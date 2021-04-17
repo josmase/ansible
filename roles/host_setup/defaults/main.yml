@@ -1,0 +1,6 @@
+packages:
+ - sshpass
+ - openssh-server
+ - openssh-client
+ - git
+ssh_key_filename: id_rsa

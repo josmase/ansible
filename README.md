@@ -1,0 +1,1 @@
+This repo contains code for setting up my own media server, network configuration and stuff.

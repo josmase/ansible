@@ -1,0 +1,7 @@
+# generic settings
+main_username: jonas
+main_groupname: "{{ main_username }}"
+main_uid: "1000"
+main_gid: "{{ main_uid }}"
+
+appdata_path: /opt/appdata
