@@ -3,5 +3,6 @@ main_username: jonas
 main_groupname: "{{ main_username }}"
 main_uid: "1000"
 main_gid: "{{ main_uid }}"
+ansible_sudo_pass: "{{ vault_default_sudo_pass }}"
 
 appdata_path: /opt/appdata

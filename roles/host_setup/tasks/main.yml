@@ -3,6 +3,7 @@
   apt:
     name: "{{ packages }}"
     state: present
+
 - name: generate SSH key "{{ ssh_key_filename }}"
   openssh_keypair:
     path: "~/.ssh/{{ ssh_key_filename }}"
@@ -10,9 +11,14 @@
     size: 4096
     state: present
     force: no
-- name: update all packages
-  become: true
-  package:
-    name: '*'
-    state: latest
-    autoremove: true
+
+- name: Set git email
+  git_config:
+    name: user.email
+    scope: global
+    value: "{{ git_email }}"
+- name: Set git name
+  git_config:
+    name: user.name
+    scope: global
+    value: "{{ git_name }}"
