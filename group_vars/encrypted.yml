@@ -1,0 +1,2 @@
+private_key_dest_dir: ~/.ssh/id_rsa.initramfs_{{ inventory_hostname }}/
+private_key: "{{ private_key_dest_dir }}/id_rsa"

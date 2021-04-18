@@ -1,0 +1,5 @@
+- hosts: encrypted
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - crypt_setup
