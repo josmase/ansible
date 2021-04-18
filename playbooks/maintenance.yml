@@ -2,4 +2,15 @@
   vars_files:
     - ../vars/vault.yml
   roles:
-    - maintenance
+    - role: maintenance
+    - role: gantsign.antigen
+      users:
+        - username: "{{ ansible_user }}"
+          antigen_libraries:
+            - name: oh-my-zsh
+          antigen_theme:
+            name: robbyrussell
+          antigen_bundles:
+            - name: git
+            - name: zsh-syntax-highlighting
+              url: zsh-users/zsh-syntax-highlighting

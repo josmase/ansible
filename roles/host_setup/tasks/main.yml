@@ -22,3 +22,7 @@
     name: user.name
     scope: global
     value: "{{ git_name }}"
+
+- name: Install roles
+  become: true
+  command: ansible-galaxy install -r {{ role_path }}/../requirements.yml -p /etc/ansible/roles --ignore-errors
