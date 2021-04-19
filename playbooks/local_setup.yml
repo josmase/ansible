@@ -1,5 +1,7 @@
 - hosts: localhost
   vars_files:
     - ../vars/vault.yml
-  roles:
-    - host_setup
+  tasks:
+    - name: Install roles
+      become: true
+      command: ansible-galaxy install -r {{ role_path }}/../requirements.yml --ignore-errors

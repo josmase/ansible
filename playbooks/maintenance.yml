@@ -1,16 +1,10 @@
 - hosts: all_servers
   vars_files:
     - ../vars/vault.yml
-  roles:
-    - role: maintenance
-    - role: gantsign.antigen
-      users:
-        - username: "{{ ansible_user }}"
-          antigen_libraries:
-            - name: oh-my-zsh
-          antigen_theme:
-            name: robbyrussell
-          antigen_bundles:
-            - name: git
-            - name: zsh-syntax-highlighting
-              url: zsh-users/zsh-syntax-highlighting
+  tasks:
+    - name: update all packages
+      become: true
+      package:
+        name: '*'
+        state: latest
+        autoremove: true

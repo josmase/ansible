@@ -1,3 +1,4 @@
+ssh_key_path: "/home/{{ lookup('env', 'USER') }}/.ssh/id_rsa.pub"
 packages:
  - sshpass
  - openssh-server
