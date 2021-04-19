@@ -1,0 +1,4 @@
+roles:
+  - name: gantsign.antigen
+collections:
+  - name: community.general
