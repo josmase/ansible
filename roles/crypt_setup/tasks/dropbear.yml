@@ -1,0 +1,73 @@
+- name: Install packages
+  become: true
+  apt:
+    name: "{{ packages }}"
+    state: present
+
+- name: Create dir {{ dropbear_key_path }}
+  become: true
+  file:
+    path: "{{ dropbear_key_path }}"
+    state: directory
+
+- name: Create dir {{ root_key_path }}
+  become: true
+  file:
+    path: "{{ root_key_path }}"
+    state: directory
+
+- name: "Create dropbear dsa key"
+  become: true
+  command: "dropbearkey -t dss -f {{ dropbear_key_path }}/dropbear_dss_host_key"
+  args: 
+    creates: "{{ dropbear_key_path }}/dropbear_dss_host_key"
+
+- name: "Create dropbear rsa  key"
+  become: true
+  command: "dropbearkey -t rsa -f {{ dropbear_key_path }}/dropbear_rsa_host_key"
+  args: 
+    creates: "{{ dropbear_key_path }}/dropbear_rsa_host_key"
+
+- name: Create root key in dropbear format
+  become: true
+  command: "dropbearkey -t rsa -f {{ root_key_path }}/id_rsa.dropbear"
+  args: 
+    creates: "{{ root_key_path }}/id_rsa.dropbear"
+
+- name: Convert root dropbear key to openssh format
+  become: true
+  command: "/usr/lib/dropbear/dropbearconvert dropbear openssh {{ root_key_path }}/id_rsa.dropbear {{ root_key_path }}/id_rsa"
+  args: 
+    creates: "{{ root_key_path }}/id_rsa"
+
+- name: Extract root public key
+  become: true
+  command: "dropbearkey -y -f {{ root_key_path }}/id_rsa.dropbear | grep '^ssh-rsa ' | tee {{ root_key_path }}/id_rsa.pub"
+
+- name: Read public key
+  become: true
+  slurp:
+    src: "{{ root_key_path }}/id_rsa.pub"
+  register: public_root_key
+
+- name: Print public key
+  ansible.builtin.debug:
+    msg: "{{ public_root_key['content'] | b64decode }}"
+
+- name: Add public key to autorhized_keys
+  become: true
+  lineinfile:
+    path: "{{ root_key_path }}/authorized_keys"
+    line: "{{ public_root_key['content'] | b64decode }}"
+    create: true
+     
+- name: Copy private root key to local machine
+  become: true
+  fetch:
+    src: "{{ root_key_path }}/id_rsa"
+    dest: "{{ private_key_dest_dir }}"
+    flat: true
+
+- name: update initramfs
+  become: true
+  command: update-initramfs -u

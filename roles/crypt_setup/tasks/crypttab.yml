@@ -1,0 +1,24 @@
+- name: Get all devices
+  command: lsblk -o NAME,UUID,FSTYPE,SIZE --json --nodeps
+  register: all_devices
+
+- name: Print all devices
+  debug:
+    msg: "{{ (all_devices.stdout | from_json).blockdevices }}"
+
+- name: Print devices to use
+  debug:
+    msg: "{{ item }}"
+  loop: "{{ (all_devices.stdout | from_json).blockdevices }}"
+  when: item.fstype == 'crypto_LUKS'
+
+- name: check what drives are available
+  become: true
+  community.general.crypttab:
+    name: "{{ item.uuid.split('-')[0] }}"
+    backing_device: "{{ item.uuid }}"
+    state: present
+    password: /home/{{ ansible_user }}/keyfile
+    opts: luks,discard
+  loop: "{{ (all_devices.stdout | from_json).blockdevices }}"
+  when: item.fstype == 'crypto_LUKS'
