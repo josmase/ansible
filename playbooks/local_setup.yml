@@ -2,10 +2,16 @@
   vars_files:
     - ../vars/vault.yml
   tasks:
-    - name: Install dependencies
-      become: true
-      command: ansible-galaxy install {{ item }}  -r {{ playbook_dir  }}/../requirements.yml --ignore-errors
-      with_items:
-        - roles
-        - collections
+    - name: create install directory
+      file:
+        path: "{{ playbook_dir  }}/../galaxy_{{ item }}"
+        state: directory
+      loop:
+        - role
+        - collection
 
+    - name: Install dependencies
+      local_action: command ansible-galaxy {{ item }} install -r {{ playbook_dir  }}/../requirements.yml -p {{ playbook_dir  }}/../galaxy_{{ item }} --ignore-errors
+      loop:
+        - role
+        - collection

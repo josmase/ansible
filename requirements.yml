@@ -1,4 +1,8 @@
+---
+
 roles:
-  - name: gantsign.antigen
+  - gantsign.antigen
+
 collections:
-  - name: community.general
+  - community.general
+  - ansible.posix
