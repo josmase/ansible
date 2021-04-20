@@ -28,3 +28,11 @@
     user: "{{ ansible_user }}"
     state: present
     key: "{{ lookup('file', '{{ ssh_key_path }}') }}"
+
+- name: Disable that BEEP!
+  # unsetopt BEEP for all beeps
+  lineinfile:
+    line: unsetopt LIST_BEEP
+    path: ~/.zshrc
+    state: present
+    create: yes
