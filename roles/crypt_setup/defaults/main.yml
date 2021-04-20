@@ -1,5 +1,6 @@
 packages:
- - dropbear
- - busybox
+  - dropbear
+  - busybox
 root_key_path: /etc/initramfs-tools/root/.ssh
 dropbear_key_path: /etc/initramfs-tools/etc/dropbear
+crypttab_name_prefix: automapped

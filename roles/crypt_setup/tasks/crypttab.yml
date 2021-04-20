@@ -12,11 +12,11 @@
   loop: "{{ (all_devices.stdout | from_json).blockdevices }}"
   when: item.fstype == 'crypto_LUKS'
 
-- name: check what drives are available
+- name: Mount encypted devices
   become: true
   community.general.crypttab:
-    name: "{{ item.uuid.split('-')[0] }}"
-    backing_device: "{{ item.uuid }}"
+    name: "{{ crypttab_name_prefix }}_{{ item.uuid.split('-')[0] }}"
+    backing_device: "UUID={{ item.uuid }}"
     state: present
     password: /home/{{ ansible_user }}/keyfile
     opts: luks,discard
