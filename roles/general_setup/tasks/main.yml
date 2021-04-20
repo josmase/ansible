@@ -30,9 +30,10 @@
     key: "{{ lookup('file', '{{ ssh_key_path }}') }}"
 
 - name: Disable that BEEP!
+  # unsetopt LIST_BEEP for all autocomplete beeps
   # unsetopt BEEP for all beeps
   lineinfile:
-    line: unsetopt LIST_BEEP
+    line: unsetopt BEEP
     path: ~/.zshrc
     state: present
     create: yes
