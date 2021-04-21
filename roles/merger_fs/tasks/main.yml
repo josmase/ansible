@@ -10,12 +10,6 @@
   apt:
     deb: "{{ merger_fs_src }}"
     state: present
-
-- name: Create merger fs mount point
-  become: true
-  file:
-    path: "{{ merger_fs_mnt_dest }}"
-    state: directory
     
 - name: Mount mapped decrypted devices
   become: true
