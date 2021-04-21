@@ -4,6 +4,12 @@
   roles:
     - crypt_setup
 
+- hosts: media_server
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - merger_fs
+
 - hosts: all_servers
   vars_files:
     - ../vars/vault.yml

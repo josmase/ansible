@@ -1,0 +1,27 @@
+- name: Get merger fs
+  become: true
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ packages }}"
+
+- name: Get merger fs
+  become: true
+  apt:
+    deb: "{{ merger_fs_src }}"
+    state: present
+
+- name: Create merger fs mount point
+  become: true
+  file:
+    path: "{{ merger_fs_mnt_dest }}"
+    state: directory
+    
+- name: Mount mapped decrypted devices
+  become: true
+  ansible.posix.mount:
+    state: mounted
+    path: "{{ merger_fs_mnt_dest }}"
+    src: "{{ merger_fs_mnt_src }}"
+    fstype: fuse.mergerfs
+    opts: "{{ merger_fs_mnt_opt }}"
