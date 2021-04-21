@@ -1,0 +1,16 @@
+- name: Get all devices
+  command: lsblk -o NAME,UUID,FSTYPE,SIZE --json
+  register: all_devices
+
+- name: Mount mapped decrypted devices
+  become: true
+  ansible.posix.mount:
+    state: mounted
+    path: "{{ mount_dir }}{{ item.children[0].name }}"
+    src: /dev/mapper/{{ item.children[0].name }}
+    fstype: "{{ item.children[0].fstype }}"
+  loop: "{{ (all_devices.stdout | from_json).blockdevices }}"
+  when:
+    - item.fstype == 'crypto_LUKS'
+    - item.children[0].name is search('{{ crypttab_name_prefix }}')
+    - item.children[0].fstype == 'xfs'
