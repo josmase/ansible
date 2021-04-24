@@ -1,16 +1,32 @@
 - hosts: encrypted
+  tags:
+    - fs
   vars_files:
     - ../vars/vault.yml
   roles:
     - crypt_setup
 
 - hosts: media_server
+  tags:
+    - fs
   vars_files:
     - ../vars/vault.yml
   roles:
     - merger_fs
 
+
+- hosts: main
+  tags:
+    - vnc
+  become: true
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+   - sdarwin.vnc
+
 - hosts: all_servers
+  tags:
+    - general
   vars_files:
     - ../vars/vault.yml
   roles:

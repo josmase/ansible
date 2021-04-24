@@ -2,6 +2,7 @@
 
 roles:
   - gantsign.antigen
+  - sdarwin.vnc
 
 collections:
   - community.general
