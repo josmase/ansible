@@ -6,6 +6,7 @@ main_gid: "{{ main_uid }}"
 ansible_sudo_pass: "{{ vault_default_sudo_pass }}"
 
 appdata_path: /opt/appdata
+mount_dir: /mnt/drives/
 
 ######################
 ###  VNC Settings  ###
