@@ -12,6 +12,14 @@
   loop: "{{ (all_devices.stdout | from_json).blockdevices }}"
   when: item.fstype == 'crypto_LUKS'
 
+- name: "Add keyfile"
+  linefile:
+    become: true
+    path: /home/{{ ansible_user }}/keyfile
+    line: "{{ vault_keyfile }}"
+    owner: root
+    group: root
+
 - name: Mount encypted devices
   become: true
   community.general.crypttab:
