@@ -13,19 +13,20 @@ appdata_path: /opt/appdata
 ### You should configure vnc_users for your list of users. Give each a different vnc_num.
 vnc_users:
   - username: "{{ ansible_user }}"
-    #port 6001 is 1
-    vnc_num: 101
-    vnc_default_password: "{{ vault_default_sudo_pass }}"
+    #port 5904 is 1
+    vnc_num: 100
+    vnc_default_password: hejsan
 
 ### Choices are "gnome" and "xfce4"
 vnc_desktop: gnome
+#vnc_desktop: xfce4
 
-### Choices of vnc_server for Ubuntu/Debian are currently "tigervnc", "vnc4server" and "tightvnc".
-vnc_server: tigervnc
-vnc_client_options: "-geometry 1920x1080"
+vnc_server: tightvnc
+
+vnc_client_options: "-geometry 1920x1080 -localhost"
 
 ### Should the role generate and enable per-user systemd services for VNC desktops?
-vnc_install_systemd_services: true
+vnc_install_systemd_services: false
 
 ### Add the vncstart.sh script to users' .bashrc for vnc autostart when logging in? Recommended.
 vnc_bashrc_startup: true
