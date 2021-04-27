@@ -2,6 +2,9 @@ packages:
   - docker
   - docker-compose
 
+docker_compose_dir: /opt/docker
+script_dir: "{{ docker_compose_dir }}/scripts"
+
 docker_templates:
   - emby
   - grafana
@@ -16,3 +19,9 @@ docker_templates:
   - telegraf
   - unifi
   - vpn
+
+script_templates:
+  - common
+  - down
+  - maintenance
+  - start

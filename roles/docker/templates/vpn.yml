@@ -21,8 +21,6 @@ services:
       - PORT_FORWARDING=on
       - OPENVPN_USER={{ vault_vpn_user }}
       - OPENVPN_PASSWORD={{ vault_vpn_password }}
-    env_file:
-      - ../default.env
     volumes:
       - "{{ appdata_path }}/vpn/:/gluetun"
 
@@ -43,8 +41,10 @@ services:
     image: linuxserver/radarr
     container_name: radarr
     network_mode: service:vpn
-    env_file:
-      - ../default.env
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/radarr:/config"
       - "{{ storage_dir }}/files/movies:/movies"

@@ -11,8 +11,6 @@ services:
       - HOST_SYS=/rootfs/sys
       - HOST_ETC=/rootfs/etc
       - HOST_MOUNT_PREFIX=/rootfs
-    env_file:
-      - ../default.env
     volumes:
       - "{{ appdata_path }}/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf"
       - /var/run/utmp:/var/run/utmp:ro
