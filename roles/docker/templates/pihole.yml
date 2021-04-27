@@ -1,0 +1,20 @@
+version: "3.7"
+services:
+  pihole:
+    image: pihole/pihole
+    container_name: pihole
+    environment:
+      - ServerIP={{ ansible_default_ipv4.address }}
+      - DNSMASQ_LISTENING=all
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/pihole/pihole:/etc/pihole/"
+      - "{{ appdata_path }}/pihole/dnsmasq.d:/etc/dnsmasq.d/"
+    ports:
+      - 53:53
+      - 67:67
+      - 80:80
+      - 443:443
+    restart: always

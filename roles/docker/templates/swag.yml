@@ -1,0 +1,21 @@
+version: "3.7"
+services:
+  swag:
+    image: linuxserver/swag
+    container_name: swag
+    environment:
+      - EMAIL=josnase@gmail.com
+      - URL=hejsan.xyz
+      - SUBDOMAINS=wildcard
+      - ONLY_SUBDOMAINS=false
+      - VALIDATION=dns
+      - DNSPLUGIN=cloudflare
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/swag:/config"
+    ports:
+      - 8081:80
+      - 4433:443
+    restart: always

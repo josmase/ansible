@@ -1,0 +1,24 @@
+- name: Install packages
+  become: true
+  apt:
+    name: "{{ packages }}"
+    state: present
+
+- name: Create docker template directory
+  become: true
+  file:
+    path: /opt/docker
+    state: directory
+    owner: "{{ main_username }}"
+    group: "{{ main_groupname }}"
+
+- name: deploy templates
+  become: true
+  template:
+    src: ../templates/{{ item }}.yml
+    dest: /opt/docker/{{ item }}.yml
+    owner: "{{ main_username }}"
+    group: "{{ main_groupname }}"
+    mode: '0640'
+  loop: "{{ docker_templates }}"
+

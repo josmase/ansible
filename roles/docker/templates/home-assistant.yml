@@ -1,0 +1,15 @@
+version: "3.7"
+services:
+  homeassistant:
+    image: ghcr.io/linuxserver/homeassistant
+    container_name: homeassistant
+    network_mode: host
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/homeassistant:/config"
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
+    restart: always

@@ -3,6 +3,7 @@
 roles:
   - gantsign.antigen
   - sdarwin.vnc
+  - community.docker
 
 collections:
   - community.general

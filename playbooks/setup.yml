@@ -14,6 +14,14 @@
   roles:
     - merger_fs
 
+- hosts: media_server
+  tags:
+    - docker
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - docker
+
 
 - hosts: main
   tags:

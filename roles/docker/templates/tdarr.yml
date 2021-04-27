@@ -1,0 +1,21 @@
+version: "3.7"
+services:
+  tdarr:
+    image: haveagitgat/tdarr
+    container_name: tdarr
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+      - serverIP=0.0.0.0
+      - serverPort=8266
+      - webUIPort=8265
+    volumes:
+      - "{{ appdata_path }}/tdarr:/app/server"
+      - /tmp/transcode/tdarr:/temp
+      - "{{ storage_dir }}/files/movies:/media/movies"
+      - "{{ storage_dir }}/files/series:/media/tv"
+    ports:
+      - 8265:8265
+      - 8266:8266
+    restart: always

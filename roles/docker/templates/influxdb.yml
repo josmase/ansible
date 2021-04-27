@@ -1,0 +1,18 @@
+version: "3.7"
+services:
+  influxdb:
+    image: influxdb/influxdb
+    container_name: influxdb
+    environment:
+      - INFLUXDB_DB=telegraf
+      - INFLUXDB_ADMIN_USER=telegraf
+      - INFLUXDB_ADMIN_PASSWORD=password
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/influxdb:/data"
+    ports:
+      - 8083:8083
+      - 8086:8086
+    restart: always

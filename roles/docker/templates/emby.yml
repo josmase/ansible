@@ -1,0 +1,14 @@
+version: "3.7"
+services:
+  emby:
+    image: linuxserver/emby
+    container_name: emby
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/emby:/config"
+      - "{{ storage_dir }}/files/series:/data/tvshows"
+      - "{{ storage_dir }}/files/movies:/data/movies"
+    restart: always

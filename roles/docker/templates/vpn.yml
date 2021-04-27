@@ -1,0 +1,94 @@
+version: "3.7"
+services:
+  vpn:
+    container_name: vpn
+    image: qmcgaw/gluetun:latest
+    restart: always
+    cap_add:
+      - net_admin
+    ports:
+      - 9091:9091 #transmission 
+      - 7878:7878 #radarr
+      - 8989:8989 #sonarr 
+      - 9117:9117 #jackett
+      - 6767:6767 #bazarr
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+      - REGION=sweden
+      - VPNSP=private internet access
+      - PORT_FORWARDING=on
+      - OPENVPN_USER={{ vault_vpn_user }}
+      - OPENVPN_PASSWORD={{ vault_vpn_password }}
+    env_file:
+      - ../default.env
+    volumes:
+      - "{{ appdata_path }}/vpn/:/gluetun"
+
+  transmission:
+    container_name: transmission
+    image: linuxserver/transmission
+    network_mode: service:vpn
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/transmission/config:/config"
+      - "{{ storage_dir }}/downloads/:/downloads"
+    restart: always
+
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    network_mode: service:vpn
+    env_file:
+      - ../default.env
+    volumes:
+      - "{{ appdata_path }}/radarr:/config"
+      - "{{ storage_dir }}/files/movies:/movies"
+      - "{{ storage_dir }}/downloads/complete/movies:/downloads/complete/movies"
+    restart: always
+
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    network_mode: service:vpn
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/sonarr:/config"
+      - "{{ storage_dir }}/files/series:/media"
+      - "{{ storage_dir }}/downloads/complete/series:/downloads/complete/series"
+    restart: always
+
+  jackett:
+    image: linuxserver/jackett
+    container_name: jackett
+    network_mode: service:vpn
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/jackett:/config"
+    restart: always
+
+  bazarr:
+    image: linuxserver/bazarr
+    container_name: bazarr
+    network_mode: service:vpn
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/bazarr:/config"
+      - "{{ storage_dir }}/files/movies:/movies"
+      - "{{ storage_dir }}/files/series:/tv"
+    restart: always
+
+

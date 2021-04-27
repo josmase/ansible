@@ -8,4 +8,4 @@ merger_fs_src: "https://github.com/trapexit/mergerfs/releases/download/2.32.4/me
 
 merger_fs_mnt_opt: allow_other,use_ino,cache.files=off,dropcacheonclose=true,category.create=mfs,minfreespace=200G
 merger_fs_mnt_src: "{{ mount_dir }}*"
-merger_fs_mnt_dest: /mnt/storage
+merger_fs_mnt_dest: "{{ storage_dir }}"
