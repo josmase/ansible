@@ -19,7 +19,6 @@ services:
       - PUID={{ main_gid }}
       - GUID={{ main_uid }}
       - TZ={{ timezone }}
-    environment:
       - SESSION_SECRET=ccd3fc23c7e9dafc5e8b8fdd5a621dab
     volumes:
       - "{{ appdata_path }}/zwave:/usr/src/app/store"
