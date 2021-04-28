@@ -19,8 +19,8 @@ services:
       - REGION=sweden
       - VPNSP=private internet access
       - PORT_FORWARDING=on
-      - USER={{ vault_vpn_user }}
-      - PASSWORD={{ vault_vpn_password }}
+      - OPENVPN_USER={{ vault_vpn_user }}
+      - OPENVPN_PASSWORD={{ vault_vpn_password }}
     volumes:
       - "{{ appdata_path }}/vpn/:/gluetun"
 
