@@ -25,3 +25,4 @@ script_templates:
   - down
   - maintenance
   - start
+  - update
