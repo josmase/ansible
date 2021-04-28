@@ -5,7 +5,7 @@ script_dir={{ script_dir }}
 downloads_dir={{ storage_dir }}/downloads
 
 echo =====================  $(date)  ==============================================
-source "${script_dir}}/}update.sh"
+source "${script_dir}/update.sh"
 source "${script_dir}/down.sh"
 
 #rsync -aP --delete "${appdat_path}" "${backup_path}"
