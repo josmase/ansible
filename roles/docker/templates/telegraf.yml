@@ -6,7 +6,6 @@ services:
     environment:
       - PUID={{ main_gid }}
       - GUID={{ main_uid }}
-      - TZ={{ timezone }}
       - HOST_PROC=/rootfs/proc
       - HOST_SYS=/rootfs/sys
       - HOST_ETC=/rootfs/etc
