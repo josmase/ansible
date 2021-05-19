@@ -19,6 +19,7 @@ docker_templates:
   - telegraf
   - unifi
   - vpn
+  - jellyfin
 
 script_templates:
   - common
