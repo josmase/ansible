@@ -11,11 +11,32 @@ services:
       - serverPort=8266
       - webUIPort=8265
     volumes:
-      - "{{ appdata_path }}/tdarr:/app/server"
-      - /tmp/transcode/tdarr:/temp
+      - "{{ appdata_path }}/tdarr/server:/app/server"
+      - "{{ appdata_path }}/tdarr/configs:/app/configs"
+      - "{{ appdata_path }}/tdarr/logs:/app/logs"
       - "{{ storage_dir }}/files/movies:/media/movies"
       - "{{ storage_dir }}/files/series:/media/tv"
     ports:
       - 8265:8265
       - 8266:8266
+      - 8267:8267
+    restart: always
+  tdarr_node:
+    image: haveagitgat/tdarr_node
+    container_name: tdarr_node
+    network_mode: service:tdarr
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+      - nodeID=node1
+      - nodeIP=0.0.0.0
+      - nodePort=8267
+      - serverIP=0.0.0.0
+      - serverPort=8266
+    volumes:
+      - "{{ appdata_path }}/tdarr/configs:/app/configs"
+      - "{{ appdata_path }}/tdarr/logs:/app/logs"
+      - "{{ storage_dir }}/files/movies:/media/movies"
+      - "{{ storage_dir }}/files/series:/media/tv"
     restart: always

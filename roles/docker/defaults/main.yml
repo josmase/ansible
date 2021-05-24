@@ -20,6 +20,7 @@ docker_templates:
   - unifi
   - vpn
   - jellyfin
+  - tdarr
 
 script_templates:
   - common
