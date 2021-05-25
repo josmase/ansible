@@ -16,6 +16,7 @@ services:
       - "{{ appdata_path }}/tdarr/logs:/app/logs"
       - "{{ storage_dir }}/files/movies:/media/movies"
       - "{{ storage_dir }}/files/series:/media/tv"
+      - "{{ storage_dir }}/transcode:/temp/transcode"
     ports:
       - 8265:8265
       - 8266:8266
@@ -39,4 +40,5 @@ services:
       - "{{ appdata_path }}/tdarr/logs:/app/logs"
       - "{{ storage_dir }}/files/movies:/media/movies"
       - "{{ storage_dir }}/files/series:/media/tv"
+      - "{{ storage_dir }}/transcode:/temp/transcode"
     restart: always
