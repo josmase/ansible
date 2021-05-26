@@ -21,6 +21,7 @@ docker_templates:
   - vpn
   - jellyfin
   - tdarr
+  - samba
 
 script_templates:
   - common
