@@ -3,6 +3,21 @@
   apt:
     name: "{{ packages }}"
     state: present
+- name: Create docker group
+  become: true
+  group:
+    name: docker
+    state: present
+
+- name: Add user to group
+  become: true
+  user:
+    name: "{{ main_username }}"
+    groups: 
+      - docker
+    append: yes
+
+
 
 - name: Create docker template directory
   become: true
