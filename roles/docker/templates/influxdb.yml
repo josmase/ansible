@@ -1,15 +1,22 @@
 version: "3.7"
 services:
   influxdb:
-    image: influxdb/influxdb
+    image: influxdb:latest
     container_name: influxdb
     environment:
-      - INFLUXDB_DB=telegraf
-      - INFLUXDB_ADMIN_USER=telegraf
-      - INFLUXDB_ADMIN_PASSWORD=password
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=telegraf
+      - DOCKER_INFLUXDB_INIT_PASSWORD=password
+      - DOCKER_INFLUXDB_INIT_ORG=media-server
+      - DOCKER_INFLUXDB_INIT_BUCKET=telegraf
+      - DOCKER_INFLUXDB_INIT_RETENTION=90d
       - PUID={{ main_gid }}
       - GUID={{ main_uid }}
       - TZ={{ timezone }}
+    ports:
+      -  8083:8083
+      -  8086:8086
     volumes:
-      - "{{ appdata_path }}/influxdb:/data"
+      - "{{ appdata_path }}/influxdb/data:/var/lib/influxdb2"
+      - "{{ appdata_path }}/influxdb/config:/etc/influxdb2"
     restart: always
