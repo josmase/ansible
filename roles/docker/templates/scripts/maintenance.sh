@@ -8,7 +8,7 @@ echo =====================  $(date)  ===========================================
 source "${script_dir}/update.sh"
 source "${script_dir}/down.sh"
 
-#rsync -aP --delete "${appdat_path}" "${backup_path}"
+rsync -aP --delete "${appdat_path}" "${backup_path}"
 #snapraid -c ../snapraid.conf sync
 
 source "${script_dir}/start.sh"
