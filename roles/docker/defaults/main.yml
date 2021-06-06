@@ -1,7 +1,3 @@
-packages:
-  - docker
-  - docker-compose
-
 docker_compose_dir: /opt/docker
 script_dir: "{{ docker_compose_dir }}/scripts"
 

@@ -1,8 +1,9 @@
 - name: Install packages
   become: true
   apt:
-    name: "{{ packages }}"
+    name: docker
     state: present
+
 - name: Create docker group
   become: true
   group:
