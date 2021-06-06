@@ -10,6 +10,7 @@ merger_fs_mnt_opt: defaults,nonempty,allow_other,use_ino,cache.files=off,moveone
 merger_fs_mnt_src: "{{ mount_dir }}/*"
 merger_fs_mnt_dest: "{{ storage_dir }}"
 
+snapraid_compile_dir: /opt/snapraid
 
 crypttab_name_prefix: automapped
 
