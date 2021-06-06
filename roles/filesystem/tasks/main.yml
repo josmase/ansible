@@ -1,0 +1,3 @@
+- include: crypttab.yml
+- include: fstab.yml
+- include: mergerfs.yml

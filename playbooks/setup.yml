@@ -1,18 +1,10 @@
-- hosts: encrypted
-  tags:
-    - fs
-  vars_files:
-    - ../vars/vault.yml
-  roles:
-    - crypt_setup
-
 - hosts: media_server
   tags:
     - fs
   vars_files:
     - ../vars/vault.yml
   roles:
-    - merger_fs
+    - filesystem
 
 - hosts: media_server
   tags:
