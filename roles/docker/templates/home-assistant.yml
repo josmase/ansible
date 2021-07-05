@@ -9,8 +9,6 @@ services:
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/homeassistant:/config"
-    devices:
-      - /dev/ttyACM0:/dev/ttyACM0
     restart: always
   zwave:
     image: zwavejs/zwavejs2mqtt:latest
