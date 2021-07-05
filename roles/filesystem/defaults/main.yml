@@ -11,6 +11,7 @@ merger_fs_mnt_src: "{{ mount_dir }}/*"
 merger_fs_mnt_dest: "{{ storage_dir }}"
 
 snapraid_compile_dir: /opt/snapraid
+snapraid_conf_dir: /opt/snapraid_conf
 
 crypttab_name_prefix: automapped
 

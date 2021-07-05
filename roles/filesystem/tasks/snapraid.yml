@@ -37,7 +37,7 @@
 - name: Schedule parity cheks as admin
   become: true
   cron:
-    name: "Sync parity"
+    name: Sync parity
     minute: "0"
     hour: "5"
     job: "snapraid -c {{ snapraid_conf_dir }}/snapraid.conf sync"
