@@ -57,3 +57,9 @@
     mode: '0740'
   loop: "{{ script_templates }}"
 
+- name: Schedule maintenance script
+  cron:
+    name: Run docker maintenance script
+    minute: "0"
+    hour: "4"
+    job: "{{ script_dir }}/maintenance.sh"
