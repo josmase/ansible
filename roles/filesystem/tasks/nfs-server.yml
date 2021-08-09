@@ -1,18 +1,11 @@
 - name: install nfs-utils
+  become: true
   apt: 
-    name: nfs-utils 
+    name: nfs-kernel-server 
     state: latest
 
-- name: enable rpcbind nfslock nfs
-  service:
-    name: "{{ item }}"
-    enabled: yes
-    with_items:
-    - rpcbind
-    - nfslock
-    - nfs
-
 - name: Copy exports file.
+  become: true
   template:
     src: ../templates/exports.j2
     dest: /etc/exports
@@ -21,4 +14,5 @@
     mode: 0644
 
 - name: NFS apply change configrue
-  shell: systemctl reload nfs;exportfs -a
+  become: true
+  shell: exportfs -a && systemctl restart nfs-kernel-server
