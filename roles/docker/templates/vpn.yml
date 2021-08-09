@@ -16,7 +16,7 @@ services:
       - PUID={{ main_gid }}
       - GUID={{ main_uid }}
       - TZ={{ timezone }}
-      - REGION=sweden
+      - REGION=Norway
       - VPNSP=private internet access
       - PORT_FORWARDING=on
       - OPENVPN_USER={{ vault_vpn_user }}
