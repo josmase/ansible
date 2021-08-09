@@ -13,7 +13,7 @@
   become: true
   apt:
     name: "{{ packages }}"
-    state: present
+    state: latest
 
 - name: generate SSH key "{{ ssh_key_filename }}"
   openssh_keypair:

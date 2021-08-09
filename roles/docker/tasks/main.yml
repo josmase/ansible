@@ -2,7 +2,7 @@
   become: true
   apt:
     name: docker
-    state: present
+    state: latest
 
 - name: Create docker group
   become: true
@@ -63,3 +63,6 @@
     minute: "0"
     hour: "4"
     job: "{{ script_dir }}/maintenance.sh"
+
+- name: Start containers
+  command:  "{{ script_dir }}/start.sh"
