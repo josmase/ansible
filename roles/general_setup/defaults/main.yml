@@ -4,7 +4,6 @@ packages:
  - openssh-server
  - openssh-client
  - git
- - nfs-common
 ssh_key_filename: id_rsa
 git_email: "{{ vault_git_email }}"
 git_name: Jonas Lundberg

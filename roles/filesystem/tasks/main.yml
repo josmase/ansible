@@ -1,4 +1,5 @@
 - include: crypttab.yml
 - include: fstab.yml
 - include: mergerfs.yml
+- include: nfs-server.yml
 #- include: snapraid.yml

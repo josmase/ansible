@@ -1,0 +1,4 @@
+# /etc/exports: the access control list for filesystems which may be exported
+#   to NFS clients.  See exports(5).
+"{{ storage_dir }}/files"            *(ro,sync,no_root_squash,no_subtree_check)
+"{{ storage_dir }}/downloads"        *(ro,sync,no_root_squash,no_subtree_check)
