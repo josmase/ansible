@@ -18,6 +18,7 @@ docker_templates:
   - jellyfin
   - tdarr
   - samba
+  - nfs
 
 script_templates:
   - common

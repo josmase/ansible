@@ -1,0 +1,19 @@
+version: "3.7"
+services:
+  nfs:
+    image: erichough/nfs-server
+    container_name: nfs
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - TZ={{ timezone }}
+      - NFS_EXPORT_0='/media *(ro,no_subtree_check)'
+    volumes:
+      - "{{ appdata_path }}/nfs/exports.txt:/etc/exports:ro"
+      - "{{ storage_dir }}/files/series:/media/movies"
+      - "{{ storage_dir }}/files/movies:/media/tv"
+    ports:
+      - 2049:2049
+    cap_add:
+      - SYS_ADMIN
+    restart: always
