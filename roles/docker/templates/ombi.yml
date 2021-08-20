@@ -4,8 +4,8 @@ services:
     image: linuxserver/ombi
     container_name: ombi
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/ombi:/config"

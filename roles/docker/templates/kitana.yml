@@ -4,8 +4,8 @@ services:
     image: pannal/kitana
     container_name: kitana
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/kitana:/app/data"

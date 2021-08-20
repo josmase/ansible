@@ -4,8 +4,8 @@ services:
     image: ghcr.io/linuxserver/homeassistant
     container_name: homeassistant
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/homeassistant:/config"
@@ -14,8 +14,8 @@ services:
     image: zwavejs/zwavejs2mqtt:latest
     container_name: zwave
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
       - TZ={{ timezone }}
       - SESSION_SECRET=ccd3fc23c7e9dafc5e8b8fdd5a621dab
     volumes:

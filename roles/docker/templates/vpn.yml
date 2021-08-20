@@ -29,8 +29,8 @@ services:
     image: linuxserver/transmission
     network_mode: service:vpn
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/transmission/config:/config"
@@ -42,8 +42,8 @@ services:
     container_name: radarr
     network_mode: service:vpn
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/radarr:/config"
@@ -56,8 +56,8 @@ services:
     container_name: sonarr
     network_mode: service:vpn
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/sonarr:/config"
@@ -70,8 +70,8 @@ services:
     container_name: jackett
     network_mode: service:vpn
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/jackett:/config"
@@ -82,8 +82,8 @@ services:
     container_name: bazarr
     network_mode: service:vpn
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/bazarr:/config"

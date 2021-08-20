@@ -4,8 +4,8 @@ services:
     image: linuxserver/emby
     container_name: emby
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/emby:/config"
