@@ -24,6 +24,7 @@
     force: no
 
 - name: Put public key in authorized_keys of remotes
+  become: true
   authorized_key:
     user: "{{ ansible_user }}"
     state: present
