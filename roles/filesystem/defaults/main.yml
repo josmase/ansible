@@ -6,7 +6,8 @@ merger_fs_version: 2.32.4
 merger_fs_src: "https://github.com/trapexit/mergerfs/releases/download/2.32.4/mergerfs_2.32.4.ubuntu-focal_amd64.deb"
 
 
-merger_fs_mnt_opt: defaults,nonempty,allow_other,use_ino,cache.files=off,moveonenospc=true,dropcacheonclose=true,minfreespace=200G,fsname=mergerfs
+#merger_fs_mnt_opt: defaults,nonempty,allow_other,use_ino,cache.files=off,moveonenospc=true,dropcacheonclose=true,minfreespace=200G,fsname=mergerfs
+merger_fs_mnt_opt: rw,use_ino,allow_other,func.getattr=newest,category.action=all,category.create=ff,dropcacheonclose=true,minfreespace=200G
 merger_fs_mnt_src: "{{ mount_dir }}/*"
 merger_fs_mnt_dest: "{{ storage_dir }}"
 
