@@ -9,10 +9,8 @@ services:
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/plex:/config"
-      - /tmp/transcode/plex:/transcode
       - "{{ storage_dir }}/files/movies:/movies"
       - "{{ storage_dir }}/files/series:/tv"
-#    network_mode: host
     restart: always
     ports:
       - 32400:32400/tcp
