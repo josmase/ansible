@@ -1,19 +1,13 @@
-- name: remove ubuntu motd spam
-  become: true
-  file:
-    path: "/etc/update-motd.d/{{ item }}"
-    state: absent
-  loop:
-    - 80-livepatch
-    - 95-hwe-eol
-    - 10-help-text
-  when: ansible_distribution == 'Ubuntu'
-
 - name: Install all packages
   become: true
-  apt:
+  pacman:
     name: "{{ packages }}"
     state: latest
+
+- name: Create .ssh dir
+  file:
+    path: ~/.ssh/
+    state: directory
 
 - name: generate SSH key "{{ ssh_key_filename }}"
   openssh_keypair:

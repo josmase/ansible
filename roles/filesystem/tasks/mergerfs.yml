@@ -1,13 +1,13 @@
 - name: Get merger fs
   become: true
-  apt:
+  pacman:
     name: "{{ item }}"
     state: present
   loop: "{{ packages }}"
 
 - name: Get merger fs
   become: true
-  apt:
+  pacman:
     deb: "{{ merger_fs_src }}"
     state: present
     

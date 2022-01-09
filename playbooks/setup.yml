@@ -1,4 +1,4 @@
-- hosts: media_server
+- hosts: nas
   tags:
     - fs
   vars_files:
@@ -13,16 +13,6 @@
     - ../vars/vault.yml
   roles:
     - docker
-
-
-- hosts: main
-  tags:
-    - vnc
-  become: true
-  vars_files:
-    - ../vars/vault.yml
-  roles:
-   - sdarwin.vnc
 
 - hosts: all_servers
   tags:

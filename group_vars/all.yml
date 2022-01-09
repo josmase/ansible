@@ -10,39 +10,3 @@ ansible_sudo_pass: "{{ vault_default_sudo_pass }}"
 appdata_path: /opt/appdata
 mount_dir: /mnt/drives
 storage_dir: /mnt/storage
-
-######################
-###  VNC Settings  ###
-######################
-### You should configure vnc_users for your list of users. Give each a different vnc_num.
-vnc_users:
-  - username: "{{ ansible_user }}"
-    #port 5904 is 1
-    vnc_num: 100
-    vnc_default_password: hejsan
-
-### Choices are "gnome" and "xfce4"
-vnc_desktop: gnome
-#vnc_desktop: xfce4
-
-vnc_server: tightvnc
-
-vnc_client_options: "-geometry 1920x1080 -localhost"
-
-### Should the role generate and enable per-user systemd services for VNC desktops?
-vnc_install_systemd_services: false
-
-### Add the vncstart.sh script to users' .bashrc for vnc autostart when logging in? Recommended.
-vnc_bashrc_startup: true
-
-### Ansible will create certain scripts such as ~/.config/systemd/user/vncserver.service and ~/vncstart.sh
-### The question is should Ansible overwrite them later on? Set this to True or False.
-vnc_ansible_managed_startup_scripts: true
-
-### Ansible will create xstartup. The question is should Ansible overwrite xstartup files later on? Set this to True or False.
-vnc_ansible_managed_xstartup: true
-
-### It has been discovered that an Ubuntu server, in the Cloud, ought to be rebooted at least one time in order to fix the locale settings.
-### If you set this to True, then Ansible will reboot the server. The default here is False, so you will need to reboot manually.
-### Only affects the systemd type configuration, otherwise not relevant.
-vnc_reboot_once: false
