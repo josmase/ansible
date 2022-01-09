@@ -1,3 +1,0 @@
-
-- name: Decrypt remote machine
-  command: echo -ne \"secret\" >/lib/cryptsetup/passfifo
