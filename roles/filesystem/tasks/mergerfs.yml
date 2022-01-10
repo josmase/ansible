@@ -1,15 +1,40 @@
-- name: Get merger fs
-  become: true
-  pacman:
-    name: "{{ item }}"
-    state: present
-  loop: "{{ packages }}"
+#- name: Get merger fs
+#  become: true
+#  pacman:
+#    name: "{{ item }}"
+#    state: present
+#  loop: "{{ packages }}"
+- name: Create the `aur_builder` user
+  become: yes
+  ansible.builtin.user:
+    name: aur_builder
+    create_home: yes
+    group: wheel
 
-- name: Get merger fs
-  become: true
-  pacman:
-    deb: "{{ merger_fs_src }}"
-    state: present
+- name: Allow the `aur_builder` user to run `sudo pacman` without a password
+  become: yes
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers.d/11-install-aur_builder
+    line: 'aur_builder ALL=(ALL) NOPASSWD: /usr/bin/pacman'
+    create: yes
+    validate: 'visudo -cf %s'
+
+
+- name: Install mergerfs
+  become: yes
+  become_user: aur_builder
+  kewlfft.aur.aur:
+    state: latest
+    use: yay
+    name:
+      - mergerfs-git
+      - mergerfs-tools-git
+
+#- name: Get merger fs
+#  become: true
+#  pacman:
+#    deb: "{{ merger_fs_src }}"
+#    state: present
     
 - name: Mount mapped decrypted devices
   become: true

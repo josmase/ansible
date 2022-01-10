@@ -8,3 +8,4 @@ roles:
 collections:
   - community.general
   - ansible.posix
+  - kewlfft.aur
