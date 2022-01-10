@@ -1,7 +1,7 @@
 - name: Install packages
   become: true
   pacman:
-    name: docker
+    name: docker docker-compose
     state: latest
 
 - name: Create docker group
@@ -18,7 +18,13 @@
       - docker
     append: yes
 
-
+- name: Start and Enable docker
+  become: true
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+    daemon-reload: yes
 
 - name: Create docker template directory
   become: true
