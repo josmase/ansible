@@ -8,6 +8,32 @@
 
 - hosts: media_server
   tags:
+    - fs
+  vars_files:
+    - ../vars/vault.yml
+  tasks:
+    - name: install nfs-utils
+      become: true
+      pacman: 
+        name: nfs-utils
+        state: latest
+    - name: create install directory
+      become: true
+      file:
+        path: "{{ storage_dir }}"
+        state: directory
+    - name: Bind storage to nfs exports
+      become: true
+      ansible.posix.mount:
+        state: mounted
+        path: "{{ storage_dir }}"
+        src: "nas.localdomain:/"
+        fstype: nfs
+        opts: defaults,timeo=900,retrans=5,_netdev
+
+
+- hosts: media_server
+  tags:
     - docker
   vars_files:
     - ../vars/vault.yml

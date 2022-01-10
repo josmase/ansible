@@ -1,7 +1,7 @@
 - name: install nfs-utils
   become: true
-  apt: 
-    name: nfs-kernel-server 
+  pacman: 
+    name: nfs-utils
     state: latest
 
 - name: Copy exports file.
@@ -13,6 +13,37 @@
     group: root
     mode: 0644
 
+- name: Bind storage to nfs exports
+  become: true
+  ansible.posix.mount:
+    state: mounted
+    path: "/srv/nfs4/{{ item }}"
+    src: "{{ merger_fs_mnt_dest }}/{{ item }}"
+    fstype: none
+    opts: bind
+  loop:
+    - isos
+    - backups
+    - downloads
+    - files
+
+- name: Start and Enable nfs-server
+  become: true
+  systemd:
+    name: nfs-server
+    state: started
+    enabled: yes
+    daemon-reload: yes
+
 - name: NFS apply change configrue
   become: true
-  shell: exportfs -a && systemctl restart nfs-kernel-server
+  shell: exportfs -arv
+
+- name: Allow nfs4 port
+  become: true
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_ports:
+      - "2049"
+    jump: ACCEPT

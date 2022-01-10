@@ -1,4 +1,7 @@
 # /etc/exports: the access control list for filesystems which may be exported
 #   to NFS clients.  See exports(5).
-"{{ storage_dir }}/files"            *(rw,sync,no_root_squash,no_subtree_check,fsid=0)
-"{{ storage_dir }}/downloads"        *(rw,sync,no_root_squash,no_subtree_check,fsid=0)
+/srv/nfs4        192.168.1.0/24(rw,sync,no_subtree_check,fsid=0)
+/srv/nfs4/isos   192.168.1.0/24(rw,sync,nohide,no_subtree_check,fsid=100)
+/srv/nfs4/backups   192.168.1.0/24(rw,sync,nohide,no_subtree_check,fsid=101)
+/srv/nfs4/files   192.168.1.0/24(rw,sync,nohide,no_subtree_check,fsid=102)
+/srv/nfs4/downloads   192.168.1.0/24(rw,sync,nohide,no_subtree_check,fsid=103)
