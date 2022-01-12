@@ -26,10 +26,15 @@
       become: true
       ansible.posix.mount:
         state: mounted
-        path: "{{ storage_dir }}"
-        src: "nas.localdomain:/"
+        path: "{{ storage_dir }}/{{ item }}"
+        src: "nas.localdomain:/{{ item }}"
         fstype: nfs
         opts: defaults,timeo=900,retrans=5,_netdev
+      loop:
+        - downloads
+        - files
+        - isos
+        - backups
 
 
 - hosts: media_server
