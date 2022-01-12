@@ -32,3 +32,14 @@
     path: ~/.zshrc
     state: present
     create: yes
+
+- name: Setup aliases
+  lineinfile:
+    path=~/.zshrc
+    line="alias {{ item }}"
+    state=present
+    create=True
+  loop:
+    - rm="rm -v"
+    - cp="cp -v"
+    - mv="mv -v"
