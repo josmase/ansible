@@ -21,11 +21,7 @@
     src: "{{ merger_fs_mnt_dest }}/{{ item }}"
     fstype: none
     opts: bind
-  loop:
-    - isos
-    - backups
-    - downloads
-    - files
+  loop: "{{ exported_shares }}"
 
 - name: Start and Enable nfs-server
   become: true

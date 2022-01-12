@@ -30,11 +30,8 @@
         src: "nas.localdomain:/{{ item }}"
         fstype: nfs
         opts: defaults,timeo=900,retrans=5,_netdev
-      loop:
-        - downloads
-        - files
-        - isos
-        - backups
+      loop: "{{ exported_shares }}"
+
 
 
 - hosts: media_server
