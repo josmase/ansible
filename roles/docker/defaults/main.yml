@@ -25,3 +25,8 @@ script_templates:
   - maintenance
   - start
   - update
+
+timers:
+  - maintenance
+
+timer_dir: /etc/systemd/system/

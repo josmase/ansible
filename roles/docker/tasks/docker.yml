@@ -1,0 +1,67 @@
+- name: Install packages
+  become: true
+  pacman:
+    name: docker docker-compose
+    state: latest
+
+- name: Create docker group
+  become: true
+  group:
+    name: docker
+    state: present
+
+- name: Add user to group
+  become: true
+  user:
+    name: "{{ main_username }}"
+    groups: 
+      - docker
+    append: yes
+
+- name: Start and Enable docker
+  become: true
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+    daemon-reload: yes
+
+- name: Create docker template directory
+  become: true
+  file:
+    path: "{{ docker_compose_dir }}"
+    state: directory
+    owner: "{{ main_username }}"
+    group: "{{ main_groupname }}"
+
+- name: Deploy compose templates
+  become: true
+  template:
+    src: ../templates/compose/{{ item }}.yml
+    dest: "{{ docker_compose_dir }}/{{ item }}.yml"
+    owner: "{{ main_username }}"
+    group: "{{ main_groupname }}"
+    mode: '0640'
+  loop: "{{ docker_templates }}"
+
+
+- name: Create docker script directory
+  become: true
+  file:
+    path: "{{ script_dir }}"
+    state: directory
+    owner: "{{ main_username }}"
+    group: "{{ main_groupname }}"
+
+- name: Deploy scripts
+  become: true
+  template:
+    src: ../templates/scripts/{{ item }}.sh
+    dest: "{{ script_dir }}/{{ item }}.sh"
+    owner: "{{ main_username }}"
+    group: "{{ main_groupname }}"
+    mode: '0740'
+  loop: "{{ script_templates }}"
+
+- name: Start containers
+  command:  "{{ script_dir }}/start.sh"

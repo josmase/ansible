@@ -1,0 +1,23 @@
+- name: Deploy service templates
+  become: true
+  template:
+    src: ../templates/timers/{{ item }}.service.j2
+    dest: "{{ timer_dir }}/{{ item }}.service"
+  loop: "{{ timers }}"
+
+- name: Deploy timer templates
+  become: true
+  template:
+    src: ../templates/timers/{{ item }}.timer.j2
+    dest: "{{ timer_dir }}/{{ item }}.timer"
+  loop: "{{ timers }}" 
+
+- name: Enable timer
+  become: true
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    daemon-reload: yes
+  loop: "{{ timers }}"
+
+
