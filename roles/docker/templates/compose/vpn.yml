@@ -90,5 +90,19 @@ services:
       - "{{ storage_dir }}/files/movies:/movies"
       - "{{ storage_dir }}/files/series:/tv"
     restart: always
+    
+  readarr:
+    image: linuxserver/readarr
+    container_name: readarr
+    network_mode: service:vpn
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/readarr:/config"
+      - "{{ storage_dir }}/files/books:/books"
+      - "{{ storage_dir }}/downloads/complete/books:/downloads"
+    restart: always
 
 
