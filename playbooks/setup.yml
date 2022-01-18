@@ -1,4 +1,4 @@
-- hosts: nas
+- hosts: media_server
   tags:
     - fs
   vars_files:
@@ -8,7 +8,7 @@
 
 - hosts: media_server
   tags:
-    - fs
+    - old
   vars_files:
     - ../vars/vault.yml
   tasks:
