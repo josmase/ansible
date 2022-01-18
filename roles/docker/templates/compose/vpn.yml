@@ -103,7 +103,7 @@ services:
     volumes:
       - "{{ appdata_path }}/readarr:/config"
       - "{{ storage_dir }}/files/books:/books"
-      - "{{ storage_dir }}/downloads/complete/books:/downloads"
+      - "{{ storage_dir }}/downloads/complete/books:/downloads/complete/books"
     restart: always
 
 
