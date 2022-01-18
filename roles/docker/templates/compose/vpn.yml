@@ -12,6 +12,7 @@ services:
       - 8989:8989 #sonarr 
       - 9117:9117 #jackett
       - 6767:6767 #bazarr
+      - 8787:8787 #readarr
     environment:
       - PUID={{ main_gid }}
       - GUID={{ main_uid }}
@@ -90,7 +91,7 @@ services:
       - "{{ storage_dir }}/files/movies:/movies"
       - "{{ storage_dir }}/files/series:/tv"
     restart: always
-    
+
   readarr:
     image: linuxserver/readarr
     container_name: readarr
