@@ -93,7 +93,7 @@ services:
     restart: always
 
   readarr:
-    image: linuxserver/readarr
+    image: linuxserver/readarr:nightly
     container_name: readarr
     network_mode: service:vpn
     environment:
