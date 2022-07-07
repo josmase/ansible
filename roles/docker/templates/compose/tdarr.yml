@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   tdarr:
-    image: haveagitgat/tdarr:dev
+    image: haveagitgat/tdarr
     container_name: tdarr
     environment:
       - PUID={{ main_gid }}
@@ -22,7 +22,7 @@ services:
       - 8266:8266
     restart: always
   tdarr_node:
-    image: haveagitgat/tdarr_node:dev
+    image: haveagitgat/tdarr_node
     container_name: tdarr_node
     environment:
       - PUID={{ main_gid }}

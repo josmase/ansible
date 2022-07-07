@@ -1,9 +1,9 @@
-- name: Install packages
-  become: true
-  pacman:
-    name: docker docker-compose
-    state: latest
-
+#- name: Install packages
+#  become: true
+#  pacman:
+#    name: docker docker-compose
+#    state: present
+#
 - name: Create docker group
   become: true
   group:
