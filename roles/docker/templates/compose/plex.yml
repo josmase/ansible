@@ -10,6 +10,7 @@ services:
     volumes:
       - "{{ appdata_path }}/plex:/config"
       - "{{ storage_dir }}/files/movies:/movies"
+      - "{{ storage_dir }}/files/series:/series"
       - "{{ storage_dir }}/files/photos:/photos"
     restart: always
     ports:
