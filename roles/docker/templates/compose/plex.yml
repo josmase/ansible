@@ -12,7 +12,10 @@ services:
       - "{{ storage_dir }}/files/movies:/movies"
       - "{{ storage_dir }}/files/series:/series"
       - "{{ storage_dir }}/files/photos:/photos"
+      - "{{ storage_dir }}/files/plex/transcode:/config/transcode"
+      - "{{ storage_dir }}/files/plex/tmp:/tmp"
     restart: always
+    network_mode: host
     ports:
       - 32400:32400/tcp
       - 32400:32400/udp

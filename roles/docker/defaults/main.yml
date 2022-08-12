@@ -17,7 +17,7 @@ docker_templates:
   - vpn
   - jellyfin
   - tdarr
-  - samba
+  - wireguard
 
 script_templates:
   - common
