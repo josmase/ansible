@@ -27,6 +27,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     restart: unless-stopped
+    user: "{{ main_uid }}:{{ main_gid }}"
     volumes:
       - "{{ appdata_path }}/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
       - "{{ appdata_path }}/prometheus/data:/prometheus"
@@ -44,6 +45,7 @@ services:
   grafana:
     image: grafana/grafana
     container_name: grafana
+    user: "{{ main_uid }}:{{ main_gid }}"
     ports:
       - 3001:3000
     volumes:
