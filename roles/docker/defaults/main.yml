@@ -3,21 +3,15 @@ script_dir: "{{ docker_compose_dir }}/scripts"
 
 docker_templates:
   - emby
-  - grafana
   - home-assistant
-  - influxdb
-  - kitana
   - ombi
-  - pihole
   - plex
   - swag
-  - tautulli
-  - telegraf
-  - unifi
   - vpn
   - jellyfin
   - tdarr
   - wireguard
+  - monitoring
 
 script_templates:
   - common

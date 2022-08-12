@@ -19,3 +19,30 @@ services:
     ports:
       - 32400:32400/tcp
       - 32400:32400/udp
+
+  kitana:
+    image: pannal/kitana
+    container_name: kitana
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/kitana:/app/data"
+    ports:
+      - 31337:31337
+    restart: always
+    
+  tautulli:
+    image: linuxserver/tautulli
+    container_name: tautulli
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/tautulli:/config"
+      - "{{ appdata_path }}/plex/Library/Application Support/Plex Media Server/Logs/:/logs"
+    ports:
+      - 8181:8181
+    restart: always
