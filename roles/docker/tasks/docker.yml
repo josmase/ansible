@@ -14,7 +14,7 @@
   become: true
   user:
     name: "{{ main_username }}"
-    groups: 
+    groups:
       - docker
     append: yes
 
@@ -25,6 +25,12 @@
     state: started
     enabled: yes
     daemon-reload: yes
+
+- name: Delete any existing docker template directory
+  become: true
+  file:
+    state: absent
+    path: "{{ docker_compose_dir }}"
 
 - name: Create docker template directory
   become: true
@@ -41,7 +47,7 @@
     dest: "{{ docker_compose_dir }}/{{ item }}.yml"
     owner: "{{ main_username }}"
     group: "{{ main_groupname }}"
-    mode: '0640'
+    mode: "0640"
   loop: "{{ docker_templates }}"
 
 
@@ -60,8 +66,8 @@
     dest: "{{ script_dir }}/{{ item }}.sh"
     owner: "{{ main_username }}"
     group: "{{ main_groupname }}"
-    mode: '0740'
+    mode: "0740"
   loop: "{{ script_templates }}"
 
 - name: Start containers
-  command:  "{{ script_dir }}/start.sh"
+  command: "{{ script_dir }}/start.sh"

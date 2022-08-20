@@ -11,8 +11,9 @@ appdata_path: /opt/appdata
 mount_dir: /mnt/drives
 storage_dir: /mnt/storage
 
-exported_shares:
-  - downloads
-  - files
-  - isos
-  - backups
+nfs_share: /srv/storage
+
+docker_data_dir: appdata
+docker_puid: "{{ main_username }}"
+docker_pgid: "{{ main_groupname }}"
+docker_timezone: Europe/Stockholm

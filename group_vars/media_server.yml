@@ -1,5 +1,11 @@
-docker_data_dir: appdata
-docker_puid: "{{ main_username }}"
-docker_pgid: "{{ main_groupname }}"
-docker_timezone: Europe/Stockholm
-
+docker_templates:
+  - emby
+  - home-assistant
+  - ombi
+  - plex
+  - swag
+  - vpn
+  - jellyfin
+  - tdarr
+  - wireguard
+  - monitoring

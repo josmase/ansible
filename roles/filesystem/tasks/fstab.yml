@@ -2,15 +2,41 @@
   command: lsblk -o NAME,UUID,FSTYPE,SIZE --json
   register: all_devices
 
-- name: Mount mapped decrypted devices
+- name: Create list of all available partitions
+  set_fact:
+    child_devices: "{{ child_devices | default([]) + item.children }}" 
+  loop: "{{ (all_devices.stdout | from_json).blockdevices }}"
+  when: 
+    - item.children is defined
+    - item.children | list | length == 1
+
+- name: Create list of encrypted partitions where the size is 1 terabyte or larger
+  set_fact:
+    encrypted_partitions: "{{ encrypted_partitions | default([]) + [item] }}"
+  loop: "{{ child_devices }}"
+  when: 
+    - item.fstype == 'crypto_LUKS'
+    - (item.size | string)[0] | int >= 1
+    - (item.size | string)[-1] == 'T'
+
+- name: Create list of decrypted partitions where the size is 1 terabyte or larger
+  set_fact:
+    decrypted_partitions: "{{ decrypted_partitions | default([]) + item.children }}" 
+  loop: "{{ encrypted_partitions }}"
+  when: 
+    - item.children is defined
+    - item.children | list | length == 1
+
+- name: Add decrypted drives to /etc/fstab
   become: true
   ansible.posix.mount:
     state: mounted
-    path: "{{ mount_dir }}/{{ item.children[0].name }}"
-    src: /dev/mapper/{{ item.children[0].name }}
-    fstype: "{{ item.children[0].fstype }}"
-  loop: "{{ (all_devices.stdout | from_json).blockdevices }}"
-  when:
-    - item.fstype == 'crypto_LUKS'
-    - item.children[0].name is search('{{ crypttab_name_prefix }}')
-    - item.children[0].fstype == 'xfs'
+    path: "{{ mount_dir }}/{{ item.name }}"
+    src: /dev/mapper/{{ item.name }}
+    fstype: "{{ item.fstype }}"
+  loop: "{{ decrypted_partitions }}"
+  when: 
+      - (item.size | string)[0] | int >= 1
+      - (item.size | string)[-1] == 'T'
+      - item.name is search(crypttab_name_prefix)
+      - item.fstype == 'xfs'

@@ -1,16 +1,27 @@
 - name: Get all devices
-  command: lsblk -o NAME,UUID,FSTYPE,SIZE --json --nodeps
+  command: lsblk -o NAME,UUID,FSTYPE,SIZE --json
   register: all_devices
 
 - name: Print all devices
   debug:
     msg: "{{ (all_devices.stdout | from_json).blockdevices }}"
 
-- name: Print devices to use
-  debug:
-    msg: "{{ item }}"
+- name: Create list of all available partitions
+  set_fact:
+    child_devices: "{{ child_devices | default([]) + item.children }}" 
   loop: "{{ (all_devices.stdout | from_json).blockdevices }}"
-  when: item.fstype == 'crypto_LUKS'
+  when: 
+    - item.children is defined
+    - item.children | list | length == 1
+   
+- name: Create list of encrypted partitions where the size is 1 terabyte or larger
+  set_fact:
+    encrypted_partitions: "{{ encrypted_partitions | default([]) + [item] }}"
+  loop: "{{ child_devices }}"
+  when: 
+    - item.fstype == 'crypto_LUKS'
+    - (item.size | string)[0] | int >= 1
+    - (item.size | string)[-1] == 'T'
 
 - name: Add keyfile
   become: true
@@ -23,7 +34,7 @@
     create: yes
 
 
-- name: Mount encypted devices
+- name: Add partitions to crypttab
   become: true
   community.general.crypttab:
     name: "{{ crypttab_name_prefix }}_{{ item.uuid.split('-')[0] }}"
@@ -31,5 +42,8 @@
     state: present
     password: /home/{{ ansible_user }}/keyfile
     opts: luks,discard
-  loop: "{{ (all_devices.stdout | from_json).blockdevices }}"
-  when: item.fstype == 'crypto_LUKS'
+  loop: "{{ encrypted_partitions }}"
+
+#- name: Mount crypttab
+#  become: true
+#  command: /usr/lib/systemd/system-generators/systemd-cryptsetup-generator && systemctl daemon-reload && systemctl restart cryptsetup.target
