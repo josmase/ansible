@@ -32,7 +32,7 @@
         path: "{{ storage_dir }}"
         src: "192.168.0.27:/"
         fstype: nfs
-        opts: soft
+        opts: soft,nolock
 
 - hosts: media_server
   tags:
