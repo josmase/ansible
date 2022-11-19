@@ -1,4 +1,4 @@
-export VM_NAME="master-1"
+export VM_NAME="master-2"
 export CLOUD_VERSION="focal"
 export CLOUD_IMAGE="${CLOUD_VERSION}-server-cloudimg-amd64.img"
 export BASE_IMAGE_NAME="ubuntu20.04"
