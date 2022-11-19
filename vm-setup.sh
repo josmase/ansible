@@ -1,6 +1,6 @@
 export VM_NAME="master-1"
 export CLOUD_VERSION="focal"
-export CLOUD_IMAGE="${CLOUD_VERSION}-server-cloudimg-amd64-disk-kvm.img"
+export CLOUD_IMAGE="${CLOUD_VERSION}-server-cloudimg-amd64.img"
 export BASE_IMAGE_NAME="ubuntu20.04"
 
 export BASE_IMAGE_FILE="/var/lib/libvirt/images/base/${BASE_IMAGE_NAME}.qcow2"
