@@ -7,5 +7,4 @@ docker_templates:
   - vpn
   - jellyfin
   - tdarr
-  - wireguard
   - monitoring
