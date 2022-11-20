@@ -1,28 +1,28 @@
 - name: Install all packages
   become: true
-  pacman:
+  apt:
     name: "{{ packages }}"
     state: latest
 
-- name: Create .ssh dir
-  file:
-    path: ~/.ssh/
-    state: directory
+#- name: Create .ssh dir
+#  file:
+#    path: ~/.ssh/
+#    state: directory
 
-- name: generate SSH key "{{ ssh_key_filename }}"
-  openssh_keypair:
-    path: "~/.ssh/{{ ssh_key_filename }}"
-    type: rsa
-    size: 4096
-    state: present
-    force: no
+#- name: generate SSH key "{{ ssh_key_filename }}"
+#  openssh_keypair:
+#    path: "~/.ssh/{{ ssh_key_filename }}"
+#    type: rsa
+#    size: 4096
+#    state: present
+#    force: no
 
-- name: Put public key in authorized_keys of remotes
-  become: true
-  authorized_key:
-    user: "{{ ansible_user }}"
-    state: present
-    key: "{{ lookup('file', '{{ ssh_key_path }}') }}"
+#- name: Put public key in authorized_keys of remotes
+#  become: true
+#  authorized_key:
+#    user: "{{ ansible_user }}"
+#    state: present
+#    key: "{{ lookup('file', '{{ ssh_key_path }}') }}"
 
 - name: Disable that BEEP!
   # unsetopt LIST_BEEP for all autocomplete beeps

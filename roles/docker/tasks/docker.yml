@@ -1,9 +1,15 @@
-#- name: Install packages
-#  become: true
-#  pacman:
-#    name: docker docker-compose
-#    state: present
-#
+- name: Install docker
+  become: true
+  apt:
+    name: docker
+    state: present
+
+- name: Install docker compose
+  become: true
+  apt:
+    name: docker-compose
+    state: present
+
 - name: Create docker group
   become: true
   group:

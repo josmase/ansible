@@ -1,6 +1,6 @@
 - name: install nfs-utils
   become: true
-  pacman: 
+  apt: 
     name: nfs-utils
     state: latest
 

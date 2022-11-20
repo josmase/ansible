@@ -1,5 +1,3 @@
----
-
 roles:
   - gantsign.antigen
   - sdarwin.vnc
