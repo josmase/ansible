@@ -1,0 +1,5 @@
+hostname: rancher.local.hejsan.xyz
+ingress:
+  tls:
+    source: local-hejsan-xyz
+bootstrapPassword: password
