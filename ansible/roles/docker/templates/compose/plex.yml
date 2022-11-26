@@ -9,11 +9,7 @@ services:
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/plex:/config"
-      - "{{ storage_dir }}/files/movies:/movies"
-      - "{{ storage_dir }}/files/series:/series"
-      - "{{ storage_dir }}/files/photos:/photos"
-      #- "{{ storage_dir }}/files/plex/transcode:/config/transcode"
-      - "{{ storage_dir }}/files/plex/tmp:/tmp"
+      - "{{ storage_dir }}/files/:{{ storage_dir }}/files/"
     restart: always
     network_mode: host
 

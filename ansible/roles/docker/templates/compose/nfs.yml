@@ -10,7 +10,8 @@ services:
       - PUID={{ main_gid }}
       - GUID={{ main_uid }}
       - TZ={{ timezone }}
-      - NFS_EXPORT_0={{ nfs_share }} *(rw,no_subtree_check,fsid=0)
+      - NFS_DISABLE_VERSION_3=true
+      - NFS_EXPORT_0={{ nfs_share }} *(rw,no_subtree_check,all_squash,anonuid=1001,anongid=1001,fsid=0)
     volumes:
       - "{{ storage_dir }}:{{ nfs_share }}"
       - "/lib/modules:/lib/modules:ro"

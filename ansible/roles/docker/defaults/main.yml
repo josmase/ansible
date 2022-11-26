@@ -1,6 +1,9 @@
 docker_compose_dir: /opt/docker
 script_dir: "{{ docker_compose_dir }}/scripts"
 
+cloudflare_api_key: "{{ vault_cloudflare_api_key }}"
+cloudflare_zone: "{{ vault_cloudflare_zone }}"
+
 script_templates:
   - common
   - down

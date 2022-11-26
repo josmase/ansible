@@ -1,10 +1,10 @@
 docker_templates:
-  - emby
+  - cloudflare
+  - swag
   - home-assistant
   - ombi
-  - plex
-  - swag
-  - vpn
+  - emby
   - jellyfin
+  - plex
+  - vpn
   - tdarr
-  - monitoring

@@ -9,8 +9,7 @@ services:
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/jellyfin:/config"
-      - "{{ storage_dir }}/files/series:/data/tvshows"
-      - "{{ storage_dir }}/files/movies:/data/movies"
+      - "{{ storage_dir }}/files/:{{ storage_dir }}/files/"
     ports:
       - 8096:8096
     restart: always

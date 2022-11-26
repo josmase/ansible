@@ -16,8 +16,8 @@ chown -R 472:472 "${appdata_path}/grafana"
 source "${script_dir}/start.sh"
 
 #These are to fix permission errors caused by restarting somehting that is writing to downloads. Not sure what.
-chown -R {{ main_username }}:{{ main_groupname }} "${downloads_dir}"
-chmod -R 755 "${downloads_dir}"
+#chown -R {{ main_username }}:{{ main_groupname }} "${downloads_dir}"
+#chmod -R 755 "${downloads_dir}"
 
 #There is an issue with EasyAudioEncoder and removing all codecs and restarting solves it for a while.
 rm -r "${appdata_path}/plex/Library/Application Support/Plex Media Server/Codecs/*" && docker restart plex

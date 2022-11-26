@@ -10,9 +10,9 @@ services:
       - 9091:9091 #transmission 
       - 7878:7878 #radarr
       - 8989:8989 #sonarr 
-      - 9117:9117 #jackett
-      - 6767:6767 #bazarr
       - 8787:8787 #readarr
+      - 9696:9696 #prowlarr
+      - 6767:6767 #bazarr
     environment:
       - PUID={{ main_gid }}
       - GUID={{ main_uid }}
@@ -35,7 +35,7 @@ services:
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/transmission/config:/config"
-      - "{{ storage_dir }}/downloads/:/downloads"
+      - "{{ storage_dir }}/downloads/:{{ storage_dir }}/downloads/"
     restart: always
 
   radarr:
@@ -48,8 +48,7 @@ services:
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/radarr:/config"
-      - "{{ storage_dir }}/files/movies:/movies"
-      - "{{ storage_dir }}/downloads/complete/movies:/downloads/complete/movies"
+      - "{{ storage_dir }}:{{ storage_dir }}"
     restart: always
 
   sonarr:
@@ -62,34 +61,7 @@ services:
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/sonarr:/config"
-      - "{{ storage_dir }}/files/series:/media"
-      - "{{ storage_dir }}/downloads/complete/series:/downloads/complete/series"
-    restart: always
-
-  jackett:
-    image: linuxserver/jackett
-    container_name: jackett
-    network_mode: service:vpn
-    environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
-      - TZ={{ timezone }}
-    volumes:
-      - "{{ appdata_path }}/jackett:/config"
-    restart: always
-
-  bazarr:
-    image: linuxserver/bazarr
-    container_name: bazarr
-    network_mode: service:vpn
-    environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
-      - TZ={{ timezone }}
-    volumes:
-      - "{{ appdata_path }}/bazarr:/config"
-      - "{{ storage_dir }}/files/movies:/movies"
-      - "{{ storage_dir }}/files/series:/tv"
+      - "{{ storage_dir }}:{{ storage_dir }}"
     restart: always
 
   readarr:
@@ -102,8 +74,32 @@ services:
       - TZ={{ timezone }}
     volumes:
       - "{{ appdata_path }}/readarr:/config"
-      - "{{ storage_dir }}/files/books:/books"
-      - "{{ storage_dir }}/downloads/complete/books:/downloads/complete/books"
+      - "{{ storage_dir }}:{{ storage_dir }}"
+    restart: always
+
+  prowlarr:
+    image: linuxserver/prowlarr:develop
+    container_name: prowlarr
+    network_mode: service:vpn
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/prowlarr:/config"
+    restart: always
+
+  bazarr:
+    image: linuxserver/bazarr
+    container_name: bazarr
+    network_mode: service:vpn
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ appdata_path }}/bazarr:/config"
+      - "{{ storage_dir }}/files:{{ storage_dir }}/files"
     restart: always
 
 
