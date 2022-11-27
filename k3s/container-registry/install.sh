@@ -12,6 +12,10 @@ echo $SHA >> ./auth/registry-creds.txt
 docker run --entrypoint htpasswd httpd:2 -Bbn admin $SHA > ./auth/htpasswd
 
 helm repo add twuni https://helm.twun.io && helm repo update
-helm install -f values.yaml docker-registry twuni/docker-registry --set secrets.htpasswd=$(cat ./auth/htpasswd)
+helm upgrade --install \
+  --values=values.yaml \
+  --set secrets.htpasswd=$(cat ./auth/htpasswd) \
+  --wait docker-registry twuni/docker-registry 
+
 kubectl rollout status deploy/docker-registry
 kubectl apply -f ./ingress.yaml

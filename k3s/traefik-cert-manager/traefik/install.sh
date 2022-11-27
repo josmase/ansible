@@ -18,7 +18,10 @@ read -n 1 -s
 kubectl apply -f ./namespace.yaml
 
 helm repo add traefik https://helm.traefik.io/traefik && helm repo update
-helm install --namespace=traefik traefik traefik/traefik --values=values.yaml
+helm upgrade --install \
+  --create-namespace --namespace=traefik  \
+  --values=values.yaml \
+  --wait traefik traefik/traefik 
 
 kubectl apply -f default-headers.yaml -f dashboard/secret-dashboard.yaml -f dashboard/middleware.yaml -f ingress.yaml
 

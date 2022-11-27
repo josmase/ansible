@@ -4,7 +4,12 @@ set -e
 
 helm repo add rancher-stable https://releases.rancher.com/server-charts/stable && helm repo update
 kubectl apply -f ./namespace.yaml
-helm install rancher rancher-stable/rancher --namespace cattle-system -f values.yaml
+
+helm upgrade --install \
+  --create-namespace  --namespace cattle-system \
+  --values=values.yaml \
+  --wait rancher rancher-stable/rancher
+
 kubectl -n cattle-system rollout status deploy/rancher
 
 
