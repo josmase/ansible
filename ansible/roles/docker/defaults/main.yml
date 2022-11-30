@@ -6,7 +6,7 @@ cloudflare_zone: "{{ vault_cloudflare_zone }}"
 
 script_templates:
   - common
-  - down
+  - stop
   - maintenance
   - start
   - update
