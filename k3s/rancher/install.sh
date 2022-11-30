@@ -3,7 +3,6 @@
 set -e
 
 helm repo add rancher-stable https://releases.rancher.com/server-charts/stable && helm repo update
-kubectl apply -f ./namespace.yaml
 
 helm upgrade --install \
   --create-namespace  --namespace cattle-system \
