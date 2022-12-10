@@ -1,5 +1,5 @@
 #!/bin/bash
-SCRIPT_DIR={{ SCRIPT_DIR }}
+SCRIPT_DIR={{ script_dir }}
 
 
 source "${SCRIPT_DIR}/common.sh"

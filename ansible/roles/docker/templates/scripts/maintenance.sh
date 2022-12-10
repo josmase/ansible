@@ -1,12 +1,12 @@
 #!/bin/bash
 BACKUP_PATH={{ storage_dir }}/backups
-APPDATA_PATH={{ APPDATA_PATH }}
-SCRIPT_DIR={{ SCRIPT_DIR }}
+APPDATA_PATH={{ appdata_path }}
+SCRIPT_DIR={{ script_dir }}
 DOWNLOADS_DIR={{ storage_dir }}/downloads
 
 echo =====================  $(date)  ==============================================
 source "${SCRIPT_DIR}/update.sh"
-source "${SCRIPT_DIR}/down.sh"
+source "${SCRIPT_DIR}/stop.sh"
 
 #rsync -aP --delete "${APPDATA_PATH}" "${BACKUP_PATH}"
 
