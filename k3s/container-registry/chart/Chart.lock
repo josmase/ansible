@@ -1,0 +1,12 @@
+dependencies:
+- name: docker-registry
+  repository: https://helm.twun.io
+  version: 2.2.2
+- name: docker-registry-ui
+  repository: https://helm.joxit.dev
+  version: 0.4.3
+- name: dockerconfigjson
+  repository: https://snowplow-devops.github.io/helm-charts
+  version: 0.1.0
+digest: sha256:f31c2cf92d77b18b39c7d3b6dcbd77cb38b7e03acd2a2c255a17a3f6c975d26e
+generated: "2022-12-10T19:39:20.933393632Z"

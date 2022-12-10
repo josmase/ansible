@@ -1,0 +1,16 @@
+ui:
+  domain: ""
+registry:
+  domain: ""
+tls:
+  name: ""
+
+docker-registry-ui:
+  ui:
+    singleRegistry: true
+    title: Registry UI
+    deleteImages: true
+    ingress:
+      enabled: false
+    proxy: false
+    replicas: 3

@@ -1,0 +1,24 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace | quote }}
+  annotations:
+    kubernetes.io/ingress.class: traefik-external
+spec:
+  entryPoints:
+    - websecure
+  routes:
+      - match: Host(`{{ .Values.registry.domain }}`)
+        kind: Rule
+        services:
+          - kind: Service
+            name: {{ .Release.Name }}-docker-registry
+            port: 5000
+        middlewares:
+          - name: {{ .Release.Name }}-cors
+          - name: default-headers
+  
+  tls:
+    secretName: {{ .Values.tls.name | quote }}

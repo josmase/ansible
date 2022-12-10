@@ -1,2 +1,16 @@
-persistence:
-  enabled: false
+ui:
+  domain: registry-ui.local.hejsan.xyz
+registry:
+  domain: registry.local.hejsan.xyz
+tls:
+  name: local-hejsan-xyz-tls
+docker-registry-ui:
+  ui:
+    dockerRegistryUrl: https://registry.local.hejsan.xyz
+docker-registry:
+  persistence:
+    enabled: false
+dockerconfigjson:
+  name: container-registry-secret
+  username: admin
+  server: registry.local.hejsan.xyz
