@@ -12,7 +12,7 @@ source "${SCRIPT_DIR}/stop.sh"
 
 TIME='date +%b-%d-%y'
 FILENAME=appdata-$TIME.tar.gz
-tar -cpzf "${BACKUP_PATH}/${FILENAME}" "${APPDATA_PATH}"
+tar -cvpzf "${BACKUP_PATH}/${FILENAME}" "${APPDATA_PATH}"
 
 
 #Grafana requires UID and GUID 472 since the container doesn't support setting them. This has to be done before starting it.
