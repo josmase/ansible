@@ -1,6 +1,6 @@
 #!/bin/bash
-script_dir={{ script_dir }}
+SCRIPT_DIR={{ SCRIPT_DIR }}
 
 
-source "${script_dir}/common.sh"
-eval "docker-compose ${file_command} down --remove-orphans"
+source "${SCRIPT_DIR}/common.sh"
+eval "docker-compose ${DOCKER_FILE_COMMAND} down --remove-orphans"

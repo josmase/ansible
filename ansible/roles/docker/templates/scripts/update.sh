@@ -1,5 +1,5 @@
 #!/bin/bash
-script_dir={{ script_dir }}
+SCRIPT_DIR={{ SCRIPT_DIR }}
 
-source "${script_dir}/common.sh"
-eval "docker-compose ${file_command} pull"
+source "${SCRIPT_DIR}/common.sh"
+eval "docker-compose ${DOCKER_FILE_COMMAND} pull"

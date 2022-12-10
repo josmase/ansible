@@ -1,9 +1,9 @@
 #!/bin/bash
-script_dir={{ script_dir }}
+SCRIPT_DIR={{ SCRIPT_DIR }}
 
-source "${script_dir}/common.sh"
-echo "$file_command"
-eval "docker-compose ${file_command} up -d --remove-orphans"
+source "${SCRIPT_DIR}/common.sh"
+echo "$DOCKER_FILE_COMMAND"
+eval "docker-compose ${DOCKER_FILE_COMMAND} up -d --remove-orphans"
 
 docker image prune -fa
 docker volume prune -f

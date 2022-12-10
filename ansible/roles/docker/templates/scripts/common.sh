@@ -1,6 +1,6 @@
-docker_compose_dir={{ docker_compose_dir }}
-file_command=""
+DOCKER_COMPOSE_DIR={{ DOCKER_COMPOSE_DIR }}
+DOCKER_FILE_COMMAND=""
 
-for compose_file in $docker_compose_dir/*.yml; do
-    file_command="${file_command} -f ${compose_file}"
+for compose_file in $DOCKER_COMPOSE_DIR/*.yml; do
+    DOCKER_FILE_COMMAND="${DOCKER_FILE_COMMAND} -f ${compose_file}"
 done

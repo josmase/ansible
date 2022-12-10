@@ -1,24 +1,29 @@
 #!/bin/bash
-backup_path={{ storage_dir }}/backups
-appdata_path={{ appdata_path }}
-script_dir={{ script_dir }}
-downloads_dir={{ storage_dir }}/downloads
+BACKUP_PATH={{ storage_dir }}/backups
+APPDATA_PATH={{ APPDATA_PATH }}
+SCRIPT_DIR={{ SCRIPT_DIR }}
+DOWNLOADS_DIR={{ storage_dir }}/downloads
 
 echo =====================  $(date)  ==============================================
-source "${script_dir}/update.sh"
-source "${script_dir}/down.sh"
+source "${SCRIPT_DIR}/update.sh"
+source "${SCRIPT_DIR}/down.sh"
 
-rsync -aP --delete "${appdata_path}" "${backup_path}"
+#rsync -aP --delete "${APPDATA_PATH}" "${BACKUP_PATH}"
+
+TIME='date +%b-%d-%y'
+FILENAME=appdata-$TIME.tar.gz
+tar -cpzf "${BACKUP_PATH}/${FILENAME}" "${APPDATA_PATH}"
+
 
 #Grafana requires UID and GUID 472 since the container doesn't support setting them. This has to be done before starting it.
-chown -R 472:472 "${appdata_path}/grafana"
+chown -R 472:472 "${APPDATA_PATH}/grafana"
 
-source "${script_dir}/start.sh"
+source "${SCRIPT_DIR}/start.sh"
 
 #These are to fix permission errors caused by restarting somehting that is writing to downloads. Not sure what.
-#chown -R {{ main_username }}:{{ main_groupname }} "${downloads_dir}"
-#chmod -R 755 "${downloads_dir}"
+#chown -R {{ main_username }}:{{ main_groupname }} "${DOWNLOADS_DIR}"
+#chmod -R 755 "${DOWNLOADS_DIR}"
 
 #There is an issue with EasyAudioEncoder and removing all codecs and restarting solves it for a while.
-rm -r "${appdata_path}/plex/Library/Application Support/Plex Media Server/Codecs/*" && docker restart plex
+rm -r "${APPDATA_PATH}/plex/Library/Application Support/Plex Media Server/Codecs/*" && docker restart plex
 
