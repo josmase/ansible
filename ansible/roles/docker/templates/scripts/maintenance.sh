@@ -10,7 +10,7 @@ source "${SCRIPT_DIR}/stop.sh"
 
 #rsync -aP --delete "${APPDATA_PATH}" "${BACKUP_PATH}"
 
-TIME='date +%b-%d-%y'
+TIME=$(date +%b-%d-%y)
 FILENAME=appdata-$TIME.tar.gz
 tar -cvpzf "${BACKUP_PATH}/${FILENAME}" "${APPDATA_PATH}"
 
