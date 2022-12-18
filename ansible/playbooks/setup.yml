@@ -34,7 +34,9 @@
         fstype: nfs
         opts: soft,nolock
 
-- hosts: media_server
+- hosts: 
+    - media_server
+    - utilities
   tags:
     - applications
   vars_files:
