@@ -12,19 +12,6 @@ services:
       - "{{ storage_dir }}/files/:{{ storage_dir }}/files/"
     restart: always
     network_mode: host
-
-  kitana:
-    image: pannal/kitana
-    container_name: kitana
-    environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
-      - TZ={{ timezone }}
-    volumes:
-      - "{{ appdata_path }}/kitana:/app/data"
-    ports:
-      - 31337:31337
-    restart: always
     
   tautulli:
     image: linuxserver/tautulli
