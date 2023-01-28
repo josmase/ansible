@@ -5,11 +5,11 @@
     state: present
   loop: "{{ packages }}"
 
-#- name: Get merger fs
-#  become: true
-#  apt:
-#    deb: "{{ merger_fs_src }}"
-#    state: present
+- name: Get merger fs
+  become: true
+  apt:
+    deb: "{{ merger_fs_src }}"
+    state: present
 
 #- name: Create the `aur_builder` user
 #  become: true
