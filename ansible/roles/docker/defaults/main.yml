@@ -1,8 +1,14 @@
+movies_dir: "{{ storage_dir }}/files/movies"
+series_dir: "{{ storage_dir }}/files/series"
+
 docker_compose_dir: /opt/docker
 script_dir: "{{ docker_compose_dir }}/scripts"
 
 cloudflare_api_key: "{{ vault_cloudflare_api_key }}"
 cloudflare_zone: "{{ vault_cloudflare_zone }}"
+
+sonarr_api_key: "{{ vault_sonarr_api_key }}"
+radarr_api_key: "{{ vault_radarr_api_key }}"
 
 script_templates:
   - common

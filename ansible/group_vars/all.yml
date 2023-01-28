@@ -7,6 +7,11 @@ timezone: Europe/Stockholm
 
 ansible_sudo_pass: "{{ vault_default_sudo_pass }}"
 
+email: "{{ vault_email }}"
+
+local_domain: "{{ vault_local_domain }}"
+media_server_domain: "media.{{ local_domain }}"
+
 appdata_path: /opt/appdata
 mount_dir: /mnt/drives
 storage_dir: /mnt/storage
