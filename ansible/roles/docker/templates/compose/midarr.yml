@@ -5,18 +5,15 @@ services:
     ports:
       - 4000:4000
     volumes:
-#       Database path
-      - "{{ appdata_path }}:/app/database"
-
-#       Media path
+      - "{{ appdata_path }}/midarr:/app/database"
       - "{{ movies_dir }}:{{ movies_dir }}"
       - "{{ series_dir }}:{{ series_dir }}"
-
     environment:
 #       App config
       - APP_URL=http://{{ media_server_domain }}:4000
 
 #       Admin account
+
       - SETUP_ADMIN_EMAIL={{ email }}
       - SETUP_ADMIN_NAME=admin
       - SETUP_ADMIN_PASSWORD=somepassword # minimum length 12
