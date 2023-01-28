@@ -15,8 +15,9 @@
 - name: Enable timer
   become: true
   systemd:
-    name: "{{ item }}"
+    name: "{{ item }}.timer"
     enabled: yes
+    state: started
     daemon-reload: yes
   loop: "{{ timers }}"
 
