@@ -1,21 +1,26 @@
 This repo contains code for setting up my own media server, network configuration and stuff.
 
 
-# Finding drives
+# Adding a new drive
 
-`lsblk |awk 'NR==1{print $0" DEVICE-ID(S)"}NR>1{dev=$1;printf $0" ";system("find /dev/disk/by-id -lname \"*"dev"\" -printf \" %p\"");print "";}'|grep -v -E 'part|lvm'`
+Find the drive, add it to the vm, format it.
 
-# Adding drive to VM
+## Finding drives
 
-Edit the VM using `virsh edit VMNAME` and add the below XML
 
-```xml
-    <disk type='block' device='disk'>
-        <driver name='qemu' type='raw'/>
-        <source dev='/dev/disk/by-id/DISK_ID'/>
-        <target dev='vdc' bus='virtio'/>
-    </disk>
+```sh
+ls -la /dev/disk/by-id
+qm set $VM_ID -scsi$DRIVE_NUMBER /dev/disks/by-id/$DRIVE_ID
 ```
 
-Apply the change `virsh define /etc/libvirt/qemu/VMNAME.xml`
+## Use GPT with LUKS encrypted XFS partition
+
+```sh
+DRIVE="some drive name to use"
+lsblk -o NAME,UUID,FSTYPE,SIZE --json
+sudo sgdisk -n 1:0:0 /dev/$DRIVE
+sudo cryptsetup luksFormat /dev/${DRIVE}1 --key-file ./keyfile
+sudo cryptsetup luksOpen /dev/${DRIVE}1 ${DRIVE}1 --key-file ./keyfile
+sudo mkfs.xfs /dev/mapper/${DRIVE}1
+```
 
