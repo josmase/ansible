@@ -46,6 +46,8 @@ services:
       - PUID={{ main_uid }}
       - PGID={{ main_gid }}
       - TZ={{ timezone }}
+      - DOCKER_MODS=ghcr.io/gilbn/theme.park:sonarr
+      - TP_THEME=overseerr
     volumes:
       - "{{ appdata_path }}/radarr:/config"
       - "{{ storage_dir }}:{{ storage_dir }}"
@@ -59,21 +61,10 @@ services:
       - PUID={{ main_uid }}
       - PGID={{ main_gid }}
       - TZ={{ timezone }}
+      - DOCKER_MODS=ghcr.io/gilbn/theme.park:sonarr
+      - TP_THEME=overseerr
     volumes:
       - "{{ appdata_path }}/sonarr:/config"
-      - "{{ storage_dir }}:{{ storage_dir }}"
-    restart: always
-
-  readarr:
-    image: linuxserver/readarr:nightly
-    container_name: readarr
-    network_mode: service:vpn
-    environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
-      - TZ={{ timezone }}
-    volumes:
-      - "{{ appdata_path }}/readarr:/config"
       - "{{ storage_dir }}:{{ storage_dir }}"
     restart: always
 
