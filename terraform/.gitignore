@@ -1,6 +1,9 @@
 # Secrets file
 .env.secrets.sh
 
+# Ignore log files
+**/*.log
+
 # Local .terraform directories
 **/.terraform/*
 

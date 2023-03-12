@@ -2,6 +2,7 @@ variable "proxmox_host" {
   description = "Ip address or hostname of the proxmox machine"
   type        = string
 }
+
 variable "proxmox_node" {
   description = "Name of the proxmox node"
   type        = string

@@ -32,7 +32,7 @@ resource "proxmox_vm_qemu" "virtual_machines" {
     rate     = 0
     firewall = each.value.network_firewall
   }
-  
+
   lifecycle {
     ignore_changes = [
       network,
