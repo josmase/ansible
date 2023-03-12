@@ -36,32 +36,18 @@ locals {
   })
 
   machine_map = {
-    machines = {
-      master-211 = merge(local.kubernetes_master, {
-        name       = "master-211"
-        ip_address = "${local.subnet}.211"
-      })
-      master-212 = merge(local.kubernetes_master, {
-        name       = "master-212"
-        ip_address = "${local.subnet}.212"
-      })
-      master-213 = merge(local.kubernetes_master, {
-        name       = "master-213"
-        ip_address = "${local.subnet}.213"
-      })
-      node-214 = merge(local.kubernetes_node, {
-        name       = "node-214"
-        ip_address = "${local.subnet}.214"
-      })
-      node-215 = merge(local.kubernetes_node, {
-        name       = "node-215"
-        ip_address = "${local.subnet}.215"
-      })
-      node-216 = merge(local.kubernetes_node, {
-        name       = "node-216"
-        ip_address = "${local.subnet}.216"
-      })
-    }
+    machines = merge(
+      { for machine_id in [201, 202, 203] : machine_id => merge(local.kubernetes_master, {
+        id         = machine_id
+        name       = "master-${machine_id}"
+        ip_address = "${local.subnet}.${machine_id}"
+      }) },
+      { for machine_id in [204, 205, 206] : machine_id => merge(local.kubernetes_node, {
+        id         = machine_id
+        name       = "node-${machine_id}"
+        ip_address = "${local.subnet}.${machine_id}"
+      }) }
+    )
   }
 
   machines = lookup(local.machine_map, "machines", {})
