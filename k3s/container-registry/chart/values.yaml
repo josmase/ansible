@@ -2,8 +2,18 @@ ui:
   domain: ""
 registry:
   domain: ""
+  persistance:
+    size: ""
+    name: ""
+    server: ""
+    path: ""
 tls:
   name: ""
+
+docker-registry:
+  persistence:
+    accessMode: ReadWriteOnce
+    storageClass: ""
 
 docker-registry-ui:
   ui:

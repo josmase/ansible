@@ -1,15 +1,22 @@
 ui:
   domain: registry-ui.local.hejsan.xyz
-registry:
-  domain: registry.local.hejsan.xyz
 tls:
   name: local-hejsan-xyz-tls
+registry:
+  domain: registry.local.hejsan.xyz
+  persistance:
+    size: 10Gi
+    name: container-registry
+    server: storage.local.hejsan.xyz
+    path: /kubernetes
+docker-registry:
+  persistence:
+    enabled: true
+    size: 5Gi
+    existingClaim: container-registry
 docker-registry-ui:
   ui:
     dockerRegistryUrl: https://registry.local.hejsan.xyz
-docker-registry:
-  persistence:
-    enabled: false
 dockerconfigjson:
   name: container-registry-secret
   username: admin

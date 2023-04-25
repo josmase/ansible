@@ -2,7 +2,7 @@
   vars_files:
     - ../vars/vault.yml
   vars:
-    git_email: "{{ vault_git_email }}"
+    git_email: "{{ email }}"
     git_name: Jonas Lundberg
   tasks:
     - name: create install directory

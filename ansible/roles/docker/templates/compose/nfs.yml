@@ -1,4 +1,5 @@
 version: "3.7"
+
 services:
   nfs:
     image: erichough/nfs-server
@@ -11,7 +12,9 @@ services:
       - GUID={{ main_uid }}
       - TZ={{ timezone }}
       - NFS_DISABLE_VERSION_3=true
-      - NFS_EXPORT_0={{ nfs_share }} *(rw,no_subtree_check,all_squash,anonuid=1001,anongid=1001,fsid=0)
+      - NFS_EXPORT_0={{ nfs_share }} *(fsid=0,rw,sync,no_subtree_check,no_root_squash,all_squash,anonuid=1000,anongid=1000)
+      - NFS_EXPORT_1={{ nfs_share }}/files *(fsid=1,rw,sync,no_subtree_check,no_root_squash,all_squash,anonuid=1000,anongid=1000)
+      - NFS_EXPORT_2={{ nfs_share }}/kubernetes *(fsid=2,rw,sync,no_subtree_check,no_root_squash,all_squash,anonuid=1000,anongid=1000)
     volumes:
       - "{{ storage_dir }}:{{ nfs_share }}"
       - "/lib/modules:/lib/modules:ro"

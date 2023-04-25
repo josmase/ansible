@@ -1,5 +1,6 @@
 - hosts: 
     - media_server
+    - nfs_server
     - utilities
   tags:
     - applications

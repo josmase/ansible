@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  capacity:
+    storage: {{ .Values.registry.persistance.size | quote }}
+  accessModes:
+    - ReadWriteOnce
+  nfs:
+    server: {{ .Values.registry.persistance.server | quote }}
+    path: {{ .Values.registry.persistance.path | quote }}
+    readOnly: false
+  persistentVolumeReclaimPolicy: Retain
+  volumeMode: Filesystem
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.registry.persistance.name | quote }}
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeName: {{ .Release.Name }}
+  volumeMode: Filesystem
+  storageClassName: ''
+  resources:
+    requests:
+      storage: {{ .Values.registry.persistance.size | quote }}

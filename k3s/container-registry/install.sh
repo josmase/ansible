@@ -5,11 +5,13 @@ set -e
 export SHA=$(head -c 16 /dev/urandom | shasum | cut -d " " -f 1)
 export USER=admin
 
-#mkdir -p ./auth
-#echo $USER > ./auth/registry-creds.txt
-#echo $SHA >> ./auth/registry-creds.txt
+if [ ! -f ./auth/registry-creds.txt ]; then
+  mkdir -p ./auth
+  echo $USER > ./auth/registry-creds.txt
+  echo $SHA >> ./auth/registry-creds.txt
 
-#docker run --entrypoint htpasswd httpd:2 -Bbn admin $SHA > ./auth/htpasswd
+  docker run --entrypoint htpasswd httpd:2 -Bbn admin $SHA > ./auth/htpasswd
+fi
 
 helm upgrade --install \
   --values=values.yaml \
