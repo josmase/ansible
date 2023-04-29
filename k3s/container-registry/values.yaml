@@ -10,6 +10,8 @@ registry:
     server: storage.local.hejsan.xyz
     path: /kubernetes
 docker-registry:
+  proxy:
+    enabled: true
   persistence:
     enabled: true
     size: 5Gi
