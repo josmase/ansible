@@ -1,5 +1,4 @@
 docker_templates:
-  - cloudflare
   - swag
   - home-assistant
   - ombi
