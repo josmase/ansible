@@ -22,6 +22,6 @@ helm upgrade --install \
   --values=values.yaml \
   --wait traefik traefik/traefik 
 
-kubectl apply -f default-headers.yaml -f dashboard/secret-dashboard.yaml -f dashboard/middleware.yaml -f dashboard/ingress.yaml
+kubectl apply -f default-headers.yaml -f dashboard
 
    

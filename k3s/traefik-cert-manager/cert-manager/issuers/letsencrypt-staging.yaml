@@ -14,8 +14,8 @@ spec:
           cloudflare:
             email: lundbergjonas96@gmail.com
             apiTokenSecretRef:
-              name: cloudflare-token-secret
-              key: cloudflare-token
+              name: cloudflare
+              key: hejsan-xyz-edit
         selector:
           dnsZones:
             - "hejsan.xyz"
