@@ -8,9 +8,8 @@ echo =====================  $(date)  ===========================================
 source "${SCRIPT_DIR}/update.sh"
 source "${SCRIPT_DIR}/stop.sh"
 
-#rsync -aP --delete "${APPDATA_PATH}" "${BACKUP_PATH}"
 
-TIME=$(date +%b-%d-%y)
+TIME=$(date +%Y-%m-%d_%T)
 FILENAME=appdata-$TIME.tar.gz
 tar -cvpzf "${BACKUP_PATH}/${FILENAME}" "${APPDATA_PATH}"
 
