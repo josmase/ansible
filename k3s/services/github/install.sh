@@ -1,7 +1,7 @@
 #!/bin/bash
 #Exit on error
 set -e
-
+#This should be a PAT from https://github.com/settings/tokens/new
 TOKEN=$(cat ./secret/token)
 
 helm repo add actions-runner-controller https://actions-runner-controller.github.io/actions-runner-controller && helm repo update

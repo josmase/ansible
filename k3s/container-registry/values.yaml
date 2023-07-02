@@ -5,16 +5,16 @@ tls:
 registry:
   domain: registry.local.hejsan.xyz
   persistance:
-    size: 10Gi
+    size: 1000Gi
     name: container-registry
     server: storage.local.hejsan.xyz
-    path: /kubernetes
+    path: /kubernetes/container-registry
 docker-registry:
   proxy:
     enabled: true
   persistence:
     enabled: true
-    size: 5Gi
+    size: 1000Gi
     existingClaim: container-registry
 docker-registry-ui:
   ui:
