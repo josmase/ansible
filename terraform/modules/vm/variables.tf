@@ -35,13 +35,9 @@ variable "virtual_machines" {
     cloud_init_pass     = string
     automatic_reboot    = bool
     dns_servers         = string
-    storage_dev         = string
-    disk_type           = string
-    storage             = string
-    network_bridge_type = string
     network_model       = string
+    network_bridge_type = string
     network_firewall    = bool
-
   }))
   default     = {}
   description = "Identifies the object of virtual machines."

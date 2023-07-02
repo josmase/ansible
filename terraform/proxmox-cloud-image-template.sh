@@ -1,22 +1,30 @@
 #!/bin/bash
 
-if [[ -z "${1}" || -z "${2}" ]]; then
-    echo "Usage: $0 <proxmox storage name> <template name>"
+if [[  -z "${1}" || -z "${2}" || -z "${3}" || -z "${4}" ]]; then
+    echo "Usage: $0 <id> <proxmox storage name> <template name> <disk size>"
     exit 1
 fi
 
-volumeName=$1
-templateName=$2
+virtualMachineId=$1
+volumeName=$2
+templateName=$3
+diskSize=$4
 imageURL=https://cloud-images.ubuntu.com/lunar/current/lunar-server-cloudimg-amd64.img
-imageName="lunar-server-cloudimg-amd64.img"
-virtualMachineId="9000"
+imageName="lunar-server-cloudimg-amd64-$diskSize.img"
 tmp_cores="2"
 tmp_memory="2048"
 
-
+#Cleanup
 rm $imagename
-wget -O $imageName $imageURL
+wget $imageURL -O $imageName
 qm destroy $virtualMachineId
+
+#Increase root disk size
+qemu-img resize $imageName "+$diskSize"
+virt-customize -a $imagename --install cloud-guest-utils
+virt-customize -a $imagename --run-command growpart /dev/vda 1
+
+#Continue with normal install
 virt-customize -a $imageName --install qemu-guest-agent
 qm create $virtualMachineId --name $templateName --memory $tmp_memory --cores $tmp_cores --net0 virtio,bridge=vmbr0
 qm importdisk $virtualMachineId $imageName $volumeName

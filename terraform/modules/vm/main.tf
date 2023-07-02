@@ -18,12 +18,7 @@ resource "proxmox_vm_qemu" "virtual_machines" {
   cipassword       = each.value.cloud_init_pass
   automatic_reboot = each.value.automatic_reboot
   nameserver       = each.value.dns_servers
-
-  disk {
-    storage = each.value.storage_dev
-    type    = each.value.disk_type
-    size    = each.value.storage
-  }
+  scsihw           = "virtio-scsi-pci"
 
   network {
     bridge   = each.value.network_bridge_type

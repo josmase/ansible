@@ -2,24 +2,22 @@ locals {
   subnet = "192.168.0"
 
   base_machine = {
-    target_node         = var.proxmox_node
-    qemu_os             = "other"
-    os_type             = "cloud-init"
-    full_clone          = true
-    template            = var.ubuntu_template
-    cores               = 2
-    socket              = 1
-    memory              = 2048
-    storage             = "20G"
-    gateway             = "${local.subnet}.1"
-    ssh_user            = "ubuntu"
-    public_ssh_key      = var.public_ssh_key
-    disk_type           = "virtio"
-    storage_dev         = var.proxmox_storage
-    network_bridge_type = "vmbr0"
+    target_node      = var.proxmox_node
+    qemu_os          = "other"
+    os_type          = "cloud-init"
+    full_clone       = true
+    template         = var.ubuntu_template_20G
+    cores            = 2
+    socket           = 1
+    memory           = 2048
+    gateway          = "${local.subnet}.1"
+    ssh_user         = "ubuntu"
+    public_ssh_key   = var.public_ssh_key
+    cloud_init_pass  = var.cloud_init_pass
+    automatic_reboot = true
+
     network_model       = "virtio"
-    cloud_init_pass     = "somepassword"
-    automatic_reboot    = true
+    network_bridge_type = "vmbr0"
     network_firewall    = false
     dns_servers         = "1.1.1.1 1.0.0.1 192.168.0.1 127.0.0.1"
   }
@@ -33,25 +31,26 @@ locals {
     description = "Kubernetes node"
     cores       = 2
     memory      = 4096
-    storage     = "300G"
+    template    = var.ubuntu_template_300G
+
   })
 
   machine_map = {
     machines = merge(
       { for machine_id in [201, 202, 203] : machine_id => merge(local.kubernetes_master, {
         id         = machine_id
-        name       = "master-${machine_id}"
+        name       = "kubernetes-master-${machine_id}"
         ip_address = "${local.subnet}.${machine_id}"
       }) },
       { for machine_id in [204, 205, 206] : machine_id => merge(local.kubernetes_node, {
         id         = machine_id
-        name       = "node-${machine_id}"
+        name       = "kubernetes-node-${machine_id}"
         ip_address = "${local.subnet}.${machine_id}"
       }) },
       { 105 = merge(local.base_machine, {
         id          = "105"
         name        = "media-server"
-        storage     = "150G"
+        template    = var.ubuntu_template_300G
         memory      = 8192
         description = "Main media server for stuff that is not yet running in kubernetes"
         ip_address  = "${local.subnet}.105"
