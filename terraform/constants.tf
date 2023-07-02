@@ -32,7 +32,8 @@ locals {
   kubernetes_node = merge(local.base_machine, {
     description = "Kubernetes node"
     cores       = 2
-    storage = "300G"
+    memory      = 4096
+    storage     = "300G"
   })
 
   machine_map = {
