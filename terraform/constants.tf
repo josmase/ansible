@@ -14,7 +14,7 @@ locals {
     gateway             = "${local.subnet}.1"
     ssh_user            = "ubuntu"
     public_ssh_key      = var.public_ssh_key
-    disk_type           = "scsi"
+    disk_type           = "virtio"
     storage_dev         = var.proxmox_storage
     network_bridge_type = "vmbr0"
     network_model       = "virtio"
