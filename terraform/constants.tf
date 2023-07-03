@@ -50,6 +50,7 @@ locals {
       { 105 = merge(local.base_machine, {
         id          = "105"
         name        = "media-server"
+        cores       = 10
         template    = var.ubuntu_template_300G
         memory      = 8192
         description = "Main media server for stuff that is not yet running in kubernetes"
