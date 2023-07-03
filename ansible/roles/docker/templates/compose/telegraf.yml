@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   telegraf:
-    image: telegraf:latest
+    image: {{ docker_registry_domain }}/telegraf:latest
     container_name: telegraf
     environment:
       - PUID={{ main_gid }}

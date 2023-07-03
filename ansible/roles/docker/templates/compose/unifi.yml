@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   unifi:
-    image: linuxserver/unifi-controller
+    image: {{ docker_registry_domain }}/linuxserver/unifi-controller
     container_name: unifi
     environment:
       - PUID={{ main_uid }}

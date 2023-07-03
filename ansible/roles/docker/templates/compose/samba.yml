@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   samba:
-    image: dperson/samba
+    image: {{ docker_registry_domain }}/dperson/samba
     container_name: samba
     environment:
       - GROUPID={{ main_gid }}

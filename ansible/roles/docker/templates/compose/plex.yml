@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   plex:
-    image: linuxserver/plex
+    image: {{ docker_registry_domain }}/linuxserver/plex
     container_name: plex
     environment:
       - PUID={{ main_uid }}
@@ -14,7 +14,7 @@ services:
     network_mode: host
     
   tautulli:
-    image: linuxserver/tautulli
+    image: {{ docker_registry_domain }}/linuxserver/tautulli
     container_name: tautulli
     environment:
       - PUID={{ main_uid }}

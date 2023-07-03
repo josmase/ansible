@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   swag:
-    image: linuxserver/swag
+    image: {{ docker_registry_domain }}/linuxserver/swag
     container_name: swag
     environment:
       - EMAIL=josnase@gmail.com

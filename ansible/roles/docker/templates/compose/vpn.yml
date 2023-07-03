@@ -2,7 +2,7 @@ version: "3.7"
 services:
   vpn:
     container_name: vpn
-    image: qmcgaw/gluetun:latest
+    image: {{ docker_registry_domain }}/qmcgaw/gluetun:latest
     restart: always
     cap_add:
       - net_admin
@@ -27,7 +27,7 @@ services:
 
   transmission:
     container_name: transmission
-    image: linuxserver/transmission
+    image: {{ docker_registry_domain }}/linuxserver/transmission
     network_mode: service:vpn
     environment:
       - PUID={{ main_uid }}
@@ -39,14 +39,14 @@ services:
     restart: always
 
   radarr:
-    image: linuxserver/radarr
+    image: {{ docker_registry_domain }}/linuxserver/radarr
     container_name: radarr
     network_mode: service:vpn
     environment:
       - PUID={{ main_uid }}
       - PGID={{ main_gid }}
       - TZ={{ timezone }}
-      - DOCKER_MODS=ghcr.io/gilbn/theme.park:sonarr
+      - DOCKER_MODS=registry.local.hejsan.xyz/gilbn/theme.park:sonarr
       - TP_THEME=overseerr
     volumes:
       - "{{ appdata_path }}/radarr:/config"
@@ -54,14 +54,14 @@ services:
     restart: always
 
   sonarr:
-    image: linuxserver/sonarr
+    image: {{ docker_registry_domain }}/linuxserver/sonarr
     container_name: sonarr
     network_mode: service:vpn
     environment:
       - PUID={{ main_uid }}
       - PGID={{ main_gid }}
       - TZ={{ timezone }}
-      - DOCKER_MODS=ghcr.io/gilbn/theme.park:sonarr
+      - DOCKER_MODS=registry.local.hejsan.xyz/gilbn/theme.park:sonarr
       - TP_THEME=overseerr
     volumes:
       - "{{ appdata_path }}/sonarr:/config"
@@ -69,7 +69,7 @@ services:
     restart: always
 
   prowlarr:
-    image: linuxserver/prowlarr:develop
+    image: {{ docker_registry_domain }}/linuxserver/prowlarr:develop
     container_name: prowlarr
     network_mode: service:vpn
     environment:
@@ -81,7 +81,7 @@ services:
     restart: always
 
   bazarr:
-    image: linuxserver/bazarr
+    image: {{ docker_registry_domain }}/linuxserver/bazarr
     container_name: bazarr
     network_mode: service:vpn
     environment:

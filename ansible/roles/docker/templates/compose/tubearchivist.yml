@@ -1,0 +1,79 @@
+services:
+  tubearchivist:
+    container_name: tubearchivist
+    restart: unless-stopped
+    image: {{ docker_registry_domain }}/bbilly1/tubearchivist
+    ports:
+      - 8000:8000
+    volumes:
+      - media:/youtube
+      - cache:/cache
+    environment:
+      - ES_URL=http://archivist-es:9200     
+      - REDIS_HOST=archivist-redis         
+      - TA_HOST=tubearchivist.media.local.hejsan.xyz         
+      - TA_USERNAME=tubearchivist          
+      - TA_PASSWORD=verysecret             
+      - ELASTIC_PASSWORD=verysecret   
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}      
+      - HOST_UID={{ main_uid }}
+      - HOST_GID={{ main_gid }}
+      - TZ={{ timezone }}            
+    depends_on:
+      - archivist-es
+      - archivist-redis
+  archivist-redis:
+    image: {{ docker_registry_domain }}/redis/redis-stack-server
+    container_name: archivist-redis
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - redis:/data
+    depends_on:
+      - archivist-es
+  archivist-es:
+    image: {{ docker_registry_domain }}/bbilly1/tubearchivist-es         
+    container_name: archivist-es
+    restart: unless-stopped
+    environment:
+      - "ELASTIC_PASSWORD=verysecret"      
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "xpack.security.enabled=true"
+      - "discovery.type=single-node"
+      - "path.repo=/usr/share/elasticsearch/data/snapshot"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es:/usr/share/elasticsearch/data    
+    expose:
+      - "9200"
+
+volumes:
+  media:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '{{ storage_dir }}/files/youtube'
+  cache:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '{{ appdata_path }}/tubearchivist/cache'
+  redis:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '{{ appdata_path }}/tubearchivist/redis'
+  es:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: '{{ appdata_path }}/tubearchivist/es'

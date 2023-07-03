@@ -32,11 +32,13 @@
     enabled: yes
     daemon-reload: yes
 
-- name: Delete any existing docker template directory
-  become: true
-  file:
-    state: absent
-    path: "{{ docker_compose_dir }}"
+- name: Log into private registry and force re-authorization
+  community.docker.docker_login:
+    registry_url: "{{ docker_registry_domain }}"
+    username: "{{ docker_registry_user }}"
+    password: "{{ docker_registry_password }}"
+    reauthorize: true
+    validate_certs: true
 
 - name: Create docker template directory
   become: true
@@ -45,6 +47,18 @@
     state: directory
     owner: "{{ main_username }}"
     group: "{{ main_groupname }}"
+
+- name: Find all docker templates
+  find:
+    paths: "{{ docker_compose_dir }}"
+    patterns: "*.yml"
+  register: existing_docker_templates
+
+- name: Delete all existing templates
+  file:
+    path: "{{ item['path'] }}"
+    state: absent
+  with_items: "{{ existing_docker_templates['files'] }}"
 
 - name: Deploy compose templates
   become: true
