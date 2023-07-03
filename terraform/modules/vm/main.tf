@@ -32,6 +32,7 @@ resource "proxmox_vm_qemu" "virtual_machines" {
   lifecycle {
     ignore_changes = [
       network,
+      disk
     ]
   }
 }
