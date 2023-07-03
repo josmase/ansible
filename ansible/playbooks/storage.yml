@@ -3,3 +3,34 @@
     - ../vars/vault.yml
   roles:
     - filesystem
+
+- hosts: nfs_server
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - docker
+
+- hosts: nfs_client
+  vars_files:
+    - ../vars/vault.yml
+  tasks:
+    - name: install nfs-utils
+      become: true
+      apt: 
+        name: nfs-common
+        state: latest
+    
+    - name: create install directory
+      become: true
+      file:
+        path: "{{ storage_dir }}"
+        state: directory
+
+    - name: Bind storage to nfs exports
+      become: true
+      ansible.posix.mount:
+        state: mounted
+        path: "{{ storage_dir }}"
+        src: "192.168.0.102:/"
+        fstype: nfs
+        opts: soft,nolock
