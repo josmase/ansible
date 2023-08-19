@@ -11,6 +11,7 @@
     src: ../templates/timers/{{ item }}.timer.j2
     dest: "{{ timer_dir }}/{{ item }}.timer"
   loop: "{{ timers }}" 
+  when: maintenance_calendar is defined
 
 - name: Enable timer
   become: true
@@ -20,5 +21,16 @@
     state: started
     daemon-reload: yes
   loop: "{{ timers }}"
+  when: maintenance_calendar is defined
+
+- name: Disable timer if no calendar
+  become: true
+  systemd:
+    name: "{{ item }}.timer"
+    enabled: no
+    state: started
+    daemon-reload: yes
+  loop: "{{ timers }}"
+  when: maintenance_calendar is undefined
 
 

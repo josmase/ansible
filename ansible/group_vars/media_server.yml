@@ -8,3 +8,5 @@ docker_templates:
   - vpn
   - midarr
   - tdarr
+
+maintenance_calendar: "*-*-* 04:00:00"

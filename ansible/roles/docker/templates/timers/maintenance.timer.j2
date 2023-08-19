@@ -3,7 +3,7 @@ Description=Schedule to run the maintenance script at the night
 
 [Timer]
 Persistent=true
-OnCalendar=*-*-* 04:00:00
+OnCalendar={{ maintenance_calendar }}
 
 [Install]
 WantedBy=timers.target
