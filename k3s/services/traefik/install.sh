@@ -16,9 +16,9 @@ echo $CREDENTIALS
 echo "Put the above secret inteo secret-dashboard. Then press any key to continue"
 read -n 1 -s
 
-helm repo add traefik https://helm.traefik.io/traefik && helm repo update
+helm repo add traefik https://traefik.github.io/charts && helm repo update
 helm upgrade --install \
-  --create-namespace --namespace=traefik  \
+  --create-namespace --namespace=staging  \
   --values=values.yaml \
   --wait traefik traefik/traefik 
 

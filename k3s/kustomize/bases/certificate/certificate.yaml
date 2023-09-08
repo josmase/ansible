@@ -3,11 +3,10 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: local-hejsan-xyz
-  namespace: default
 spec:
   secretName: local-hejsan-xyz-tls
   issuerRef:
-    name: letsencrypt-production
+    name: letsencrypt
     kind: ClusterIssuer
   commonName: "*.local.hejsan.xyz"
   dnsNames:
