@@ -3,7 +3,9 @@ kind: Kustomization
 
 resources:
   - ../../bases/cert-manager
+  - ../../bases/actions-runner-controller
   
  #Copy from base
 patches:
   - secret-cf-token.yaml
+  - secret-runner-token.yaml
