@@ -5,6 +5,7 @@ commonLabels:
   app: container-registry-ui
 
 resources:
+  - configmap.yaml
   - deployment.yaml
   - ingress.yaml
   - service.yaml

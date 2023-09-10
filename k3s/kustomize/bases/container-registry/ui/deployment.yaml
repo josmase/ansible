@@ -22,11 +22,9 @@ spec:
       containers:
         - name: container-registry-ui
           image: joxit/docker-registry-ui:main
-          env: 
-            - name: REGISTRY_URL
-              value: https://registry.staging.local.hejsan.xyz:5000
-            - name: THEME
-              value: dark
+          envFrom:
+            - configMapRef:
+                name: container-registry-ui-config
           ports:
             - name: http
               containerPort: 80

@@ -23,7 +23,7 @@ spec:
         - name: config
           configMap:
             defaultMode: 420
-            name: container-registry
+            name: container-registry-config
       containers:
         - name: container-registry
           image: "docker.io/registry:2.7"
