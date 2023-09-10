@@ -10,4 +10,5 @@ resources:
   - ../../bases/traefik-dashboard
   - ../../bases/downloader
   - ../../bases/certificate
+  - ../../bases/container-registry
   - cloudflare-ddns

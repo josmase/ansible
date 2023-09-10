@@ -1,0 +1,41 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: container-registry-ui
+  labels:
+    app: container-registry-ui
+spec:
+  replicas: 3
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: container-registry-ui
+  template:
+    metadata:
+      labels:
+        app: container-registry-ui
+    spec:
+      containers:
+        - name: container-registry-ui
+          image: joxit/docker-registry-ui:main
+          env: 
+            - name: REGISTRY_URL
+              value: https://registry.staging.local.hejsan.xyz:5000
+            - name: THEME
+              value: dark
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
