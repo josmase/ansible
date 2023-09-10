@@ -3,9 +3,6 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: downloader
-  namespace: default
-  labels:
-    app: downloader
 spec:
   replicas: 3
   progressDeadlineSeconds: 600
