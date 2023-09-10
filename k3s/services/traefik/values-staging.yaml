@@ -1,5 +1,4 @@
-image:
-  tag: v3.0.0-beta3
+commonLabels: {app: traefik}
 
 globalArguments:
   - "--global.sendanonymoususage=false"
@@ -31,18 +30,21 @@ ingressRoute:
 providers:
   kubernetesCRD:
     enabled: true
+    ingressClass: traefik-external
     allowExternalNameServices: true
-    namespaces:
+    namespace:
       - staging
   kubernetesIngress:
     enabled: true
     allowExternalNameServices: true
-    namespaces:
+    publishedService:
+      enabled: false
+    namespace:
       - staging
 
 rbac:
   enabled: true
-  namespaced: true
+ # namespaced: true
 
 service:
   enabled: true
