@@ -52,7 +52,7 @@ locals {
         name        = "media-server"
         cores       = 10
         template    = var.ubuntu_template_300G
-        memory      = 8192
+        memory      = 9216
         description = "Main media server for stuff that is not yet running in kubernetes"
         ip_address  = "${local.subnet}.105"
       }) },
