@@ -10,7 +10,7 @@ additionalArguments:
 
 deployment:
   enabled: true
-  replicas: 3
+  replicas: 3§
   annotations: {}
   podAnnotations: {}
   additionalContainers: []
@@ -18,7 +18,8 @@ deployment:
 
 ports:
   web:
-    redirectTo: websecure
+    redirectTo:
+      port: websecure
   websecure:
     tls:
       enabled: true
