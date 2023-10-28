@@ -1,0 +1,16 @@
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: downloader
+  annotations:
+    kubernetes.io/ingress.class: traefik-external
+spec:
+  routes:
+    - kind: Rule
+      match: Host(`downloader.local.hejsan.xyz`)
+      services:
+        - name: downloader
+          port: 80
+      middlewares:
+        - name: default-headers

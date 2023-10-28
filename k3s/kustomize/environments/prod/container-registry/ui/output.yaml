@@ -1,0 +1,83 @@
+apiVersion: v1
+data:
+  REGISTRY_URL: https://registry.local.hejsan.xyz:5000
+  THEME: dark
+kind: ConfigMap
+metadata:
+  labels:
+    app: container-registry-ui
+  name: container-registry-ui-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: container-registry-ui
+  name: container-registry-ui
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 80
+  selector:
+    app: container-registry-ui
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: container-registry-ui
+  name: container-registry-ui
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 3
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: container-registry-ui
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: container-registry-ui
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: container-registry-ui-config
+        image: joxit/docker-registry-ui:main
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+        name: container-registry-ui
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: traefik-external
+  labels:
+    app: container-registry-ui
+  name: container-registry-ui
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - kind: Rule
+    match: Host(`registry-ui.local.hejsan.xyz`)
+    services:
+    - kind: Service
+      name: container-registry-ui
+      port: 8080
+  tls:
+    secretName: local-hejsan-xyz-tls

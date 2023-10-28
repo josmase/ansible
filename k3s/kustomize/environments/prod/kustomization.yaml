@@ -4,7 +4,7 @@ kind: Kustomization
 commonLabels:
   demo: kustomize-cert-manager
 
-namespace: staging
+namespace: production
 
 resources:
   - ../../bases/certificate

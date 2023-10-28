@@ -1,0 +1,15 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: downloader
+  namespace: default
+  labels:
+    app: downloader
+spec:
+  template:
+     spec:
+      containers:
+        - name: downloader
+          image: registry.local.hejsan.xyz/downloader:main
+   
