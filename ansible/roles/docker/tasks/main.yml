@@ -1,7 +1,9 @@
 - name: Enable NFS dependencies
+  become: true
   import_tasks: nfs.yml
 - name: Install docker
   become: true
   import_tasks: docker.yml
 - name: Setup timers for upgrades and backups 
+  become: true
   import_tasks: timers.yml

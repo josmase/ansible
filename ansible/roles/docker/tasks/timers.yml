@@ -1,12 +1,10 @@
 - name: Deploy service templates
-  become: true
   template:
     src: ../templates/timers/{{ item }}.service.j2
     dest: "{{ timer_dir }}/{{ item }}.service"
   loop: "{{ timers }}"
 
 - name: Deploy timer templates
-  become: true
   template:
     src: ../templates/timers/{{ item }}.timer.j2
     dest: "{{ timer_dir }}/{{ item }}.timer"
@@ -14,7 +12,6 @@
   when: maintenance_calendar is defined
 
 - name: Enable timer
-  become: true
   systemd:
     name: "{{ item }}.timer"
     enabled: yes
@@ -24,7 +21,6 @@
   when: maintenance_calendar is defined
 
 - name: Disable timer if no calendar
-  become: true
   systemd:
     name: "{{ item }}.timer"
     enabled: no

@@ -6,18 +6,15 @@
     - nfs
 
 - name: Install lxc
-  become: true
   apt:
     name: lxc
     state: present
 
 - name: Deploy apparmor profile
-  become: true
   template:
     src: ../templates/apparmor/erichough-nfs
     dest: /etc/apparmor.d/erichough-nfs
     mode: 644
 
 - name: Reload apparmor
-  become: true
   command: apparmor_parser -r -W /etc/apparmor.d/erichough-nfs
