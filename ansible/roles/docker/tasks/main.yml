@@ -1,3 +1,7 @@
-- include_tasks: nfs.yml
-- include_tasks: docker.yml
-- include_tasks: timers.yml
+- name: Enable NFS dependencies
+  import_tasks: nfs.yml
+- name: Install docker
+  become: true
+  import_tasks: docker.yml
+- name: Setup timers for upgrades and backups 
+  import_tasks: timers.yml
