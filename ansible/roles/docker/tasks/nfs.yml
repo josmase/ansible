@@ -1,3 +1,10 @@
+- name: Load kernel modules for NFS
+  modprobe:
+    name: "{{ item }}"
+  loop:
+    - nfsd
+    - nfs
+
 - name: Install lxc
   become: true
   apt:
