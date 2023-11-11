@@ -8,10 +8,13 @@ echo =====================  $(date)  ===========================================
 source "${SCRIPT_DIR}/update.sh"
 source "${SCRIPT_DIR}/stop.sh"
 
-
+#Create a backup of all appdata
 TIME=$(date +%Y-%m-%d_%T)
 FILENAME=appdata-$TIME.tar.gz
 tar -cvpzf "${BACKUP_PATH}/${FILENAME}" "${APPDATA_PATH}"
+
+#Remove backupos that are older than 1 week
+find "${BACKUP_PATH}" -type f -name "appdata-*.tar.gz" -mtime +7 -exec rm {} \;
 
 
 #Grafana requires UID and GUID 472 since the container doesn't support setting them. This has to be done before starting it.
