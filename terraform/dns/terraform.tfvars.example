@@ -1,0 +1,5 @@
+api_token   = "<API-TOKEN>"
+zone_id     = "<ZONE ID>"
+account_id  = "<ACCOUNT ID>"
+domain      = "<DOMAIN NAME>"
+external_ip = "<EXTERNAL IP>"
