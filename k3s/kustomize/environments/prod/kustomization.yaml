@@ -12,3 +12,4 @@ resources:
   - downloader
   - container-registry
   - cloudflare-ddns
+  - it-tools
