@@ -8,3 +8,20 @@
         name: '*'
         state: latest
         autoremove: true
+
+- name: Reboot non-critical machines after upgrades
+  hosts: 
+    - utilities
+    - media_server
+    - k3s_cluster
+  vars_files:
+    - ../vars/vault.yml
+  tasks:
+    - name: Check if reboot required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+
+    - name: Reboot if required
+      reboot:
+      when: reboot_required_file.stat.exists == true
