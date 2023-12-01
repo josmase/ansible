@@ -9,6 +9,14 @@
     - ../vars/vault.yml
   roles:
     - docker
+  tasks:
+      - name: Load kernel modules for NFS
+        become: true
+        modprobe:
+          name: "{{ item }}"
+        loop:
+          - nfsd
+          - nfs
 
 - hosts: nfs_client
   vars_files:
@@ -23,14 +31,62 @@
     - name: create install directory
       become: true
       file:
-        path: "{{ storage_dir }}"
+        path: "/mnt/nfs"
         state: directory
 
     - name: Bind storage to nfs exports
       become: true
       ansible.posix.mount:
         state: mounted
-        path: "{{ storage_dir }}"
+        path: "/mnt/nfs"
         src: "192.168.0.102:/"
         fstype: nfs
         opts: soft,nolock
+
+- name: Create CIFS password file and mount SMB share
+  hosts: smb_client
+  become: true
+  vars_files:
+    - ../vars/vault.yml
+
+  vars:
+    smb_share_username: "alice"
+    smb_share_password: "alipass"
+    smb_share_path: "//192.168.0.102/alice"
+    mount_point: "{{ storage_dir }}"
+    mount_gid: "{{ main_gid }}"
+    mount_uid: "{{ main_uid }}"
+    credentials_file: "cifs_credentials_file"
+
+  tasks:
+    - name: install cifs-utils
+      become: true
+      apt: 
+        name: cifs-utils
+        state: latest 
+
+    - name: Get home directory of the user running Ansible
+      ansible.builtin.set_fact:
+        user_home_directory: "{{ lookup('env', 'HOME') }}"
+
+    - name: Create CIFS password file in user's home directory
+      ansible.builtin.lineinfile:
+        path: "{{ user_home_directory }}/{{ credentials_file }}"
+        line: |
+          username={{ smb_share_username }}
+          password={{ smb_share_password }}
+        create: yes
+        state: present
+
+    - name: Ensure mount point exists
+      ansible.builtin.file:
+        path: "{{ mount_point }}"
+        state: directory
+
+    - name: Mount SMB share
+      ansible.builtin.mount:
+        path: "{{ mount_point }}"
+        src: "{{ smb_share_path }}"
+        fstype: cifs
+        opts: "credentials={{ user_home_directory }}/{{ credentials_file }},iocharset=utf8,sec=ntlmssp,uid={{ mount_uid }},gid={{ mount_gid }}"
+        state: mounted
