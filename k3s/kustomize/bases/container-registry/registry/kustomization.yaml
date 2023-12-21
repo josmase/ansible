@@ -10,3 +10,4 @@ resources:
   - ingress.yaml
   - middleware.yaml
   - service.yaml
+  - persistence.yaml

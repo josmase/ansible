@@ -24,6 +24,9 @@ spec:
           configMap:
             defaultMode: 420
             name: container-registry-config
+        - name: registry-volume  
+          persistentVolumeClaim:
+            claimName: container-registry-pvc
       containers:
         - name: container-registry
           image: "docker.io/registry:2.7"
@@ -36,6 +39,8 @@ spec:
           volumeMounts:
             - mountPath: "/etc/docker/registry"
               name: "config"
+            - mountPath: "/var/lib/registry"
+              name: "registry-volume"
           livenessProbe:
             httpGet:
               path: /v2/
