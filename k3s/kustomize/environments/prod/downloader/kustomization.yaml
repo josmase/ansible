@@ -3,7 +3,6 @@ kind: Kustomization
 
 commonLabels:
   app: downloader
-  demo: kustomize-downloader
   
 resources:
   - ../../../bases/downloader

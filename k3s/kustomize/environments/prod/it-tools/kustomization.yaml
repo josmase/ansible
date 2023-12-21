@@ -3,7 +3,6 @@ kind: Kustomization
 
 commonLabels:
   app: it-tools
-  demo: kustomize-it-tools
   
 resources:
   - ../../../bases/it-tools

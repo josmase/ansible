@@ -6,11 +6,12 @@ globalArguments:
 
 additionalArguments:
   - "--serversTransport.insecureSkipVerify=true"
-  - "--log.level=INFO"
+  - "--log.level=DEBUG"
+  - "--accesslog=true"
 
 deployment:
   enabled: true
-  replicas: 3§
+  replicas: 3
   annotations: {}
   podAnnotations: {}
   additionalContainers: []
