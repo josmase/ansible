@@ -13,4 +13,4 @@ spec:
         services:
           - kind: Service
             name: container-registry-ui
-            port: 8080
+            port: http

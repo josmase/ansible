@@ -13,7 +13,7 @@ spec:
         services:
           - kind: Service
             name: container-registry
-            port: 5000
+            port: http
         middlewares:
           - name: container-registry-cors
           - name: default-headers

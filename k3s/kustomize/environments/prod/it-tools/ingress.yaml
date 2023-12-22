@@ -11,6 +11,6 @@ spec:
       match: Host(`it-tools.local.hejsan.xyz`)
       services:
         - name: it-tools
-          port: 80
+          port: http
       middlewares:
         - name: default-headers

@@ -11,8 +11,7 @@ spec:
       - match: Host(`registry-ui.staging.local.hejsan.xyz`)
         kind: Rule
         services:
-          - kind: Service
-            name: container-registry-ui
-            port: 8080
+          - name: container-registry-ui
+            port: http
   tls:
     secretName: local-hejsan-xyz-tls

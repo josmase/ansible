@@ -11,6 +11,6 @@ spec:
       match: Host(`downloader.local.hejsan.xyz`)
       services:
         - name: downloader
-          port: 80
+          port: http
       middlewares:
         - name: default-headers

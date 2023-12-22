@@ -7,6 +7,6 @@ spec:
   selector:
     app: it-tools
   ports:
-    - protocol: TCP
+    - name: http
       port: 80
       targetPort: 80

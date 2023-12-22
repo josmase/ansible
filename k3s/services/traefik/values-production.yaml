@@ -24,7 +24,9 @@ ports:
   websecure:
     tls:
       enabled: true
-
+  registry:
+    tls:
+      enabled: true
 ingressRoute:
   dashboard:
     enabled: false
@@ -55,5 +57,15 @@ service:
   labels: {}
   spec:
     loadBalancerIP: 192.168.0.181 # this should be an IP in the MetalLB range
+    ports:
+        - name: web
+          port: 80
+          targetPort: web
+        - name: websecure
+          port: 443
+          targetPort: websecure
+        - name: registry
+          port: 5000  
+          targetPort: registry
   loadBalancerSourceRanges: []
   externalIPs: []
