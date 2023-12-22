@@ -11,9 +11,8 @@ spec:
       - match: Host(`registry.staging.local.hejsan.xyz`)
         kind: Rule
         services:
-          - kind: Service
-            name: container-registry
-            port: 5000
+          - name: container-registry
+            port: http
         middlewares:
           - name: container-registry-cors
           - name: default-headers
