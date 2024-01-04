@@ -4,3 +4,5 @@ kind: Kustomization
 resources:
   - ../../../../bases/container-registry/registry
 
+patchesStrategicMerge:
+ - configmap.yaml

@@ -10,3 +10,4 @@ resources:
   - container-registry
   - cloudflare-ddns
   - it-tools
+  - blog

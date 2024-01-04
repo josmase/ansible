@@ -1,3 +1,13 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: container-registry-htpasswd
+data:
+  htpasswd: |-
+    Replace with $ htpasswd -Bbn username password
+
+---    
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -24,4 +34,14 @@ data:
         enabled: true
         interval: 10s
         threshold: 3
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: container-registry-env
+data:
+  REGISTRY_AUTH: htpasswd
+  REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+  REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+    
     

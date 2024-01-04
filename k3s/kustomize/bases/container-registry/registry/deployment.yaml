@@ -24,6 +24,10 @@ spec:
           configMap:
             defaultMode: 420
             name: container-registry-config
+        - name: htpasswd
+          configMap:
+            defaultMode: 420
+            name: container-registry-htpasswd
         - name: registry-volume  
           persistentVolumeClaim:
             claimName: container-registry-pvc
@@ -39,8 +43,13 @@ spec:
           volumeMounts:
             - mountPath: "/etc/docker/registry"
               name: "config"
+            - mountPath: "/auth/htpasswd"
+              name: "htpasswd"
             - mountPath: "/var/lib/registry"
               name: "registry-volume"
+          envFrom:
+            - configMapRef:
+                name: container-registry-ui-config
           livenessProbe:
             httpGet:
               path: /v2/
