@@ -10,7 +10,7 @@
         autoremove: true
 
 - name: Reboot non-critical machines after upgrades
-  hosts: 
+  hosts:
     - utilities
     - media_server
     - k3s_cluster
@@ -23,5 +23,6 @@
       register: reboot_required_file
 
     - name: Reboot if required
+      become: true
       reboot:
       when: reboot_required_file.stat.exists == true
