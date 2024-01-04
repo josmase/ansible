@@ -35,7 +35,7 @@ spec:
         - name: container-registry
           image: "docker.io/registry:2.8"
           imagePullPolicy: Always
-          #command: [ "/bin/sh", "-c", "cat /etc/docker/registry/config.yml" ]
+          #command: [ "/bin/sh", "-c", "cat /etc/docker/registry/config.yml && cat /auth/registry/htpasswd" ]
           ports:
             - name: registry
               containerPort: 5000
@@ -43,21 +43,18 @@ spec:
           volumeMounts:
             - mountPath: "/etc/docker/registry"
               name: "config"
-            - mountPath: "/auth/htpasswd"
+            - mountPath: "/auth/registry"
               name: "htpasswd"
             - mountPath: "/var/lib/registry"
               name: "registry-volume"
-          envFrom:
-            - configMapRef:
-                name: container-registry-ui-config
-          livenessProbe:
-            httpGet:
-              path: /v2/
-              port: registry
-          readinessProbe:
-            httpGet:
-              path: /v2/
-              port: registry
+          #livenessProbe:
+          #  httpGet:
+          #    path: /v2/
+          #    port: registry
+          #readinessProbe:
+          #  httpGet:
+          #    path: /v2/
+          #    port: registry
           resources:
             limits:
               memory: 512Mi

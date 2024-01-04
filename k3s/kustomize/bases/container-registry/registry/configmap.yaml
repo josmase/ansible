@@ -18,8 +18,8 @@ data:
       remoteurl: https://registry-1.docker.io
     version: 0.1
     log:
-      fields:
-        service: registry
+      level: debug
+      formatter: text
     storage:
       cache:
         blobdescriptor: inmemory
@@ -27,6 +27,7 @@ data:
         rootdirectory: /var/lib/registry
     http:
       addr: :5000
+      secret: asecretforlocaldevelopment
       headers:
         X-Content-Type-Options: [nosniff]
     health:
@@ -34,14 +35,9 @@ data:
         enabled: true
         interval: 10s
         threshold: 3
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: container-registry-env
-data:
-  REGISTRY_AUTH: htpasswd
-  REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
-  REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+    auth:
+      htpasswd:
+        realm: registry-realm
+        path: /auth/registry/htpasswd
     
     

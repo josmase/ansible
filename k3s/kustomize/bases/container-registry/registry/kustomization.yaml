@@ -11,3 +11,4 @@ resources:
   - middleware.yaml
   - service.yaml
   - persistence.yaml
+  - secret.yaml
