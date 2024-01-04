@@ -16,8 +16,10 @@ script_templates:
   - maintenance
   - start
   - update
+  - staleFileHandleHandler
 
 timers:
   - maintenance
+  - staleFileHandleHandler
 
 timer_dir: /etc/systemd/system/

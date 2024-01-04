@@ -8,10 +8,22 @@ spec:
   entryPoints:
     - websecure
   routes:
-      - match: Host(`registry-ui.staging.local.hejsan.xyz`)
-        kind: Rule
-        services:
-          - name: container-registry-ui
-            port: http
+  - match: Host(`registry.staging.local.hejsan.xyz`) && PathPrefix(`/ui`)
+    kind: Rule
+    services:
+      - name: container-registry-ui
+        port: http
+    middlewares:
+      - name: strip-ui-prefix
   tls:
     secretName: local-hejsan-xyz-tls
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-ui-prefix
+spec:
+  stripPrefix:
+    prefixes:
+      - "/ui"

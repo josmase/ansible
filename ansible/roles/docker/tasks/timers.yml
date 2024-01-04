@@ -3,6 +3,7 @@
     src: ../templates/timers/{{ item }}.service.j2
     dest: "{{ timer_dir }}/{{ item }}.service"
   loop: "{{ timers }}"
+  when: maintenance_calendar is defined
 
 - name: Deploy timer templates
   template:
@@ -28,5 +29,5 @@
     daemon-reload: yes
   loop: "{{ timers }}"
   when: maintenance_calendar is undefined
-
+  ignore_errors: true  
 
