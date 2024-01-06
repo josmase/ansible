@@ -1,0 +1,29 @@
+version: "3.7"
+services:
+  lancache-dns:
+    image: {{ docker_registry_domain }}/lancachenet/lancache-dns:latest
+    container_name: lancache-dns
+    environment:
+      - TZ={{ timezone }}
+      - LANCACHE_IP={{ ansible_default_ipv4.address }}
+      - DNS_BIND_IP={{ ansible_default_ipv4.address }}
+      - USE_GENERIC_CACHE=true
+    restart: always
+    ports:
+      - "{{ ansible_default_ipv4.address }}:53:53/udp"
+      - "{{ ansible_default_ipv4.address }}:53:53/tcp"
+  lancache:
+    image: {{ docker_registry_domain }}/lancachenet/monolithic:latest
+    restart: always
+    container_name: lancache
+    environment:
+        - TZ={{ timezone }}
+        - CACHE_ROOT=/data
+        - DNS_BIND_IP={{ ansible_default_ipv4.address }}
+        - USE_GENERIC_CACHE=true
+    ports:
+      - 80:80/tcp
+      - 443:443/tcp
+    volumes:
+      - "/mnt/cache:/data/cache"
+      - "{{ appdata_path }}/lancache:/data/logs"

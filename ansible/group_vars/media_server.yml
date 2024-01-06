@@ -8,5 +8,6 @@ docker_templates:
   - vpn
   - midarr
   - tdarr
+  - lancache
 
 maintenance_calendar: "*-*-* 04:00:00"

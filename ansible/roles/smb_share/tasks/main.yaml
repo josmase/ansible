@@ -1,0 +1,31 @@
+- name: install cifs-utils
+  become: true
+  apt: 
+    name: cifs-utils
+    state: latest 
+
+- name: Get home directory of the user running Ansible
+  ansible.builtin.set_fact:
+    user_home_directory: "{{ lookup('env', 'HOME') }}"
+
+- name: Create CIFS password file in user's home directory
+  ansible.builtin.lineinfile:
+    path: "{{ user_home_directory }}/{{ credentials_file }}"
+    line: |
+      username={{ smb_share_username }}
+      password={{ smb_share_password }}
+    create: yes
+    state: present
+
+- name: Ensure mount point exists
+  ansible.builtin.file:
+    path: "{{ mount_point }}"
+    state: directory
+
+- name: Mount SMB share
+  ansible.builtin.mount:
+    path: "{{ mount_point }}"
+    src: "{{ smb_share_path }}"
+    fstype: cifs
+    opts: "credentials={{ user_home_directory }}/{{ credentials_file }},iocharset=utf8,sec=ntlmssp,uid={{ mount_uid }},gid={{ mount_gid }}"
+    state: mounted

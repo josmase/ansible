@@ -12,8 +12,9 @@ services:
       - TZ={{ timezone }}
       - SERVERURL=wireguard.hejsan.xyz #optional
       - SERVERPORT=51888 #optional
-      - PEERS=phone #optional
+      - PEERS=phone,laptop #optional
       - PEERDNS=1.1.1.1 #optional
+      - LOG_CONFS=true
      # - INTERNAL_SUBNET=10.13.13.0 #optional
       - ALLOWEDIPS=0.0.0.0/0 #optional
     volumes:
