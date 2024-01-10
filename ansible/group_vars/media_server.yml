@@ -2,7 +2,6 @@ docker_templates:
   - swag
   - home-assistant
   - ombi
-  - emby
   - jellyfin
   - plex
   - vpn
