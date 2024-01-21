@@ -24,6 +24,7 @@ resource "cloudflare_record" "local" {
     "media.local"     = "192.168.0.105"
     "proxmox.local"   = "192.168.0.100"
     "storage.local"   = "192.168.0.102"
+    "ansible.local"   = "192.168.0.101"
     "*.staging.local" = "192.168.0.182"
   }
   zone_id = var.zone_id
