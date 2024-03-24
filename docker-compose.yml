@@ -10,6 +10,6 @@ services:
     stdin_open: true
     tty: true
     volumes:
-      - ~/.ssh:/home/ubuntu/.ssh:ro
-      - ~/repo:/home/ubuntu/repo
-      - ~/.kube/config:/home/ubuntu/.kube/config
+      - ~/.ssh:/home/developer/.ssh:ro
+      - ~/repo:/home/developer/repo
+      - ~/.kube/config:/home/developer/.kube/config
