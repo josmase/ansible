@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  my-dev-container:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: my-dev-container
+    command: zsh
+    stdin_open: true
+    tty: true
+    volumes:
+      - ~/.ssh:/home/ubuntu/.ssh:ro
+      - ~/repo:/home/ubuntu/repo
+      - ~/.kube/config:/home/ubuntu/.kube/config
