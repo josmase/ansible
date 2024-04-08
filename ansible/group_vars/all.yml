@@ -22,6 +22,6 @@ docker_data_dir: appdata
 docker_puid: "{{ main_username }}"
 docker_pgid: "{{ main_groupname }}"
 docker_timezone: Europe/Stockholm
-docker_registry_domain: registry.local.hejsan.xyz
+docker_registry_domain: docker.io
 docker_registry_user: "{{ vault_docker_registry_user }}"
 docker_registry_password: "{{ vault_docker_registry_password }}"
