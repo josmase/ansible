@@ -12,6 +12,7 @@ services:
       - serverPort=8266
       - webUIPort=8265
       - inContainer=true
+      - internalNode=true
       - nodeName=internal-node
     volumes:
       - "{{ appdata_path }}/tdarr/server:/app/server"
