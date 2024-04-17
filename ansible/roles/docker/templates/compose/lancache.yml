@@ -1,4 +1,3 @@
-version: "3.7"
 services:
   lancache-dns:
     image: {{ docker_registry_domain }}/lancachenet/lancache-dns:latest

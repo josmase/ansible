@@ -1,4 +1,3 @@
-version: "3.7"
 services:
   homeassistant:
     image: {{ docker_registry_domain }}/linuxserver/homeassistant

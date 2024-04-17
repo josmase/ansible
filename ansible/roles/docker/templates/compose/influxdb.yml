@@ -1,4 +1,3 @@
-version: "3.7"
 services:
   influxdb:
     image: {{ docker_registry_domain }}/influxdb:latest

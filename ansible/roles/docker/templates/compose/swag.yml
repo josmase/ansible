@@ -1,4 +1,3 @@
-version: "3.7"
 services:
   swag:
     image: {{ docker_registry_domain }}/linuxserver/swag

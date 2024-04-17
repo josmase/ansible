@@ -1,4 +1,3 @@
-version: "3.7"
 services:
   tdarr:
     image: {{ docker_registry_domain }}/haveagitgat/tdarr
@@ -7,13 +6,12 @@ services:
       - PUID={{ main_uid }}
       - PGID={{ main_gid }}
       - TZ={{ timezone }}
-      - UMASK_SET=002
       - serverIP=0.0.0.0
       - serverPort=8266
       - webUIPort=8265
-      - inContainer=true
-      - internalNode=true
-      - nodeName=internal-node
+#      - inContainer=true
+#      - internalNode=true
+#      - nodeName=internal-node
     volumes:
       - "{{ appdata_path }}/tdarr/server:/app/server"
       - "{{ appdata_path }}/tdarr/configs:/app/configs"
@@ -24,24 +22,23 @@ services:
       - 8265:8265
       - 8266:8266
     restart: always
-#  tdarr_node:
-#    image: {{ docker_registry_domain }}/haveagitgat/tdarr_node
-#    container_name: tdarr_node
-#    environment:
-#      - PUID={{ main_uid }}
-#      - PGID={{ main_gid }}
-#      - TZ={{ timezone }}
-#      - UMASK_SET=002
-#      - nodeID=node1
-#      - nodeIP=tdarr_node
-#      - nodePort=8267
-#      - serverIP=tdarr
-#      - serverPort=8266
-#    volumes:
-#      - "{{ appdata_path }}/tdarr/configs:/app/configs"
-#      - "{{ appdata_path }}/tdarr/logs:/app/logs"
-#      - "{{ storage_dir }}/files:/media"
-#      - "{{ storage_dir }}/transcode/:/tmp/"
-#    ports:
-#      - 8267:8267
-#    restart: always
+  tdarr_node:
+    image: {{ docker_registry_domain }}/haveagitgat/tdarr_node
+    container_name: tdarr_node
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+      - nodeID=node1
+      - nodeIP=tdarr_node
+      - nodePort=8267
+      - serverIP=tdarr
+      - serverPort=8266
+    volumes:
+      - "{{ appdata_path }}/tdarr/configs:/app/configs"
+      - "{{ appdata_path }}/tdarr/logs:/app/logs"
+      - "{{ storage_dir }}/files:/media"
+      - "{{ storage_dir }}/transcode/:/tmp/"
+    ports:
+      - 8267:8267
+    restart: unless-stopped
