@@ -1,0 +1,9 @@
+{
+  "language": "typescript",
+  "app": "npx ts-node main.ts",
+  "projectId": "4827f4f4-bddf-4013-82e9-269ce989061e",
+  "sendCrashReports": "true",
+  "terraformProviders": ["Terraform-for-Proxmox/proxmox@~> 0.0"],
+  "terraformModules": [],
+  "context": {}
+}
