@@ -7,6 +7,7 @@ services:
       - PGID={{ main_gid }}
       - TZ={{ timezone }}
       - TempPathHost={{ storage_dir }}/transcode
+      - FFmpeg=/usr/local/bin/ffmpeg6
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - "{{ appdata_path }}/fileflow/data:/app/Data"
