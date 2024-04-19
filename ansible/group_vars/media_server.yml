@@ -6,7 +6,9 @@ docker_templates:
   - plex
   - vpn
   - midarr
-  - tdarr
-  - lancache
+  - fileflow
+  #- tdarr
+  #- lancache
+
 
 maintenance_calendar: "*-*-* 04:00:00"

@@ -1,0 +1,33 @@
+services:
+  fileflows:
+    image: "{{ docker_registry_domain }}/revenz/fileflows"
+    container_name: fileflows
+    environment:
+      - TZ={{ timezone }}
+      - TempPathHost={{ storage_dir }}/transcode
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - "{{ appdata_path }}/fileflow/data:/app/Data"
+      - "{{ appdata_path }}/fileflow/logs:/app/Logs"
+      - "{{ storage_dir }}/transcode:/temp"
+      - "{{ storage_dir }}/files:/media"
+    ports:
+      - 19200:5000
+    restart: unless-stopped
+  fileflows_node:
+    image: "{{ docker_registry_domain }}/revenz/fileflows"
+    container_name: fileflows_node
+    environment:
+      - FFNODE=1
+      - TZ={{ timezone }}
+      - TempPathHost={{ storage_dir }}/transcode
+      - ServerUrl=http://fileflows:19200
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - "{{ appdata_path }}/fileflow/data:/app/Data"
+      - "{{ appdata_path }}/fileflow/logs:/app/Logs"
+      - "{{ storage_dir }}/transcode:/temp"
+      - "{{ storage_dir }}/files:/media"
+    ports:
+      - 19201:5000
+    restart: unless-stopped
