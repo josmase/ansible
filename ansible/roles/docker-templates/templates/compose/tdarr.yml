@@ -3,8 +3,8 @@ services:
     image: {{ docker_registry_domain }}/haveagitgat/tdarr
     container_name: tdarr
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
       - serverIP=0.0.0.0
       - serverPort=8266
@@ -26,8 +26,8 @@ services:
     image: {{ docker_registry_domain }}/haveagitgat/tdarr_node
     container_name: tdarr_node
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
       - nodeID=node1
       - nodeIP=tdarr_node

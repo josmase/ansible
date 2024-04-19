@@ -13,8 +13,8 @@ services:
       - 9696:9696 #prowlarr
       - 6767:6767 #bazarr
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ docker_puid }}
+      - GUID={{ docker_pgid }}
       - TZ={{ timezone }}
       - REGION=Norway
       - VPNSP=private internet access
@@ -29,8 +29,8 @@ services:
     image: {{ docker_registry_domain }}/linuxserver/transmission
     network_mode: service:vpn
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/transmission/config:/config"
@@ -42,8 +42,8 @@ services:
     container_name: radarr
     network_mode: service:vpn
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
       - DOCKER_MODS=registry.local.hejsan.xyz/gilbn/theme.park:sonarr
       - TP_THEME=overseerr
@@ -57,8 +57,8 @@ services:
     container_name: sonarr
     network_mode: service:vpn
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
       - DOCKER_MODS=registry.local.hejsan.xyz/gilbn/theme.park:sonarr
       - TP_THEME=overseerr
@@ -72,8 +72,8 @@ services:
     container_name: prowlarr
     network_mode: service:vpn
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/prowlarr:/config"
@@ -84,8 +84,8 @@ services:
     container_name: bazarr
     network_mode: service:vpn
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/bazarr:/config"

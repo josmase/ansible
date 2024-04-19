@@ -9,8 +9,8 @@ services:
       - ONLY_SUBDOMAINS=false
       - VALIDATION=dns
       - DNSPLUGIN=cloudflare
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/swag:/config"

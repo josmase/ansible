@@ -3,8 +3,8 @@ services:
     image: {{ docker_registry_domain }}/linuxserver/emby
     container_name: emby
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/emby:/config"

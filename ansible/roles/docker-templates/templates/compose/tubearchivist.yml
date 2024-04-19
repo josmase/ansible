@@ -15,10 +15,10 @@ services:
       - TA_USERNAME=tubearchivist          
       - TA_PASSWORD=verysecret             
       - ELASTIC_PASSWORD=verysecret   
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}      
-      - HOST_UID={{ main_uid }}
-      - HOST_GID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - GUID={{ docker_pgid }}      
+      - HOST_UID={{ docker_puid }}
+      - HOST_GID={{ docker_pgid }}
       - TZ={{ timezone }}            
     depends_on:
       - archivist-es

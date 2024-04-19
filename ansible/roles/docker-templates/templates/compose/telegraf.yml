@@ -3,8 +3,8 @@ services:
     image: {{ docker_registry_domain }}/telegraf:latest
     container_name: telegraf
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ docker_puid }}
+      - GUID={{ docker_guid }}
       - HOST_PROC=/rootfs/proc
       - HOST_SYS=/rootfs/sys
       - HOST_ETC=/rootfs/etc

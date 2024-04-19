@@ -3,8 +3,8 @@ services:
     image: garethflowers/ftp-server
     container_name: ftp-server
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
       - FTP_USER=user
       - FTP_PASS=123

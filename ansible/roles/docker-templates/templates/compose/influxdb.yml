@@ -9,8 +9,8 @@ services:
       - DOCKER_INFLUXDB_INIT_ORG=media-server
       - DOCKER_INFLUXDB_INIT_BUCKET=telegraf
       - DOCKER_INFLUXDB_INIT_RETENTION=90d
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ docker_puid }}
+      - GUID={{ docker_guid }}
       - TZ={{ timezone }}
     ports:
       -  8083:8083

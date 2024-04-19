@@ -3,8 +3,8 @@ services:
     image: {{ docker_registry_domain }}/grafana/grafana:latest
     container_name: grafana
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/grafana:/var/lib/grafana"

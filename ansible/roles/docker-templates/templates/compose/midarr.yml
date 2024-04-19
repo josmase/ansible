@@ -9,8 +9,8 @@ services:
       - "{{ movies_dir }}:{{ movies_dir }}"
       - "{{ series_dir }}:{{ series_dir }}"
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
 #       App config
       - APP_URL=http://{{ docker_server_domain }}:4000

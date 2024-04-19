@@ -7,8 +7,8 @@ services:
       - NET_ADMIN
       - SYS_MODULE
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ docker_puid }}
+      - GUID={{ docker_pgid }}
       - TZ={{ timezone }}
       - SERVERURL=wireguard.hejsan.xyz #optional
       - SERVERPORT=51888 #optional

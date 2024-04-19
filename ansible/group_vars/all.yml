@@ -12,13 +12,13 @@ email: "{{ vault_email }}"
 local_domain: "{{ vault_local_domain }}"
 storage_domain: "storage.{{ local_domain }}"
 
-appdata_path: /opt/appdata
+appdata_dir: /opt/appdata
 storage_dir: /mnt/storage
 
-docker_storage_dir: storage_dir
-docker_data_dir: appdata
-docker_puid: "{{ main_username }}"
-docker_pgid: "{{ main_groupname }}"
+docker_storage_dir: "{{ storage_dir }}"
+docker_data_dir: "{{ appdata_dir }}"
+docker_puid: "{{ main_uid }}"
+docker_pgid: "{{ main_gid }}"
 docker_timezone: Europe/Stockholm
 docker_registry_domain: docker.io
 docker_registry_user: "{{ vault_docker_registry_user }}"

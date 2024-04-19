@@ -5,8 +5,8 @@ services:
     environment:
       - ServerIP={{ ansible_default_ipv4.address }}
       - DNSMASQ_LISTENING=all
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ docker_puid }}
+      - GUID={{ docker_pgid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/pihole/pihole:/etc/pihole/"

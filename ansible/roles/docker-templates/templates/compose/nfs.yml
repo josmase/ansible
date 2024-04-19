@@ -6,8 +6,8 @@ services:
       - SYS_ADMIN
       - SYS_MODULE
     environment:
-      - PUID={{ main_gid }}
-      - GUID={{ main_uid }}
+      - PUID={{ docker_puid }}
+      - GUID={{ docker_pgid }}
       - TZ={{ timezone }}
       - NFS_DISABLE_VERSION_3=true
       - NFS_EXPORT_0={{ nfs_share }} *(fsid=0,rw,sync,no_subtree_check,no_root_squash,all_squash,anonuid=1000,anongid=1000)

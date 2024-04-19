@@ -3,8 +3,8 @@ services:
     image: {{ docker_registry_domain }}/linuxserver/homeassistant
     container_name: homeassistant
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/homeassistant:/config"
@@ -13,8 +13,8 @@ services:
     image: {{ docker_registry_domain }}/zwavejs/zwavejs2mqtt:latest
     container_name: zwave
     environment:
-      - PUID={{ main_uid }}
-      - PGID={{ main_gid }}
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
       - SESSION_SECRET=ccd3fc23c7e9dafc5e8b8fdd5a621dab
     volumes:
