@@ -1,0 +1,20 @@
+services:
+  swag:
+    image: {{ docker_registry_domain }}/linuxserver/swag
+    container_name: swag
+    environment:
+      - EMAIL=josnase@gmail.com
+      - URL=hejsan.xyz
+      - SUBDOMAINS=wildcard
+      - ONLY_SUBDOMAINS=false
+      - VALIDATION=dns
+      - DNSPLUGIN=cloudflare
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/swag:/config"
+    ports:
+      - 8081:80
+      - 4433:443
+    restart: always

@@ -1,0 +1,17 @@
+services:
+  telegraf:
+    image: {{ docker_registry_domain }}/telegraf:latest
+    container_name: telegraf
+    environment:
+      - PUID={{ main_gid }}
+      - GUID={{ main_uid }}
+      - HOST_PROC=/rootfs/proc
+      - HOST_SYS=/rootfs/sys
+      - HOST_ETC=/rootfs/etc
+      - HOST_MOUNT_PREFIX=/rootfs
+    volumes:
+      - "{{ docker_data_dir }}/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf"
+      - /var/run/utmp:/var/run/utmp:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/rootfs:ro
+    restart: always

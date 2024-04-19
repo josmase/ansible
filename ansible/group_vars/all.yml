@@ -10,14 +10,12 @@ ansible_sudo_pass: "{{ vault_default_sudo_pass }}"
 email: "{{ vault_email }}"
 
 local_domain: "{{ vault_local_domain }}"
-media_server_domain: "media.{{ local_domain }}"
+storage_domain: "storage.{{ local_domain }}"
 
 appdata_path: /opt/appdata
-mount_dir: /mnt/drives
 storage_dir: /mnt/storage
 
-nfs_share: /srv/storage
-
+docker_storage_dir: storage_dir
 docker_data_dir: appdata
 docker_puid: "{{ main_username }}"
 docker_pgid: "{{ main_groupname }}"
@@ -25,3 +23,20 @@ docker_timezone: Europe/Stockholm
 docker_registry_domain: docker.io
 docker_registry_user: "{{ vault_docker_registry_user }}"
 docker_registry_password: "{{ vault_docker_registry_password }}"
+
+docker_compose_dir: /opt/docker
+docker_script_dir: "{{ docker_compose_dir }}/scripts"
+
+script_templates:
+  - common
+  - stop
+  - maintenance
+  - start
+  - update
+  - staleFileHandleHandler
+
+timers:
+  - maintenance
+  - staleFileHandleHandler
+
+timer_dir: /etc/systemd/system/

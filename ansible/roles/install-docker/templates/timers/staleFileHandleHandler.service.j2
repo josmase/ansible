@@ -1,0 +1,6 @@
+[Unit]
+Description=Runs the stale file handle handler script
+
+[Service]
+Type=oneshot
+ExecStart={{ docker_script_dir }}/staleFileHandleHandler.sh

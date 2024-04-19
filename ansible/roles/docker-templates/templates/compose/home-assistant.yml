@@ -1,0 +1,26 @@
+services:
+  homeassistant:
+    image: {{ docker_registry_domain }}/linuxserver/homeassistant
+    container_name: homeassistant
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/homeassistant:/config"
+    restart: always
+  zwave:
+    image: {{ docker_registry_domain }}/zwavejs/zwavejs2mqtt:latest
+    container_name: zwave
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+      - SESSION_SECRET=ccd3fc23c7e9dafc5e8b8fdd5a621dab
+    volumes:
+      - "{{ docker_data_dir }}/zwave:/usr/src/app/store"
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
+    restart: always
+    ports:
+      - 8091:8091

@@ -4,4 +4,4 @@
   vars_files:
     - ../vars/vault.yml
   roles:
-    - docker
+    - docker-templates

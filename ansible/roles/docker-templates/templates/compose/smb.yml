@@ -1,0 +1,13 @@
+version: '3.7'
+services:
+  samba:
+    image: ghcr.io/servercontainers/samba
+    restart: always
+    network_mode: host
+    container_name: smb
+    environment:
+      ACCOUNT_alice: alipass
+      UID_alice: {{ main_uid }}
+      SAMBA_VOLUME_CONFIG_aliceonly: "[alice]; path=/shares/alice; valid users = alice; guest ok = no; read only = no; browseable = yes"
+    volumes:
+      - {{ docker_storage_dir }}:/shares/alice      

@@ -1,0 +1,38 @@
+services:
+  fileflows:
+    image: "{{ docker_registry_domain }}/revenz/fileflows"
+    container_name: fileflows
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+      - TempPathHost={{ docker_storage_dir }}/transcode
+      - FFmpeg=/usr/local/bin/ffmpeg6
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - "{{ docker_data_dir }}/fileflow/data:/app/Data"
+      - "{{ docker_data_dir }}/fileflow/logs:/app/Logs"
+      - "{{ docker_storage_dir }}/transcode:/temp"
+      - "{{ docker_storage_dir }}/files:/media"
+    ports:
+      - 19200:5000
+    restart: unless-stopped
+  fileflows_node:
+    image: "{{ docker_registry_domain }}/revenz/fileflows"
+    container_name: fileflows_node
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+      - FFNODE=1
+      - TempPathHost={{ docker_storage_dir }}/transcode
+      - ServerUrl=http://fileflows:19200
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - "{{ docker_data_dir }}/fileflow_node/data:/app/Data"
+      - "{{ docker_data_dir }}/fileflow_node/logs:/app/Logs"
+      - "{{ docker_storage_dir }}/transcode:/temp"
+      - "{{ docker_storage_dir }}/files:/media"
+    ports:
+      - 19201:5000
+    restart: unless-stopped

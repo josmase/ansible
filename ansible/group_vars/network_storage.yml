@@ -1,0 +1,5 @@
+docker_templates:
+  - nfs
+  - smb
+
+nfs_share: /srv/storage

@@ -1,5 +1,6 @@
 
-- hosts: all_servers
+- name: Base configuration
+  hosts: all_servers
   tags:
     - general
   vars_files:
@@ -17,3 +18,10 @@
             - name: zsh-syntax-highlighting
               url: zsh-users/zsh-syntax-highlighting
     - role: general_setup
+
+- name: Inital docker setup 
+  hosts: docker
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - install-docker

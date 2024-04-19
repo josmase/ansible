@@ -1,0 +1,14 @@
+services:
+  jellyfin:
+    image: {{ docker_registry_domain }}/linuxserver/jellyfin
+    container_name: jellyfin
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/jellyfin:/config"
+      - "{{ docker_storage_dir }}/files/:{{ docker_storage_dir }}/files/"
+    ports:
+      - 8096:8096
+    restart: always

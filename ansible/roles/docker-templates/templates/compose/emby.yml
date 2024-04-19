@@ -1,0 +1,12 @@
+services:
+  emby:
+    image: {{ docker_registry_domain }}/linuxserver/emby
+    container_name: emby
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/emby:/config"
+      - "{{ docker_storage_dir }}/files/:{{ docker_storage_dir }}/files/"
+    restart: always

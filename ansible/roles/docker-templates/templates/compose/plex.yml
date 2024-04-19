@@ -1,0 +1,27 @@
+services:
+  plex:
+    image: {{ docker_registry_domain }}/linuxserver/plex
+    container_name: plex
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/plex:/config"
+      - "{{ docker_storage_dir }}/files/:{{ docker_storage_dir }}/files/"
+    restart: always
+    network_mode: host
+    
+  tautulli:
+    image: {{ docker_registry_domain }}/linuxserver/tautulli
+    container_name: tautulli
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/tautulli:/config"
+      - "{{ docker_data_dir }}/plex/Library/Application Support/Plex Media Server/Logs/:/logs"
+    ports:
+      - 8181:8181
+    restart: always

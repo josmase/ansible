@@ -7,8 +7,13 @@ docker_templates:
   - vpn
   - midarr
   - fileflow
-  #- tdarr
-  #- lancache
-
 
 maintenance_calendar: "*-*-* 04:00:00"
+
+movies_dir: "{{ docker_storage_dir }}/files/movies"
+series_dir: "{{ docker_storage_dir }}/files/series"
+
+sonarr_api_key: "{{ vault_sonarr_api_key }}"
+radarr_api_key: "{{ vault_radarr_api_key }}"
+
+media_server_domain: "media.{{ local_domain }}"

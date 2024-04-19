@@ -1,0 +1,15 @@
+services:
+  ftp-server:
+    image: garethflowers/ftp-server
+    container_name: ftp-server
+    environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
+      - TZ={{ timezone }}
+      - FTP_USER=user
+      - FTP_PASS=123
+    volumes:
+      - "{{ docker_storage_dir }}/files/public:/home/user"
+    ports:
+      - "40000-40009:40000-40009/tcp"
+      - "20-21:20-21/tcp"
