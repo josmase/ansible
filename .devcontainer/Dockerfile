@@ -33,6 +33,9 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 
 USER root
 
+# Install Ansible
+RUN apk add --no-cache ansible
+
 #Install Terraform typescript CLI
 ##Install Node.js and NPM
 RUN apk add --no-cache nodejs-current npm
