@@ -3,6 +3,8 @@ services:
     image: "{{ docker_registry_domain }}/revenz/fileflows"
     container_name: fileflows
     environment:
+      - PUID={{ main_uid }}
+      - PGID={{ main_gid }}
       - TZ={{ timezone }}
       - TempPathHost={{ storage_dir }}/transcode
     volumes:
