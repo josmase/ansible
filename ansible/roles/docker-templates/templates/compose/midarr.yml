@@ -13,7 +13,7 @@ services:
       - PGID={{ main_gid }}
       - TZ={{ timezone }}
 #       App config
-      - APP_URL=http://{{ media_server_domain }}:4000
+      - APP_URL=http://{{ docker_server_domain }}:4000
 
 #       Admin account
       - SETUP_ADMIN_EMAIL={{ email }}
@@ -21,9 +21,9 @@ services:
       - SETUP_ADMIN_PASSWORD=somepassword # minimum length 12
 
 #       Radarr integration
-      - RADARR_BASE_URL=http://{{ media_server_domain }}:7878
+      - RADARR_BASE_URL=http://{{ docker_server_domain }}:7878
       - RADARR_API_KEY={{ radarr_api_key }}
 
 #       Sonarr integration
-      - SONARR_BASE_URL=http://{{ media_server_domain }}:8989
+      - SONARR_BASE_URL=http://{{ docker_server_domain }}:8989
       - SONARR_API_KEY={{ sonarr_api_key}}
