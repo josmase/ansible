@@ -5,15 +5,19 @@ services:
     ports:
       - 4000:4000
     volumes:
-      - "{{ docker_data_dir }}/midarr:/app/database"
-      - "{{ movies_dir }}:{{ movies_dir }}"
-      - "{{ series_dir }}:{{ series_dir }}"
+      - "{{ docker_storage_dir }}:{{ docker_storage_dir }}"
     environment:
       - PUID={{ docker_puid }}
       - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
 #       App config
       - APP_URL=http://{{ docker_server_domain }}:4000
+
+#       Database config
+      - DB_USERNAME=my_user
+      - DB_PASSWORD=my_password
+      - DB_DATABASE=my_database
+      - DB_HOSTNAME=postgresql
 
 #       Admin account
       - SETUP_ADMIN_EMAIL={{ email }}
@@ -27,3 +31,18 @@ services:
 #       Sonarr integration
       - SONARR_BASE_URL=http://{{ docker_server_domain }}:8989
       - SONARR_API_KEY={{ sonarr_api_key}}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+
+  postgresql:
+    container_name: postgresql
+    image: {{ docker_registry_domain }}/postgres
+    volumes:
+      - {{ docker_data_dir }}/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=my_user
+      - POSTGRES_PASSWORD=my_password
+      - POSTGRES_DB=my_database
+    healthcheck:
+      test: "exit 0"
