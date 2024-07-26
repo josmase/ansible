@@ -1,5 +1,0 @@
-export TF_VAR_proxmox_node="server"
-export TF_VAR_proxmox_host="192.168.0.100"
-export TF_VAR_ubuntu_template_20G="lunar-template-20G"
-export TF_VAR_ubuntu_template_300G="lunar-template-300G"
-export TF_VAR_proxmox_storage="storage"
