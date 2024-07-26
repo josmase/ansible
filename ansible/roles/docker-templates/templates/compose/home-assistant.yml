@@ -8,6 +8,8 @@ services:
       - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/homeassistant:/config"
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
     restart: always
   zwave:
     image: {{ docker_registry_domain }}/zwavejs/zwavejs2mqtt:latest
@@ -21,6 +23,7 @@ services:
       - "{{ docker_data_dir }}/zwave:/usr/src/app/store"
     devices:
       - /dev/ttyACM0:/dev/ttyACM0
+      - /dev/ttyUSB0:/dev/ttyUSB0
     restart: always
     ports:
       - 8091:8091
