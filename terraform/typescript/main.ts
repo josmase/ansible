@@ -9,12 +9,16 @@ class MyStack extends TerraformStack {
     super(scope, id);
     this.vmVariables = vmVariables(this);
 
-    const { proxmoxHost, proxmoxUser, proxmoxPassword } = this.vmVariables;
-
+    const {
+      proxmoxHost,
+      proxmoxTokenId,
+      proxmoxTokenSecret,
+    } = this.vmVariables;
+    console.dir(this.vmVariables)
     createVms(this, this.defineMachines(), {
       host: proxmoxHost.value,
-      user: proxmoxUser.value,
-      password: proxmoxPassword.value,
+      tokenid: proxmoxTokenId.value,
+      tokenSecret: proxmoxTokenSecret.value,
     });
   }
 

@@ -26,6 +26,16 @@ export function vmVariables(stack: TerraformStack) {
       sensitive: true,
       type: VariableType.STRING,
     }),
+    proxmoxTokenId: new TerraformVariable(stack, "proxmox_token_id", {
+      description: "Token id created for a specific user",
+      sensitive: true,
+      type: VariableType.STRING,
+    }),
+    proxmoxTokenSecret: new TerraformVariable(stack, "proxmox_token_secret", {
+      description: "Token secret for the token id",
+      sensitive: true,
+      type: VariableType.STRING,
+    }),
     proxmoxStorage: new TerraformVariable(stack,"proxmox_storage",{
       description: "The name of the storage space to put all container disks in",
       type: VariableType.STRING

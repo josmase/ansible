@@ -1,6 +1,9 @@
 import { TerraformStack } from "cdktf";
 import { VmQemu, VmQemuConfig } from "../.gen/providers/proxmox/vm-qemu";
-import { ProxmoxProvider } from "../.gen/providers/proxmox/provider";
+import {
+  ProxmoxProvider,
+  ProxmoxProviderConfig,
+} from "../.gen/providers/proxmox/provider";
 
 export interface VirtualMachine {
   id: number;
@@ -70,7 +73,9 @@ function isProxmoxTokenConfig(
   return "tokenid" in config && "tokenSecret" in config;
 }
 
-function getProxmoxAuth(config: ProxmoxTokenConfig | ProxmoxUserConfig) {
+function getProxmoxAuth(
+  config: ProxmoxTokenConfig | ProxmoxUserConfig
+): Partial<ProxmoxProviderConfig> {
   if (isProxmoxTokenConfig(config)) {
     return {
       pmApiTokenId: config.tokenid,
@@ -78,8 +83,8 @@ function getProxmoxAuth(config: ProxmoxTokenConfig | ProxmoxUserConfig) {
     };
   } else {
     return {
-      pmApiUser: config.user,
-      pmApiPass: config.password,
+      pmUser: config.user,
+      pmPassword: config.password,
     };
   }
 }
