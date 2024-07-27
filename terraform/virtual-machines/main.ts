@@ -9,12 +9,9 @@ class MyStack extends TerraformStack {
     super(scope, id);
     this.vmVariables = vmVariables(this);
 
-    const {
-      proxmoxHost,
-      proxmoxTokenId,
-      proxmoxTokenSecret,
-    } = this.vmVariables;
-    console.dir(this.vmVariables)
+    const { proxmoxHost, proxmoxTokenId, proxmoxTokenSecret } =
+      this.vmVariables;
+    console.dir(this.vmVariables);
     createVms(this, this.defineMachines(), {
       host: proxmoxHost.value,
       tokenid: proxmoxTokenId.value,
@@ -53,7 +50,7 @@ class MyStack extends TerraformStack {
         "Main media server for stuff that is not yet running in kubernetes",
       id: 105,
       ip_address: `${subnet}.105`,
-      memory: 9216,
+      memory: 16384,
       name: "media-server",
       template: ubuntuTemplate300G.value,
     } as VirtualMachine;
