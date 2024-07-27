@@ -9,7 +9,7 @@
     "get": "cdktf get",
     "build": "tsc",
     "synth": "cdktf synth",
-    "deploy": "cdktf deploy --var-file=variables.tfvars --var-file=variables.secret.tfvars",
+    "deploy": "tsc --pretty && cdktf deploy --var-file=variables.tfvars --var-file=variables.secret.tfvars",
     "compile": "tsc --pretty",
     "watch": "tsc -w",
     "test": "jest",
@@ -21,7 +21,8 @@
     "node": ">=18.0"
   },
   "dependencies": {
-    "cdktf": "^0.20.5",
+    "cdktf": "^0.20.8",
+    "cdktf-cli": "^0.20.8",
     "constructs": "^10.3.0"
   },
   "devDependencies": {
