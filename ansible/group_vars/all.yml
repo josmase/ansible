@@ -20,7 +20,7 @@ docker_data_dir: "{{ appdata_dir }}"
 docker_puid: "{{ main_uid }}"
 docker_pgid: "{{ main_gid }}"
 docker_timezone: Europe/Stockholm
-docker_registry_domain: docker.io
+docker_registry_domain: registry-proxy.local.hejsan.xyz
 docker_registry_user: "{{ vault_docker_registry_user }}"
 docker_registry_password: "{{ vault_docker_registry_password }}"
 
