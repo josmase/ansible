@@ -30,7 +30,7 @@ services:
       - 5514:5514/udp #optioal
     restart: unless-stopped
   unifi-db:
-    image: "{{ docker_registry_domain }}/mongo:7.0"
+    image: "{{ docker_registry_domain }}/library/mongo:7.0"
     container_name: unifi-db
     environment:
       - PUID={{ docker_puid }}
