@@ -92,6 +92,7 @@ class MyStack extends TerraformStack {
       id: id,
       name: `kubernetes-node-${id}`,
       ip_address: `${subnet}.${id}`,
+      memory: 4096,
     } as VirtualMachine;
   }
 
