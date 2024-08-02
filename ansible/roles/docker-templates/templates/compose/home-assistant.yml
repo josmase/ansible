@@ -12,7 +12,7 @@ services:
       - /dev/ttyUSB0:/dev/ttyUSB0
     restart: always
   zwave:
-    image: {{ docker_registry_domain }}/zwavejs/zwavejs2mqtt:latest
+    image: {{ docker_registry_domain }}/zwavejs/zwave-js-ui:9.16.4
     container_name: zwave
     environment:
       - PUID={{ docker_puid }}
