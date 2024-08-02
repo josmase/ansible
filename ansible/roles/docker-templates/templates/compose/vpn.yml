@@ -16,9 +16,9 @@ services:
       - PUID={{ docker_puid }}
       - GUID={{ docker_pgid }}
       - TZ={{ timezone }}
-      - REGION=Norway
-      - VPNSP=private internet access
-      - PORT_FORWARDING=on
+      - SERVER_REGIONS=Norway
+      - VPN_SERVICE_PROVIDER=private internet access
+      - VPN_PORT_FORWARDING=on
       - OPENVPN_USER={{ vault_vpn_user }}
       - OPENVPN_PASSWORD={{ vault_vpn_password }}
     volumes:
