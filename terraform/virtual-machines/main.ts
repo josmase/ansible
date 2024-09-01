@@ -50,7 +50,7 @@ class MyStack extends TerraformStack {
         "Main media server for stuff that is not yet running in kubernetes",
       id: 105,
       ip_address: `${subnet}.105`,
-      memory: 12000,
+      memory: 9000,
       name: "media-server",
       template: ubuntuTemplate300G.value,
     } as VirtualMachine;
@@ -79,6 +79,7 @@ class MyStack extends TerraformStack {
       id: id,
       name: `kubernetes-master-${id}`,
       ip_address: `${subnet}.${id}`,
+      memory: 3000,
     } as VirtualMachine;
   }
 
@@ -92,7 +93,7 @@ class MyStack extends TerraformStack {
       id: id,
       name: `kubernetes-node-${id}`,
       ip_address: `${subnet}.${id}`,
-      memory: 4096,
+      memory: 6000,
     } as VirtualMachine;
   }
 
