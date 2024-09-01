@@ -27,6 +27,7 @@ export interface VirtualMachine {
   network_bridge_type: string;
   network_model: string;
   network_firewall: boolean;
+  on_boot: boolean;
 }
 
 export interface ProxmoxTokenConfig {
@@ -122,5 +123,6 @@ function virtualMachineToVmQemuConfig(value: VirtualMachine): VmQemuConfig {
     lifecycle: {
       ignoreChanges: ["network", "disk"],
     },
+    onboot: value.on_boot
   };
 }

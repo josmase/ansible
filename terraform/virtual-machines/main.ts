@@ -38,6 +38,7 @@ class MyStack extends TerraformStack {
       id: 110,
       ip_address: `${subnet}.110`,
       name: "utils",
+      on_boot: true
     } as VirtualMachine;
   }
 
