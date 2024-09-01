@@ -79,6 +79,7 @@ class MyStack extends TerraformStack {
       ...baseVm,
       id: id,
       name: `kubernetes-master-${id}`,
+      cores: 4,
       ip_address: `${subnet}.${id}`,
       memory: 3000,
     } as VirtualMachine;
