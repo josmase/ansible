@@ -8,8 +8,6 @@ services:
       - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/homeassistant:/config"
-    devices:
-      - /dev/ttyUSB0:/dev/ttyUSB0
     restart: always
   zwave:
     image: {{ docker_registry_domain }}/zwavejs/zwave-js-ui:9.16.4
@@ -21,9 +19,49 @@ services:
       - SESSION_SECRET=ccd3fc23c7e9dafc5e8b8fdd5a621dab
     volumes:
       - "{{ docker_data_dir }}/zwave:/usr/src/app/store"
-    devices:
-      - /dev/ttyACM0:/dev/ttyACM0
-      - /dev/ttyUSB0:/dev/ttyUSB0
     restart: always
     ports:
       - 8091:8091
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
+  zigbee2mqtt:
+    image: {{ docker_registry_domain }}/koenkk/zigbee2mqtt:1.40.1
+    container_name: zigbee2mqtt
+    environment:
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
+      - TZ={{ timezone }}
+    volumes:
+      - /run/udev:/run/udev:ro
+      - "{{ docker_data_dir }}/zigbee2mqtt/data:/app/data"
+    ports:
+      - 8085:8080
+    devices:
+      - /dev/ttyUSB0:/dev/ttyACM0
+    restart: unless-stopped
+  eclipse-mosquitto:
+    image: {{ docker_registry_domain }}/library/eclipse-mosquitto:2.0.18
+    container_name: mosquitto
+    environment:
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/mosquitto/config/:/mosquitto/config"
+      - "{{ docker_data_dir }}/mosquitto/data:/mosquitto/data"
+      - "{{ docker_data_dir }}/mosquitto/log:/mosquitto/log"
+    ports:
+      - 9001:9001
+      - 1883:1883
+  node-red:
+    image: {{ docker_registry_domain }}/nodered/node-red:4.0.2-22
+    container_name: nodered
+    environment:
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
+      - TZ={{ timezone }}
+    volumes:
+      - '{{ docker_data_dir }}/nodered/data:/data'
+    ports:
+      - '1880:1880'
+
