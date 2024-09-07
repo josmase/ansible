@@ -7,13 +7,9 @@ variable "zone_id" {
 }
 
 variable "account_id" {
-    description = "Cloudflare account ID for zone" 
+  description = "Cloudflare account ID for zone"
 }
 
 variable "domain" {
-  description = "Domain name" 
-}
-
-variable "external_ip" {
-  description = "External IP address"
+  description = "Domain name"
 }

@@ -10,18 +10,11 @@ provider "cloudflare" {
   api_token = var.api_token
 }
 
-resource "cloudflare_record" "hejsan" {
-  zone_id = var.zone_id
-  name    = var.domain
-  type    = "A"
-  value   = var.external_ip
-  proxied = true
-}
-
 resource "cloudflare_record" "local" {
   for_each = {
     "*.local"         = "192.168.0.181"
     "media.local"     = "192.168.0.105"
+    "mqtt.local"      = "192.168.0.105"
     "proxmox.local"   = "192.168.0.100"
     "storage.local"   = "192.168.0.102"
     "ansible.local"   = "192.168.0.101"
