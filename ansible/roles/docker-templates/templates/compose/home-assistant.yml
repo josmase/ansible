@@ -8,7 +8,11 @@ services:
       - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/homeassistant:/config"
+    ports:
+      - 8123:8123
     restart: always
+#    devices:
+#      - /dev/ttyUSB0:/dev/ttyUSB0
   zwave:
     image: {{ docker_registry_domain }}/zwavejs/zwave-js-ui:9.16.4
     container_name: zwave
@@ -22,8 +26,21 @@ services:
     restart: always
     ports:
       - 8091:8091
+      - 3000:3000
     devices:
       - /dev/ttyACM0:/dev/ttyACM0
+  node-red:
+    image: {{ docker_registry_domain }}/nodered/node-red:4.0.2-22
+    container_name: nodered
+    environment:
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
+      - TZ={{ timezone }}
+    volumes:
+      - '{{ docker_data_dir }}/nodered/data:/data'
+    ports:
+      - '1880:1880'
+
   zigbee2mqtt:
     image: {{ docker_registry_domain }}/koenkk/zigbee2mqtt:1.40.1
     container_name: zigbee2mqtt
@@ -53,15 +70,4 @@ services:
     ports:
       - 9001:9001
       - 1883:1883
-  node-red:
-    image: {{ docker_registry_domain }}/nodered/node-red:4.0.2-22
-    container_name: nodered
-    environment:
-      - PUID={{ docker_puid }}
-      - PGID={{ docker_pgid }}
-      - TZ={{ timezone }}
-    volumes:
-      - '{{ docker_data_dir }}/nodered/data:/data'
-    ports:
-      - '1880:1880'
-
+  
