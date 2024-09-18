@@ -12,6 +12,22 @@
   roles:
     - docker-templates
   tasks:
+    - name: Install NFS kernel server
+      become: true
+      apt:
+        name: 
+          - nfs-common
+        state: present
+        update_cache: yes
+    - name: Ensure NFS modules are loaded at boot
+      become: true
+      lineinfile:
+        path: /etc/modules-load.d/nfs.conf
+        line: "{{ item }}"
+        create: yes
+      loop:
+        - nfs
+        - nfsd
     - name: Load kernel modules for NFS
       become: true
       modprobe:
