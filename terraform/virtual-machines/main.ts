@@ -25,21 +25,8 @@ class MyStack extends TerraformStack {
     const machines: VirtualMachine[] = [
       ...this.defineKubernetesKluster(subnet, baseMachine),
       this.defineMediaServer(subnet, baseMachine),
-      this.defineUtilityServer(subnet, baseMachine),
     ];
     return machines;
-  }
-
-  defineUtilityServer(subnet: string, baseVm: Partial<VirtualMachine>) {
-    return {
-      ...baseVm,
-      description:
-        "For running utils that should always be running, for example vpn. So that all other VMs can safely be restarted without risk of being locked out.",
-      id: 110,
-      ip_address: `${subnet}.110`,
-      name: "utils",
-      on_boot: true
-    } as VirtualMachine;
   }
 
   defineMediaServer(subnet: string, baseVm: Partial<VirtualMachine>) {

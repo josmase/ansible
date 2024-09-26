@@ -1,4 +1,0 @@
-docker_templates:
-  - wireguard
-
-maintenance_calendar: "*-*-* 04:00:00"
