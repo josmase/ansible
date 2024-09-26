@@ -3,3 +3,4 @@ docker_templates:
   - smb
 
 nfs_share: /srv/storage
+maintenance_calendar: "*-*-01 03:00:00"
