@@ -3,7 +3,7 @@ services:
     image: {{ docker_registry_domain }}/linuxserver/swag
     container_name: swag
     environment:
-      - EMAIL=josnase@gmail.com
+      - EMAIL={{ email }}
       - URL=hejsan.xyz
       - SUBDOMAINS=wildcard
       - ONLY_SUBDOMAINS=false
