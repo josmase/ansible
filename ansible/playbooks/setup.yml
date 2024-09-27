@@ -33,8 +33,10 @@
   tasks:
     - name: Install kernel modules
       apt:
-        name: "linux-modules-extra-{{ ansible_kernel }}"
-        state: present
+        name:
+          - linux-modules-extra-{{ ansible_kernel }}
+          - linux-headers-{{ ansible_kernel }}
+        state: latest
       register: kernel_modules_install
 
     - name: Reboot the system if kernel modules were installed
