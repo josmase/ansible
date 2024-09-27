@@ -1,8 +1,27 @@
-- name: install cifs-utils
+- name: Install linux-modules-extra for the current kernel version
+  apt:
+    name: "linux-modules-extra-{{ ansible_kernel }}"
+    state: latest
+  register: install_modules
+
+- name: Reboot if linux-modules-extra was installed or updated
+  reboot:
+    msg: "Rebooting after installing linux-modules-extra"
+    connect_timeout: 5
+    reboot_timeout: 600
+  when: install_modules.changed
+
+- name: install needed packages
   become: true
-  apt: 
-    name: cifs-utils
-    state: latest 
+  apt:
+    name:
+      - cifs-utils
+      - locales
+    state: latest
+
+- name: Generate UTF-8 locale (Debian/Ubuntu)
+  become: true
+  command: locale-gen en_US.UTF-8
 
 - name: Get home directory of the user running Ansible
   ansible.builtin.set_fact:
@@ -27,5 +46,5 @@
     path: "{{ mount_point }}"
     src: "{{ smb_share_path }}"
     fstype: cifs
-    opts: "credentials={{ user_home_directory }}/{{ credentials_file }},iocharset=utf8,sec=ntlmssp,uid={{ mount_uid }},gid={{ mount_gid }}"
+    opts: "credentials={{ user_home_directory }}/{{ credentials_file }},iocharset=utf8,sec=ntlmssp,uid={{ mount_uid }},gid={{ mount_gid }},vers=3.0"
     state: mounted
