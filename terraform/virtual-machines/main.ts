@@ -20,7 +20,7 @@ class MyStack extends TerraformStack {
   }
 
   private defineMachines() {
-    const subnet = "192.168.0";
+    const subnet = "192.168.1";
     const baseMachine = this.defineBaseVm(subnet);
     const machines: VirtualMachine[] = [
       ...this.defineKubernetesKluster(subnet, baseMachine),
@@ -101,7 +101,7 @@ class MyStack extends TerraformStack {
       automatic_reboot: true,
       cloud_init_pass: cloudInitPass.value,
       cores: 2,
-      dns_servers: ["1.1.1.1", "1.0.0.1", "192.168.0.1", "127.0.0.1"],
+      dns_servers: ["1.1.1.1", "1.0.0.1", "192.168.1.1", "127.0.0.1"],
       full_clone: true,
       gateway: `${subnet}.1`,
       memory: 2048,
