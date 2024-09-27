@@ -30,7 +30,7 @@ class MyStack extends TerraformStack {
   }
 
   defineMediaServer(subnet: string, baseVm: Partial<VirtualMachine>) {
-    const { ubuntuTemplate300G } = this.vmVariables;
+    const { ubuntuTemplateLarge } = this.vmVariables;
     return {
       ...baseVm,
       cores: 10,
@@ -40,7 +40,7 @@ class MyStack extends TerraformStack {
       ip_address: `${subnet}.105`,
       memory: 9000,
       name: "media-server",
-      template: ubuntuTemplate300G.value,
+      template: ubuntuTemplateLarge.value,
     } as VirtualMachine;
   }
 
@@ -92,7 +92,7 @@ class MyStack extends TerraformStack {
       cloudInitPassword: cloudInitPass,
       publicSshKey,
       proxmoxNode,
-      ubuntuTemplate20G,
+      ubuntuTemplateSmall,
     } = this.vmVariables;
     return {
       automatic_reboot: true,
@@ -111,7 +111,7 @@ class MyStack extends TerraformStack {
       socket: 1,
       ssh_user: "ubuntu",
       target_node: proxmoxNode.value,
-      template: ubuntuTemplate20G.value,
+      template: ubuntuTemplateSmall.value,
     };
   }
 }

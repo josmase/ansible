@@ -31,7 +31,7 @@ qemu-img resize "$imageName" "+$diskSize" || { echo "Error resizing disk"; exit 
 
 echo "Installing required packages and resizing partitions..."
 virt-customize -a "$imageName" --install cloud-guest-utils || { echo "Error installing cloud-guest-utils"; exit 1; }
-resize_command="growpart /dev/sda 1"
+resize_command="growpart /dev/sda 1 && resize2fs /dev/sda1"
 
 echo "Running '$resize_command' on the image..."
 if ! virt-customize -a "$imageName" --run-command "$resize_command"; then
@@ -50,7 +50,7 @@ if ! virt-customize -a "$imageName" --run-command "$resize_command"; then
     virt-filesystems -a "$imageName" --all --long --filesystems || { echo "Error checking filesystem type"; exit 1; }
 
     # Exit with a more specific error message
-    echo "Error resizing partition"; exit 1;
+    echo "Error resizing partition or filesystem"; exit 1;
 fi
 
 # Continue with normal install
