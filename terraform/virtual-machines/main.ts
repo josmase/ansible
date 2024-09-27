@@ -77,6 +77,8 @@ class MyStack extends TerraformStack {
     subnet: string,
     baseVm: Partial<VirtualMachine>
   ): VirtualMachine {
+    const { ubuntuTemplateLarge } = this.vmVariables;
+
     return {
       ...baseVm,
       id: id,
@@ -84,6 +86,7 @@ class MyStack extends TerraformStack {
       cores: 4,
       ip_address: `${subnet}.${id}`,
       memory: 6000,
+      template: ubuntuTemplateLarge.value,
     } as VirtualMachine;
   }
 
