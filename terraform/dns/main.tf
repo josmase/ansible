@@ -12,13 +12,13 @@ provider "cloudflare" {
 
 resource "cloudflare_record" "local" {
   for_each = {
-    "*.local"         = "192.168.0.181"
-    "media.local"     = "192.168.0.105"
-    "mqtt.local"      = "192.168.0.105"
-    "proxmox.local"   = "192.168.0.100"
-    "storage.local"   = "192.168.0.102"
-    "ansible.local"   = "192.168.0.101"
-    "*.staging.local" = "192.168.0.182"
+    "*.local"         = "192.168.1.181"
+    "media.local"     = "192.168.1.105"
+    "mqtt.local"      = "192.168.1.105"
+    "proxmox.local"   = "192.168.1.100"
+    "storage.local"   = "192.168.1.102"
+    "ansible.local"   = "192.168.1.101"
+    "*.staging.local" = "192.168.1.182"
   }
   zone_id = var.zone_id
   name    = each.key

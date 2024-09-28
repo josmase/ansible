@@ -1,5 +1,5 @@
 proxmox_node="server"
-proxmox_host="192.168.0.100"
+proxmox_host="192.168.1.100"
 ubuntu_template_small="lunar-template-small"
 ubuntu_template_large="lunar-template-large"
 proxmox_storage="storage"

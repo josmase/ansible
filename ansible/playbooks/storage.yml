@@ -58,7 +58,7 @@
       ansible.posix.mount:
         state: mounted
         path: "/mnt/nfs"
-        src: "192.168.0.102:/"
+        src: "192.168.1.102:/"
         fstype: nfs
         opts: soft,nolock
 
@@ -70,7 +70,7 @@
   vars:
     smb_share_username: "alice"
     smb_share_password: "alipass"
-    smb_share_path: "//192.168.0.102/alice"
+    smb_share_path: "//192.168.1.102/alice"
     mount_point: "{{ storage_dir }}"
     mount_gid: "{{ main_gid }}"
     mount_uid: "{{ main_uid }}"
@@ -87,7 +87,7 @@
   vars:
     smb_share_username: "alice"
     smb_share_password: "alipass"
-    smb_share_path: "//192.168.0.102/alice/cache"
+    smb_share_path: "//192.168.1.102/alice/cache"
     mount_point: "/mnt/cache"
     mount_gid: "33" #www-data
     mount_uid: "33" #www-data
