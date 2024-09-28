@@ -45,8 +45,6 @@ services:
       - PUID={{ docker_puid }}
       - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
-      - DOCKER_MODS=registry.local.hejsan.xyz/gilbn/theme.park:sonarr
-      - TP_THEME=overseerr
     volumes:
       - "{{ docker_data_dir }}/radarr:/config"
       - "{{ docker_storage_dir }}:{{ docker_storage_dir }}"
@@ -60,8 +58,6 @@ services:
       - PUID={{ docker_puid }}
       - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
-      - DOCKER_MODS=registry.local.hejsan.xyz/gilbn/theme.park:sonarr
-      - TP_THEME=overseerr
     volumes:
       - "{{ docker_data_dir }}/sonarr:/config"
       - "{{ docker_storage_dir }}:{{ docker_storage_dir }}"

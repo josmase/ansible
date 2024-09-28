@@ -5,8 +5,6 @@ docker_templates:
   - jellyfin
   - plex
   - vpn
-  - midarr
-  - fileflow
   - unifi
 
 maintenance_calendar: "*-*-* 04:00:00"
