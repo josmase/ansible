@@ -1,6 +1,6 @@
 services:
   nfs:
-    image: erichough/nfs-server
+    image: docker.io/erichough/nfs-server
     container_name: nfs
     cap_add:
       - SYS_ADMIN
@@ -16,6 +16,6 @@ services:
       - "/lib/modules:/lib/modules:ro"
     ports:
       - 2049:2049
-    security_opt:
-      - apparmor=erichough-nfs #https://github.com/ehough/docker-nfs-server/issues/5 sudo systemctl disable apparmor
+    #security_opt:
+    #  - apparmor=erichough-nfs #https://github.com/ehough/docker-nfs-server/issues/5 sudo systemctl disable apparmor
     restart: always

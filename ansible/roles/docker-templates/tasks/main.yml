@@ -19,5 +19,15 @@
     mode: "0640"
   loop: "{{ docker_templates }}"
 
+- name: Deploy extra files for compose files
+  template:
+    src: ../templates/extra-files/{{ item }}
+    dest: "{{ docker_compose_dir }}/{{ item }}"
+    owner: "{{ main_username }}"
+    group: "{{ main_groupname }}"
+    mode: "0640"
+  loop: 
+    - unifi-init-mongo.js 
+
 - name: Start containers
   command: "{{ docker_script_dir }}/start.sh"

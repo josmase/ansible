@@ -2,6 +2,7 @@ roles:
   - gantsign.antigen
   - sdarwin.vnc
   - community.docker
+  - geerlingguy.nfs
 
 collections:
   - community.general

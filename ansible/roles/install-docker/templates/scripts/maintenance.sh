@@ -27,5 +27,5 @@ chown -R {{ main_username }}:{{ main_groupname }} "${DOWNLOADS_DIR}"
 chmod -R 755 "${DOWNLOADS_DIR}"
 
 #There is an issue with EasyAudioEncoder and removing all codecs and restarting solves it for a while.
-rm -r "${APPDATA_PATH}/plex/Library/Application Support/Plex Media Server/Codecs/*" && docker restart plex
+rm -r "${APPDATA_PATH}/plex/Library/Application Support/Plex Media Server/Codecs/*" && podman restart plex
 

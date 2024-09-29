@@ -1,0 +1,17 @@
+- name: install nfs-utils
+  apt:
+    name: nfs-common
+    state: latest
+
+- name: create install directory
+  file:
+    path: "{{ nfs_mount_point }}"
+    state: directory
+
+- name: Bind storage to nfs exports
+  ansible.posix.mount:
+    state: mounted
+    path: "{{ nfs_mount_point }}"
+    src: "{{ nfs_mount_src}}"
+    fstype: nfs
+    opts: soft,lock,vers=4

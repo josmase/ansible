@@ -7,60 +7,23 @@
 
 - name: Deploy netowork shares
   hosts: network_storage
+  become: true
   vars_files:
     - ../vars/vault.yml
   roles:
     - docker-templates
-  tasks:
-    - name: Install NFS kernel server
-      become: true
-      apt:
-        name: 
-          - nfs-common
-        state: present
-        update_cache: yes
-    - name: Ensure NFS modules are loaded at boot
-      become: true
-      lineinfile:
-        path: /etc/modules-load.d/nfs.conf
-        line: "{{ item }}"
-        create: yes
-      loop:
-        - nfs
-        - nfsd
-    - name: Load kernel modules for NFS
-      become: true
-      modprobe:
-        name: "{{ item }}"
-      loop:
-        - nfsd
-        - nfs
+    - geerlingguy.nfs
 
 - name: Mount NFS shares
   hosts: nfs_client
+  become: true
   vars_files:
     - ../vars/vault.yml
-  tasks:
-    - name: install nfs-utils
-      become: true
-      apt:
-        name: nfs-common
-        state: latest
-
-    - name: create install directory
-      become: true
-      file:
-        path: "/mnt/nfs"
-        state: directory
-
-    - name: Bind storage to nfs exports
-      become: true
-      ansible.posix.mount:
-        state: mounted
-        path: "/mnt/nfs"
-        src: "192.168.1.102:/"
-        fstype: nfs
-        opts: soft,nolock
+  vars:
+    nfs_mount_point: "{{ storage_dir }}"
+    nfs_mount_src: "storage.local.hejsan.xyz:/"
+  roles:
+    - nfs_share
 
 - name: Mount SMB share
   hosts: smb_client
@@ -70,28 +33,10 @@
   vars:
     smb_share_username: "alice"
     smb_share_password: "alipass"
-    smb_share_path: "//192.168.1.102/alice"
-    mount_point: "{{ storage_dir }}"
+    smb_share_path: "//storage.local.hejsan.xyz/alice"
+    mount_point: "/mnt/smb"
     mount_gid: "{{ main_gid }}"
     mount_uid: "{{ main_uid }}"
     credentials_file: "cifs_credentials_file"
-  roles:
-    - smb_share
-
-- name: Mount smb share for lancache
-  hosts: smb_client
-  become: true
-  vars_files:
-    - ../vars/vault.yml
-
-  vars:
-    smb_share_username: "alice"
-    smb_share_password: "alipass"
-    smb_share_path: "//192.168.1.102/alice/cache"
-    mount_point: "/mnt/cache"
-    mount_gid: "33" #www-data
-    mount_uid: "33" #www-data
-    credentials_file: "cifs_credentials_file"
-
   roles:
     - smb_share

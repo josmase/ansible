@@ -14,7 +14,7 @@
         - collection
 
     - name: Install dependencies
-      local_action: command ansible-galaxy {{ item }} install -r {{ playbook_dir  }}/../requirements.yml -p {{ playbook_dir  }}/../galaxy_{{ item }} --ignore-errors
+      local_action: command ansible-galaxy {{ item }} install -r {{ playbook_dir  }}/../collections/requirements.yml -p {{ playbook_dir  }}/../galaxy_{{ item }} --ignore-errors
       loop:
         - role
         - collection
