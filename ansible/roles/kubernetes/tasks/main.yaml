@@ -1,0 +1,2 @@
+- include_tasks: multipath.yaml
+- include_tasks: nvme.yaml

@@ -1,0 +1,33 @@
+- name: Install kernel modules
+  apt:
+    name:
+      - linux-modules-extra-{{ ansible_kernel }}
+      - linux-headers-{{ ansible_kernel }}
+    state: latest
+  register: kernel_modules_install
+
+- name: Reboot the system if kernel modules were installed
+  reboot:
+  when: kernel_modules_install is changed
+
+- name: Load nvme_tcp module
+  modprobe:
+    name: nvme_tcp
+    state: present
+
+- name: Ensure nvme_tcp module loads at boot
+  copy:
+    dest: /etc/modules-load.d/nvme_tcp.conf
+    content: "nvme_tcp\n"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Verify nvme_tcp module is loaded
+  shell: "lsmod | grep nvme_tcp"
+  register: nvme_tcp_status
+  ignore_errors: true
+
+- name: Display nvme_tcp module status
+  debug:
+    msg: "nvme_tcp module is {{ 'loaded' if nvme_tcp_status.rc == 0 else 'not loaded' }}"

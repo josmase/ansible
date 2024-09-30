@@ -1,0 +1,37 @@
+- name: Ensure the multipath configuration directory exists
+  file:
+    path: /etc
+    state: directory
+
+- name: Create multipath.conf if it does not exist
+  copy:
+    dest: /etc/multipath.conf
+    content: |
+      defaults {
+          user_friendly_names yes
+      }
+      blacklist {
+          devnode "^sd[a-z0-9]+"
+      }
+
+- name: Add blacklist configuration to multipath.conf
+  blockinfile:
+    path: /etc/multipath.conf
+    block: |
+      blacklist {
+          devnode "^sd[a-z0-9]+"
+      }
+    insertafter: EOF
+
+- name: Restart multipathd service
+  service:
+    name: multipathd
+    state: restarted
+
+- name: Verify multipath configuration
+  command: multipath -t
+  register: multipath_output
+
+- name: Output verification result
+  debug:
+    msg: "{{ multipath_output.stdout }}"
