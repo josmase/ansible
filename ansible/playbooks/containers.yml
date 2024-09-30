@@ -1,6 +1,5 @@
 - hosts:
     - media_server
-    - storage
   vars_files:
     - ../vars/vault.yml
   roles:

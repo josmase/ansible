@@ -3,6 +3,7 @@ roles:
   - sdarwin.vnc
   - community.docker
   - geerlingguy.nfs
+  - geerlingguy.samba
 
 collections:
   - community.general

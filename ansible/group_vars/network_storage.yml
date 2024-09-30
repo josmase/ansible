@@ -1,9 +1,21 @@
 docker_templates:
   # - nfs
-  - smb
+  #- smb
 
 nfs_share: /srv/storage
 maintenance_calendar: "*-*-01 03:00:00"
 
 nfs_exports:
   - "{{ docker_storage_dir }}  (rw,sync,fsid=0,crossmnt,no_subtree_check,anonuid=1000,anongid=1000)"
+
+smb_exports:
+  - name: public
+    content: |
+      [public]
+      path = {{ storage_dir }}
+      public = yes
+      guest only = yes
+      writable = yes
+      force create mode = 0666
+      force directory mode = 0777
+      browseable = yes

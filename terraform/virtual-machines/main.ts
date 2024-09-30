@@ -33,12 +33,12 @@ class MyStack extends TerraformStack {
     const { ubuntuTemplateLarge } = this.vmVariables;
     return {
       ...baseVm,
-      cores: 10,
+      cores: 4,
       description:
         "Main media server for stuff that is not yet running in kubernetes",
       id: 105,
       ip_address: `${subnet}.105`,
-      memory: 9000,
+      memory: 3000,
       name: "media-server",
       template: ubuntuTemplateLarge.value,
     } as VirtualMachine;
@@ -83,9 +83,9 @@ class MyStack extends TerraformStack {
       ...baseVm,
       id: id,
       name: `kubernetes-node-${id}`,
-      cores: 4,
+      cores: 6,
       ip_address: `${subnet}.${id}`,
-      memory: 6000,
+      memory: 5000,
       template: ubuntuTemplateLarge.value,
     } as VirtualMachine;
   }

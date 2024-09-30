@@ -23,28 +23,26 @@
   become: true
   command: locale-gen en_US.UTF-8
 
-- name: Get home directory of the user running Ansible
-  ansible.builtin.set_fact:
-    user_home_directory: "{{ lookup('env', 'HOME') }}"
+- name: Ensure mount point exists
+  ansible.builtin.file:
+    path: "{{ mount_point }}"
+    state: directory
+  loop: "{{ smb_shares }}"
 
-- name: Create CIFS password file in user's home directory
+- name: Create CIFS password file if credentials exist
   ansible.builtin.lineinfile:
-    path: "{{ user_home_directory }}/{{ credentials_file }}"
+    path: "{{ ansible_env.HOME }}/{{ credentials_file }}"
     line: |
       username={{ smb_share_username }}
       password={{ smb_share_password }}
     create: yes
     state: present
+  when: smb_share_username != '' and smb_share_password != ''
 
-- name: Ensure mount point exists
-  ansible.builtin.file:
-    path: "{{ mount_point }}"
-    state: directory
-
-- name: Mount SMB share
+- name: Mount SMB share with credentials if provided
   ansible.builtin.mount:
     path: "{{ mount_point }}"
     src: "{{ smb_share_path }}"
     fstype: cifs
-    opts: "credentials={{ user_home_directory }}/{{ credentials_file }},iocharset=utf8,sec=ntlmssp,uid={{ mount_uid }},gid={{ mount_gid }},vers=3.0"
+    opts: "{{ 'credentials=' + ansible_env.HOME + '/' + item.credentials_file + ',iocharset=utf8,sec=ntlmssp,uid=1000,gid=1000,vers=3.0' if smb_share_username != '' and smb_share_password != '' else 'iocharset=utf8,sec=ntlmssp,uid=1000,gid=1000,vers=3.0' }}"
     state: mounted
