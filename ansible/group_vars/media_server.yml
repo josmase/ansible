@@ -2,7 +2,6 @@ docker_templates:
   - swag
   - home-assistant
   - unifi
-  - jellyfin
 
 maintenance_calendar: "*-*-* 04:00:00"
 
