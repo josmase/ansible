@@ -1,6 +1,6 @@
 services:
   unifi:
-    image: "{{ docker_registry_domain }}/linuxserver/unifi-network-application"
+    image: "{{ docker_registry_domain }}/linuxserver/unifi-network-application:8.5.6-ls67"
     container_name: unifi
     environment:
       - PUID={{ docker_puid }}
