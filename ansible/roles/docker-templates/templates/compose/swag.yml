@@ -1,6 +1,6 @@
 services:
   swag:
-    image: {{ docker_registry_domain }}/linuxserver/swag
+    image: {{ docker_registry_domain }}/linuxserver/swag:2024.10.1-ls32
     container_name: swag
     environment:
       - EMAIL={{ email }}

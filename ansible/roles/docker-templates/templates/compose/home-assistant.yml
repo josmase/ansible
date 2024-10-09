@@ -1,6 +1,6 @@
 services:
   homeassistant:
-    image: {{ docker_registry_domain }}/linuxserver/homeassistant
+    image: {{ docker_registry_domain }}/linuxserver/homeassistant:2024.10.1-ls32
     container_name: homeassistant
     environment:
       - PUID={{ docker_puid }}
