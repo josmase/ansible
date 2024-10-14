@@ -28,12 +28,8 @@ services:
       - 5514:5514/udp #optioal
     restart: unless-stopped
   unifi-db:
-    image: "{{ docker_registry_domain }}/library/mongo:7.0"
+    image: "{{ docker_registry_domain }}/library/mongo:8.0.0"
     container_name: unifi-db
-    environment:
-      - PUID={{ docker_puid }}
-      - PGID={{ docker_pgid }}
-      - TZ={{ timezone }}
     volumes:
       - "{{ docker_data_dir }}/unifi-network-application/db:/data/db"
       - "{{ docker_compose_dir }}/unifi-init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js" # Mount the script directly
