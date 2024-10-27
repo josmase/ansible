@@ -1,0 +1,18 @@
+- name: Ensure linux-modules-extra is installed
+  ansible.builtin.package:
+    name: linux-modules-extra-{{ ansible_kernel }}
+    state: present
+  register: kernel_modules_install
+
+- name: Reboot the system if kernel modules were installed
+  reboot:
+  when: kernel_modules_install is changed
+
+- name: Load kernel modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  register: load_result
+  loop:
+    - ftdi_sio
+    - usbserial
