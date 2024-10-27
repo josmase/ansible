@@ -8,6 +8,8 @@
     src: ../templates/apparmor/erichough-nfs
     dest: /etc/apparmor.d/erichough-nfs
     mode: 644
+  register: apparmor_deploy
 
 - name: Reload apparmor
   command: apparmor_parser -r -W /etc/apparmor.d/erichough-nfs
+  when: apparmor_deploy.changed
