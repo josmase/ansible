@@ -14,14 +14,7 @@
   modprobe:
     name: nvme_tcp
     state: present
-
-- name: Ensure nvme_tcp module loads at boot
-  copy:
-    dest: /etc/modules-load.d/nvme_tcp.conf
-    content: "nvme_tcp\n"
-    owner: root
-    group: root
-    mode: "0644"
+    persistent: present
 
 - name: Verify nvme_tcp module is loaded
   shell: "lsmod | grep nvme_tcp"
