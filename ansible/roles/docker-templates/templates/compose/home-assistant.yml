@@ -1,6 +1,6 @@
 services:
   homeassistant:
-    image: {{ docker_registry_domain }}/linuxserver/homeassistant:2024.10.1-ls32
+    image: {{ docker_registry_domain }}/linuxserver/homeassistant:latest
     container_name: homeassistant
     environment:
       - PUID={{ docker_puid }}
@@ -14,7 +14,7 @@ services:
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
   zwave:
-    image: {{ docker_registry_domain }}/zwavejs/zwave-js-ui:9.16.4
+    image: {{ docker_registry_domain }}/zwavejs/zwave-js-ui:latest
     container_name: zwave
     environment:
       - PUID={{ docker_puid }}
@@ -30,7 +30,7 @@ services:
     devices:
       - /dev/ttyACM0:/dev/ttyACM0
   node-red:
-    image: {{ docker_registry_domain }}/nodered/node-red:4.0.2-22
+    image: {{ docker_registry_domain }}/nodered/node-red:latest
     container_name: nodered
     environment:
       - PUID={{ docker_puid }}

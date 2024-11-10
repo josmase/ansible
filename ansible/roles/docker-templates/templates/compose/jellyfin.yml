@@ -1,6 +1,6 @@
 services:
   jellyfin:
-    image: {{ docker_registry_domain }}/linuxserver/jellyfin
+    image: {{ docker_registry_domain }}/linuxserver/jellyfin:latest
     container_name: jellyfin
     environment:
       - PUID={{ docker_puid }}

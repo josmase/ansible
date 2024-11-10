@@ -1,6 +1,6 @@
 services:
   swag:
-    image: {{ docker_registry_domain }}/linuxserver/swag:2.11.0
+    image: {{ docker_registry_domain }}/linuxserver/swag:latest
     container_name: swag
     environment:
       - EMAIL={{ email }}
@@ -12,9 +12,11 @@ services:
       - PUID={{ docker_puid }}
       - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
+      - DOCKER_MODS=linuxserver/mods:swag-dashboard
     volumes:
       - "{{ docker_data_dir }}/swag:/config"
     ports:
       - 8081:80
       - 4433:443
+      - 8085:81
     restart: always
