@@ -26,6 +26,7 @@
     - install-docker
     - role: load_usb_modules
       when: "'home-assistant' in docker_templates"
+      become: true
 
 - name: Ensure nvme_tcp module and multipath is configured
   vars_files:
