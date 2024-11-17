@@ -6,7 +6,7 @@ nfs_share: /srv/storage
 maintenance_calendar: "*-*-01 03:00:00"
 
 nfs_exports:
-  - "{{ docker_storage_dir }}  (rw,sync,fsid=0,crossmnt,no_subtree_check,anonuid=1000,anongid=1000)"
+  - "{{ docker_storage_dir }} *(rw,sync,fsid=0,crossmnt,no_subtree_check,anonuid=1000,anongid=1000)"
 
 smb_exports:
   - name: public
