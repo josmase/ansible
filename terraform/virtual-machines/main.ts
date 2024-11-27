@@ -68,7 +68,7 @@ class MyStack extends TerraformStack {
       name: `kubernetes-master-${id}`,
       cores: 6,
       ip_address: `${subnet}.${id}`,
-      memory: 4000,
+      memory: 6000,
     } as VirtualMachine;
   }
 
@@ -85,7 +85,7 @@ class MyStack extends TerraformStack {
       name: `kubernetes-node-${id}`,
       cores: 6,
       ip_address: `${subnet}.${id}`,
-      memory: 6000,
+      memory: 20000,
       template: ubuntuTemplateLarge.value,
     } as VirtualMachine;
   }
