@@ -2,6 +2,7 @@ docker_templates:
   - swag
   - home-assistant
   - unifi
+  - vpn
 
 maintenance_calendar: "*-*-* 04:00:00"
 
