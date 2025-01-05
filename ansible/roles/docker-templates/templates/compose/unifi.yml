@@ -28,7 +28,7 @@ services:
       - 5514:5514/udp #optioal
     restart: unless-stopped
   unifi-db:
-    image: "{{ docker_registry_domain }}/flakybitnet/mongodb-server:7.0.16-fb2"
+    image: "{{ docker_registry_domain }}/library/mongo:4.4.6"
     container_name: unifi-db
     volumes:
       - "{{ docker_data_dir }}/unifi-network-application/db:/data/db"

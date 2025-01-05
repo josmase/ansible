@@ -1,6 +1,6 @@
 docker_templates:
-  - swag
-  - home-assistant
+  #- swag
+  #- home-assistant
   - unifi
   - vpn
 
