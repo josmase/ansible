@@ -10,33 +10,69 @@
     - item.children is defined
     - item.children | list | length == 1
 
-- name: Create list of encrypted partitions where the size is 1 terabyte or larger
+- name: Print all devices
+  debug:
+    msg: "{{ child_devices }}"
+
+- name: Initilize list of non-LUKS partitions
   set_fact:
-    encrypted_partitions: "{{ encrypted_partitions | default([]) + [item] }}"
+    non_luks_partitions: "{{ [] }}"
+
+- name: Create list of non-LUKS partitions
+  set_fact:
+    non_luks_partitions: "{{ non_luks_partitions | default([]) + [{
+      'name': item.name,
+      'fstype': item.fstype,
+      'size': item.size,
+      'src': '/dev/' ~ item.name,
+      'uuid': item.uuid
+      }] }}"
   loop: "{{ child_devices }}"
   when:
-    - item.fstype == 'crypto_LUKS'
-    - (item.size | string)[0] | int >= 1
-    - (item.size | string)[-1] == 'T'
+    - item.fstype != 'crypto_LUKS'
 
-- name: Create list of decrypted partitions where the size is 1 terabyte or larger
+- name: Initilize list of LUKS partitions
   set_fact:
-    decrypted_partitions: "{{ decrypted_partitions | default([]) + item.children }}"
-  loop: "{{ encrypted_partitions }}"
+    luks_partitions: "{{ [] }}"
+
+- name: Create list of LUKS partitions and their children
+  set_fact:
+    luks_partitions: "{{ luks_partitions | default([]) + [{
+      'name': item.children[0].name,
+      'fstype': item.children[0].fstype,
+      'size': item.children[0].size,
+      'src': '/dev/mapper/' ~ item.children[0].name,
+      'uuid': item.children[0].uuid
+      }] }}"
+  loop: "{{ child_devices }}"
   when:
     - item.children is defined
-    - item.children | list | length == 1
+    - item.fstype == 'crypto_LUKS'
+    - item.children is defined
+    - item.children | length == 1
 
-- name: Add decrypted drives to /etc/fstab
+- name: Debug non-LUKS partitions
+  debug:
+    msg: "Non-LUKS partitions: {{ non_luks_partitions }}"
+
+- name: Debug LUKS partitions
+  debug:
+    msg: "LUKS partitions: {{ luks_partitions }}"
+
+- name: Add non-LUKS partitions to /etc/fstab
   become: true
   ansible.posix.mount:
     state: mounted
-    path: "{{ mount_dir }}/{{ item.name }}"
-    src: /dev/mapper/{{ item.name }}
+    path: "/mnt/drives/{{ crypttab_name_prefix }}_{{ item.uuid.split('-')[0] }}"
+    src: "{{ item.src }}"
     fstype: "{{ item.fstype }}"
-  loop: "{{ decrypted_partitions }}"
-  when:
-    - (item.size | string)[0] | int >= 1
-    - (item.size | string)[-1] == 'T'
-    - item.name is search(crypttab_name_prefix)
-    - item.fstype == 'ext4'
+  loop: "{{ non_luks_partitions }}"
+
+- name: Add LUKS partitions to /etc/fstab
+  become: true
+  ansible.posix.mount:
+    state: mounted
+    path: "/mnt/drives/{{ item.name }}"
+    src: "{{ item.src }}"
+    fstype: "{{ item.fstype }}"
+  loop: "{{ luks_partitions }}"
