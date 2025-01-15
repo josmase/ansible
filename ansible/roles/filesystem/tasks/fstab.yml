@@ -4,9 +4,9 @@
 
 - name: Create list of all available partitions
   set_fact:
-    child_devices: "{{ child_devices | default([]) + item.children }}" 
+    child_devices: "{{ child_devices | default([]) + item.children }}"
   loop: "{{ (all_devices.stdout | from_json).blockdevices }}"
-  when: 
+  when:
     - item.children is defined
     - item.children | list | length == 1
 
@@ -14,16 +14,16 @@
   set_fact:
     encrypted_partitions: "{{ encrypted_partitions | default([]) + [item] }}"
   loop: "{{ child_devices }}"
-  when: 
+  when:
     - item.fstype == 'crypto_LUKS'
     - (item.size | string)[0] | int >= 1
     - (item.size | string)[-1] == 'T'
 
 - name: Create list of decrypted partitions where the size is 1 terabyte or larger
   set_fact:
-    decrypted_partitions: "{{ decrypted_partitions | default([]) + item.children }}" 
+    decrypted_partitions: "{{ decrypted_partitions | default([]) + item.children }}"
   loop: "{{ encrypted_partitions }}"
-  when: 
+  when:
     - item.children is defined
     - item.children | list | length == 1
 
@@ -35,8 +35,8 @@
     src: /dev/mapper/{{ item.name }}
     fstype: "{{ item.fstype }}"
   loop: "{{ decrypted_partitions }}"
-  when: 
-      - (item.size | string)[0] | int >= 1
-      - (item.size | string)[-1] == 'T'
-      - item.name is search(crypttab_name_prefix)
-      - item.fstype == 'xfs'
+  when:
+    - (item.size | string)[0] | int >= 1
+    - (item.size | string)[-1] == 'T'
+    - item.name is search(crypttab_name_prefix)
+    - item.fstype == 'ext4'
