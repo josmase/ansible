@@ -64,7 +64,7 @@
   ansible.posix.mount:
     state: mounted
     path: "/mnt/drives/{{ crypttab_name_prefix }}_{{ item.uuid.split('-')[0] }}"
-    src: "{{ item.src }}"
+    src: "/dev/disk/by-uuid/{{ item.uuid }}"
     fstype: "{{ item.fstype }}"
   loop: "{{ non_luks_partitions }}"
 
