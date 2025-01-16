@@ -8,31 +8,24 @@
 
 - name: Create list of all available partitions
   set_fact:
-    child_devices: "{{ child_devices | default([]) + item.children }}" 
+    child_devices: "{{ child_devices | default([]) + item.children }}"
   loop: "{{ (all_devices.stdout | from_json).blockdevices }}"
-  when: 
+  when:
     - item.children is defined
     - item.children | list | length == 1
-   
+
+- name: Initilize list of encrypted partitions
+  set_fact:
+    encrypted_partitions: "{{ [] }}"
+
 - name: Create list of encrypted partitions where the size is 1 terabyte or larger
   set_fact:
     encrypted_partitions: "{{ encrypted_partitions | default([]) + [item] }}"
   loop: "{{ child_devices }}"
-  when: 
+  when:
     - item.fstype == 'crypto_LUKS'
     - (item.size | string)[0] | int >= 1
     - (item.size | string)[-1] == 'T'
-
-- name: Add keyfile
-  become: true
-  lineinfile:
-    path: /home/{{ ansible_user }}/keyfile
-    line: "{{ vault_keyfile }}"
-    owner: root
-    group: root
-    mode: '0600'
-    create: yes
-
 
 - name: Add partitions to crypttab
   become: true
@@ -44,6 +37,16 @@
     opts: luks,discard
   loop: "{{ encrypted_partitions }}"
 
+- name: Add keyfile
+  become: true
+  lineinfile:
+    path: /home/{{ ansible_user }}/keyfile
+    line: "{{ vault_keyfile }}"
+    owner: root
+    group: root
+    mode: "0600"
+    create: yes
+  when: encrypted_partitions | length > 0
 #- name: Mount crypttab
 #  become: true
 #  command: /usr/lib/systemd/system-generators/systemd-cryptsetup-generator && systemctl daemon-reload && systemctl restart cryptsetup.target
