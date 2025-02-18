@@ -1,38 +1,38 @@
 services:
-#  vpn:
-#    container_name: vpn
-#    image: {{ docker_registry_domain }}/qmcgaw/gluetun:latest
-#    restart: always
-#    cap_add:
-#      - net_admin
-#    devices:
-#      - /dev/net/tun:/dev/net/tun
-#    ports:
-#      #- 9091:9091 #transmission 
-#      - 7878:7878 #radarr
-#      - 8989:8989 #sonarr 
-#      - 8787:8787 #readarr
-#      - 9696:9696 #prowlarr
-#      - 6767:6767 #bazarr
-#    environment:
-#      - PUID={{ docker_puid }}
-#      - GUID={{ docker_pgid }}
-#      - TZ={{ timezone }}
-#      - SERVER_REGIONS=Norway
-#      - VPN_SERVICE_PROVIDER=private internet access
-#      - VPN_PORT_FORWARDING=on
-#      - OPENVPN_USER={{ vault_vpn_user }}
-#      - OPENVPN_PASSWORD={{ vault_vpn_password }}
-#    volumes:
-#      - "{{ docker_data_dir }}/vpn/:/gluetun"
+  vpn:
+    container_name: vpn
+    image: {{ docker_registry_domain }}/qmcgaw/gluetun:latest
+    restart: always
+    cap_add:
+      - net_admin
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 9091:9091 #transmission 
+      - 7878:7878 #radarr
+      - 8989:8989 #sonarr 
+      - 8787:8787 #readarr
+      - 9696:9696 #prowlarr
+      - 6767:6767 #bazarr
+    environment:
+      - PUID={{ docker_puid }}
+      - GUID={{ docker_pgid }}
+      - TZ={{ timezone }}
+      - SERVER_REGIONS=Norway
+      - VPN_SERVICE_PROVIDER=private internet access
+      - VPN_PORT_FORWARDING=on
+      - OPENVPN_USER={{ vault_vpn_user }}
+      - OPENVPN_PASSWORD={{ vault_vpn_password }}
+    volumes:
+      - "{{ docker_data_dir }}/vpn/:/gluetun"
 
   transmission:
     container_name: transmission
     image: {{ docker_registry_domain }}/linuxserver/transmission
-    #network_mode: service:vpn
-    ports:
-      - 9091:9091 #transmission 
-      - 55991:55991
+    network_mode: service:vpn
+    #ports:
+    #  - 9091:9091 #transmission 
+    #  - 55991:55991
     environment:
       - PEERPORT=55991
       - PUID={{ docker_puid }}
@@ -45,56 +45,55 @@ services:
 
     restart: always
 
-  #radarr:
-  #  image: {{ docker_registry_domain }}/linuxserver/radarr
-  #  container_name: radarr
-  #  network_mode: service:vpn
-  #  environment:
-  #    - PUID={{ docker_puid }}
-  #    - PGID={{ docker_pgid }}
-  #    - TZ={{ timezone }}
-  #  volumes:
-  #    - "{{ docker_data_dir }}/radarr:/config"
-  #    - "{{ docker_storage_dir }}:{{ docker_storage_dir }}"
-  #  restart: always
-#
-  #sonarr:
-  #  image: {{ docker_registry_domain }}/linuxserver/sonarr
-  #  container_name: sonarr
-  #  network_mode: service:vpn
-  #  environment:
-  #    - PUID={{ docker_puid }}
-  #    - PGID={{ docker_pgid }}
-  #    - TZ={{ timezone }}
-  #  volumes:
-  #    - "{{ docker_data_dir }}/sonarr:/config"
-  #    - "{{ docker_storage_dir }}:{{ docker_storage_dir }}"
-  #  restart: always
-#
-  #prowlarr:
-  #  image: {{ docker_registry_domain }}/linuxserver/prowlarr:develop
-  #  container_name: prowlarr
-  #  network_mode: service:vpn
-  #  environment:
-  #    - PUID={{ docker_puid }}
-  #    - PGID={{ docker_pgid }}
-  #    - TZ={{ timezone }}
-  #  volumes:
-  #    - "{{ docker_data_dir }}/prowlarr:/config"
-  #  restart: always
-#
-  #bazarr:
-  #  image: {{ docker_registry_domain }}/linuxserver/bazarr
-  #  container_name: bazarr
-  #  network_mode: service:vpn
-  #  environment:
-  #    - PUID={{ docker_puid }}
-  #    - PGID={{ docker_pgid }}
-  #    - TZ={{ timezone }}
-  #  volumes:
-  #    - "{{ docker_data_dir }}/bazarr:/config"
-  #    - "{{ docker_storage_dir }}/files:{{ docker_storage_dir }}/files"
-  #  restart: always
-#
-#
-#
+  radarr:
+    image: {{ docker_registry_domain }}/linuxserver/radarr
+    container_name: radarr
+    network_mode: service:vpn
+    environment:
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/radarr:/config"
+      - "{{ docker_storage_dir }}:{{ docker_storage_dir }}"
+    restart: always
+
+  sonarr:
+    image: {{ docker_registry_domain }}/linuxserver/sonarr
+    container_name: sonarr
+    network_mode: service:vpn
+    environment:
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/sonarr:/config"
+      - "{{ docker_storage_dir }}:{{ docker_storage_dir }}"
+    restart: always
+
+  prowlarr:
+    image: {{ docker_registry_domain }}/linuxserver/prowlarr:develop
+    container_name: prowlarr
+    network_mode: service:vpn
+    environment:
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/prowlarr:/config"
+    restart: always
+
+  bazarr:
+    image: {{ docker_registry_domain }}/linuxserver/bazarr
+    container_name: bazarr
+    network_mode: service:vpn
+    environment:
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/bazarr:/config"
+      - "{{ docker_storage_dir }}/files:{{ docker_storage_dir }}/files"
+    restart: always
+
+

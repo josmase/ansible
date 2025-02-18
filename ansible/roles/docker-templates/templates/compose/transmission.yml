@@ -1,0 +1,21 @@
+services:
+  transmission:
+    container_name: transmission
+    image: {{ docker_registry_domain }}/linuxserver/transmission
+    ports:
+      - 9091:9091 #transmission 
+      - 55991:55991
+    environment:
+      - PEERPORT=55991
+      - PUID={{ docker_puid }}
+      - PGID={{ docker_pgid }}
+      - TZ={{ timezone }}
+    volumes:
+      - "{{ docker_data_dir }}/transmission:/config"
+      - "{{ docker_storage_dir }}/downloads/:{{ docker_storage_dir }}/downloads/"
+      - "{{ docker_storage_dir }}/downloads/:/downloads/"
+
+    restart: always
+
+
+
