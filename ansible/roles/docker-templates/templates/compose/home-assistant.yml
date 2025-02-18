@@ -13,30 +13,4 @@ services:
     restart: always
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
-  zwave:
-    image: {{ docker_registry_domain }}/zwavejs/zwave-js-ui:latest
-    container_name: zwave
-    environment:
-      - PUID={{ docker_puid }}
-      - PGID={{ docker_pgid }}
-      - TZ={{ timezone }}
-      - SESSION_SECRET=ccd3fc23c7e9dafc5e8b8fdd5a621dab
-    volumes:
-      - "{{ docker_data_dir }}/zwave:/usr/src/app/store"
-    restart: always
-    ports:
-      - 8091:8091
-      - 3000:3000
-    devices:
-      - /dev/ttyACM0:/dev/ttyACM0
-  node-red:
-    image: {{ docker_registry_domain }}/nodered/node-red:latest
-    container_name: nodered
-    environment:
-      - PUID={{ docker_puid }}
-      - PGID={{ docker_pgid }}
-      - TZ={{ timezone }}
-    volumes:
-      - '{{ docker_data_dir }}/nodered/data:/data'
-    ports:
-      - '1880:1880'
+  
