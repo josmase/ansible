@@ -25,9 +25,9 @@
     dest: "{{ docker_compose_dir }}/{{ item }}"
     owner: "{{ main_username }}"
     group: "{{ main_groupname }}"
-    mode: "0640"
-  loop: 
-    - unifi-init-mongo.js 
+    mode: "0644"
+  loop:
+    - unifi-init-mongo.sh
 
 - name: Start containers
   command: "{{ docker_script_dir }}/start.sh"
