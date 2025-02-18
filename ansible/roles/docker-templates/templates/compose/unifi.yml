@@ -1,16 +1,17 @@
 services:
-  unifi:
+  unifi-network-application:
     image: "{{ docker_registry_domain }}/linuxserver/unifi-network-application:8.5.6-ls67"
-    container_name: unifi
+    container_name: unifi-network-application
     environment:
       - PUID={{ docker_puid }}
       - PGID={{ docker_pgid }}
       - TZ={{ timezone }}
-      - MONGO_DBNAME=unifi-db
-      - MONGO_HOST=unifi-db
-      - MONGO_PASS=pass
+      - MONGO_HOST=localhost
       - MONGO_PORT=27017
       - MONGO_USER=unifi
+      - MONGO_PASS=pass
+      - MONGO_DBNAME=unifi
+      - MONGO_AUTHSOURCE=admin
     depends_on:
       - unifi-db
     volumes:
@@ -30,9 +31,16 @@ services:
   unifi-db:
     image: "{{ docker_registry_domain }}/library/mongo:4.4.6"
     container_name: unifi-db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=pass
+      - MONGO_USER=unifi
+      - MONGO_PASS=pass
+      - MONGO_DBNAME=unifi
+      - MONGO_AUTHSOURCE=admin
     volumes:
-      - "{{ docker_data_dir }}/unifi-network-application/db:/data/db"
-      - "{{ docker_compose_dir }}/unifi-init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js" # Mount the script directly
+      - {{ docker_data_dir }}/unifi-network-application/db:/data/db
+      - {{ docker_compose_dir }}/unifi-init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:ro
     ports:
       - 27017:27017
     restart: unless-stopped
