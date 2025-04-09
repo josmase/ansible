@@ -14,7 +14,6 @@ resource "cloudflare_record" "local" {
   for_each = {
     "*.local"         = "192.168.1.181"
     "media.local"     = "192.168.1.105"
-    "mqtt.local"      = "192.168.1.105"
     "proxmox.local"   = "192.168.1.100"
     "storage.local"   = "192.168.1.102"
     "ansible.local"   = "192.168.1.101"
@@ -29,7 +28,7 @@ resource "cloudflare_record" "local" {
 
 # Proxied CNAME Records
 resource "cloudflare_record" "proxied_cnames" {
-  for_each = toset(["api", "assistant", "budget", "dohi", "emby", "fest", "it-tools", "jellyfin", "ombi", "plex", "serble", "wireguard"])
+  for_each = toset(["assistant", "it-tools", "jellyfin", "headscale", "new-new-boplats"])
   zone_id  = var.zone_id
   name     = each.key
   type     = "CNAME"
