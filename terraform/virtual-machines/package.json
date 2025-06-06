@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "cdktf": "^0.21.0",
-    "cdktf-cli": "^0.20.8",
+    "cdktf-cli": "^0.21.0",
     "constructs": "^10.3.0"
   },
   "devDependencies": {
