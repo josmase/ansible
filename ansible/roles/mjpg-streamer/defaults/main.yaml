@@ -1,0 +1,1 @@
+mjpg_streamer_src_dir: /home/{{ ansible_user }}/mjpg-streamer

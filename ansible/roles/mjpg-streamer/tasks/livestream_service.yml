@@ -1,0 +1,20 @@
+---
+# Install and enable livestream.sh service for mjpg-streamer
+- name: Copy livestream.sh service script
+  copy:
+    src: livestream.sh
+    dest: /etc/init.d/livestream.sh
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: Register livestream.sh as a service
+  command: update-rc.d livestream.sh defaults
+  args:
+    creates: /etc/rc2.d/S20livestream.sh
+
+- name: Ensure livestream service is started
+  service:
+    name: livestream
+    enabled: yes
+    state: started

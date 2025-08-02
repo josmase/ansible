@@ -1,0 +1,33 @@
+---
+- name: Install mjpg-streamer dependencies
+  apt:
+    name:
+      - build-essential
+      - libjpeg9-dev
+      - imagemagick
+      - libv4l-dev
+      - cmake
+      - git
+    state: present
+    update_cache: yes
+
+- name: Ensure mjpg-streamer directory exists
+  file:
+    path: "{{ mjpg_streamer_src_dir }}"
+    state: directory
+
+- name: Clone mjpg-streamer repository
+  git:
+    repo: https://github.com/jacksonliam/mjpg-streamer.git
+    dest: "{{ mjpg_streamer_src_dir }}/mjpg-streamer"
+    version: master
+    update: yes
+
+- name: Build mjpg-streamer
+  make:
+    chdir: "{{ mjpg_streamer_src_dir }}/mjpg-streamer/mjpg-streamer-experimental"
+
+- name: Install mjpg-streamer
+  command: make install
+  args:
+    chdir: "{{ mjpg_streamer_src_dir }}/mjpg-streamer/mjpg-streamer-experimental"
