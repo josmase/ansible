@@ -1,5 +1,5 @@
 - hosts:
-    - media_server
+    - docker
   vars_files:
     - ../vars/vault.yml
   roles:

@@ -1,7 +1,0 @@
-- name: Install and configure mjpg-streamer
-  hosts: printer_camera
-  become: true
-  vars_files:
-    - ../vars/vault.yml
-  roles:
-    - mjpg-streamer

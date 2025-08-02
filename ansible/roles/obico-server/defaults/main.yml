@@ -1,0 +1,3 @@
+---
+# Default variables for obico-server role
+obico_repo_dir: /opt/obico-server

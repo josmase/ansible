@@ -1,0 +1,16 @@
+- name: Install and configure mjpg-streamer
+  hosts: printer_camera
+  become: true
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    - mjpg-streamer
+
+- name: Install and obico server
+  hosts: printer_support
+  become: true
+  vars_files:
+    - ../vars/vault.yml
+  roles:
+    #- install-docker
+    - obico-server
