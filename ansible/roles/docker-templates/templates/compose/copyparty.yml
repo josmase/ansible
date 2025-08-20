@@ -1,0 +1,27 @@
+services:
+    ac:
+        image: {{ docker_registry_domain }}/copyparty/ac
+        container_name: copyparty_ac
+        environment:
+            - PUID={{ docker_puid }}
+            - PGID={{ docker_pgid }}
+            - TZ={{ timezone }}
+            - LD_PRELOAD=/usr/lib/libmimalloc-secure.so.2
+            - PYTHONUNBUFFERED=1
+        volumes:
+            - {{ docker_data_dir }}/copyparty:/cfg
+            - {{ docker_storage_dir }}:/w:z
+        ports:
+            - '3923:3923'
+            - '3921:3921'
+            - '12000-12099'
+        user: '1000'
+        restart: always
+        stop_grace_period: 15s  # thumbnailer is allowed to continue finishing up for 10s after the shutdown signal
+        healthcheck:
+            # hide it from logs with "/._" so it matches the default --lf-url filter 
+            test: ["CMD-SHELL", "wget --spider -q 127.0.0.1:3923/?reset=/._"]
+            interval: 1m
+            timeout: 2s
+            retries: 5
+            start_period: 15s
