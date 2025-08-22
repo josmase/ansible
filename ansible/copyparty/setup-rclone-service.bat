@@ -5,8 +5,8 @@ setlocal
 set "RCLONE_DIR=C:\rclone"
 set "RCLONE_EXE=C:\rclone\rclone.exe"
 set "RCLONE_CONF=%RCLONE_DIR%\rclone.conf"
-set "RCLONE_USER=username"
-set "RCLONE_PASS=password"
+set "RCLONE_USER=jonas"
+set "RCLONE_PASS=kallekokain"
 set "REMOTE_NAME=storage-dav"
 set "REMOTE_URL=http://storage.local.hejsan.xyz:3923"
 set "MOUNT_DRIVE=W:"
@@ -31,21 +31,22 @@ if exist "%APPDATA%\rclone\rclone.conf" (
 )
 
 echo === Installing NSSM service ===
-nssm remove %SERVICE_NAME% confirm >nul 2>&1
+.\nssm stop %SERVICE_NAME% >nul 2>&1
+.\nssm remove %SERVICE_NAME% confirm >nul 2>&1
 
-nssm install %SERVICE_NAME% "%RCLONE_EXE%" ^
-    mount --config "%RCLONE_CONF%" --vfs-cache-mode writes --dir-cache-time 5s %REMOTE_NAME%: %MOUNT_DRIVE%
+.\nssm install %SERVICE_NAME% "%RCLONE_EXE%" cmount --config "%RCLONE_CONF%" --vfs-cache-mode writes  --file-perms 0777 %REMOTE_NAME%: %MOUNT_DRIVE%
+
 
 :: Set working dir
-nssm set %SERVICE_NAME% AppDirectory "%RCLONE_DIR%"
+.\nssm set %SERVICE_NAME% AppDirectory "%RCLONE_DIR%"
 
 :: Logging
-nssm set %SERVICE_NAME% AppStdout "%LOG_OUT%"
-nssm set %SERVICE_NAME% AppStderr "%LOG_ERR%"
-nssm set %SERVICE_NAME% AppRotateFiles 1
+.\nssm set %SERVICE_NAME% AppStdout "%LOG_OUT%"
+.\nssm set %SERVICE_NAME% AppStderr "%LOG_ERR%"
+.\nssm set %SERVICE_NAME% AppRotateFiles 1
 
 echo Starting service %SERVICE_NAME%...
-nssm start %SERVICE_NAME%
+.\nssm start %SERVICE_NAME%
 
 echo === Done! Rclone should now be mounted on %MOUNT_DRIVE% via NSSM service ===
 pause
