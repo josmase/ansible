@@ -28,7 +28,7 @@ resource "cloudflare_record" "local" {
 
 # Proxied CNAME Records
 resource "cloudflare_record" "proxied_cnames" {
-  for_each = toset(["assistant", "it-tools", "jellyfin", "headscale", "new-new-boplats", "nya-nya-boplats"])
+  for_each = toset(["assistant", "it-tools", "jellyfin", "headscale", "new-new-boplats", "nya-nya-boplats", "bilder"])
   zone_id  = var.zone_id
   name     = each.key
   type     = "CNAME"
