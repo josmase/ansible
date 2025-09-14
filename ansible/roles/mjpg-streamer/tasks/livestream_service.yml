@@ -1,7 +1,7 @@
 ---
 # Install and enable livestream.sh service for mjpg-streamer
 - name: Copy livestream.sh service script
-  copy:
+  template:
     src: livestream.sh
     dest: /etc/init.d/livestream.sh
     mode: "0755"

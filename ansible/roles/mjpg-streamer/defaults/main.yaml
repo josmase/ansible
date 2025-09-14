@@ -1,1 +1,3 @@
 mjpg_streamer_src_dir: /home/{{ ansible_user }}/mjpg-streamer
+mjpg_streamer_fps: 30
+mjpg_streamer_resolution: 1280x720
