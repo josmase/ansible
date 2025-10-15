@@ -1,9 +1,0 @@
-[Unit]
-Description=Schedule to run the maintenance script at the night
-
-[Timer]
-Persistent=true
-OnCalendar={{ maintenance_calendar }}
-
-[Install]
-WantedBy=timers.target

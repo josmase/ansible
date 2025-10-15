@@ -1,0 +1,4 @@
+---
+# Role-specific variables for usb_module_setup
+debian_package: "linux-modules-extra-{{ ansible_kernel }}"
+arch_package: "linux-headers"

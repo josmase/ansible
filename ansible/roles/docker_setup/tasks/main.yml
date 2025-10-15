@@ -1,0 +1,19 @@
+- name: Validate docker setup configuration
+  import_tasks: validate.yml
+  tags:
+    - always
+    - validation
+
+- name: Enable NFS dependencies
+  become: true
+  import_tasks: nfs.yml
+  when: docker_nfs_enabled | default(false) | bool
+  
+- name: Install docker
+  become: true
+  import_tasks: docker.yml
+
+- name: Setup timers for upgrades and backups 
+  become: true
+  import_tasks: timers.yml
+  when: docker_setup_enabled | default(true) | bool

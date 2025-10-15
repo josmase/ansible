@@ -1,0 +1,33 @@
+- name: Install packages (Distribution-agnostic)
+  ansible.builtin.package:
+    name: "{{ packages }}"
+    state: present
+  tags:
+    - packages
+    - setup
+
+- name: Configure zsh shell
+  block:
+    - name: Ensure zshrc exists
+      ansible.builtin.file:
+        path: "{{ zshrc_path }}"
+        state: touch
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Disable the BEEP
+      ansible.builtin.lineinfile:
+        line: unsetopt BEEP
+        path: "{{ zshrc_path }}"
+        state: present
+
+    - name: Setup aliases
+      ansible.builtin.lineinfile:
+        path: "{{ zshrc_path }}"
+        line: "alias {{ item }}"
+        state: present
+      loop: "{{ shell_aliases }}"
+  tags:
+    - shell
+    - config

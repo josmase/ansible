@@ -1,0 +1,11 @@
+---
+# Storage Configuration for Media Services
+storage:
+  mount:
+    src: "storage.local.hejsan.xyz:/"
+    dest: "/mnt/storage"
+    fstype: "nfs"
+    options:
+      defaults: true
+      _netdev: true
+    state: "mounted"

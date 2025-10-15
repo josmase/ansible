@@ -1,0 +1,40 @@
+---
+# Storage Configuration Playbook
+# This playbook sets up and configures storage solutions including:
+# - Local filesystem mounting
+# - Network share services (NFS, Samba)
+# - Client mounting of network shares
+
+- name: Configure local filesystem mounts
+  hosts: storage_servers
+  become: true
+  roles:
+    - filesystem_setup
+
+- name: Deploy network file sharing services
+  hosts: storage_servers
+  become: true
+  roles:
+    - geerlingguy.samba
+    - geerlingguy.nfs
+    - network_share_setup
+
+- name: Configure NFS client mounts
+  hosts: nfs_clients
+  become: true
+  vars:
+    nfs_mount_point: "{{ system.storage_dir }}"
+    nfs_mount_src: "storage.local.hejsan.xyz:/"
+  roles:
+    - nfs_client_setup
+
+- name: Configure SMB client mounts
+  hosts: smb_client
+  become: true
+  vars:
+    smb_share_path: "//storage.local.hejsan.xyz/public"
+    mount_point: "/mnt/smb"
+    mount_gid: "{{ main_gid }}"
+    mount_uid: "{{ main_uid }}"
+  roles:
+    - smb_client_setup

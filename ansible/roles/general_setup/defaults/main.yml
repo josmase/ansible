@@ -1,4 +1,0 @@
-ssh_key_path: "/home/{{ lookup('env', 'USER') }}/.ssh/id_rsa.pub"
-packages:
-  - git
-ssh_key_filename: id_rsa

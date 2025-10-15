@@ -1,0 +1,43 @@
+---
+# Role-specific variables for docker_setup
+
+# User Configuration
+docker_user: "{{ ansible_user }}"  # Default to ansible user
+docker_group: "docker"            # Default docker group
+docker_user_id: 1000             # Default UID
+docker_group_id: 1000            # Default GID
+
+# Directory Configuration
+docker_base_dir: /opt/docker     # Base directory for Docker files
+docker_compose_dir: "{{ docker_base_dir }}"
+docker_script_dir: "{{ docker_base_dir }}/scripts"
+docker_data_dir: /opt/appdata    # Application data directory
+docker_storage_dir: /mnt/storage # Persistent storage directory
+
+# Service Configuration
+docker_service_enabled: true
+docker_service_start_on_boot: true
+
+# Registry Configuration
+docker_registry_enabled: false
+docker_registry_domain: ""
+docker_registry_user: ""
+docker_registry_password: ""
+
+# Script Configuration
+docker_script_templates:
+  - common
+  - stop
+  - maintenance
+  - start
+  - update
+  - staleFileHandleHandler
+
+# Timer Configuration
+docker_timer_dir: /etc/systemd/system
+docker_maintenance_timer_calendar: true  # Set to enable maintenance timers
+docker_timers:
+  - name: maintenance
+    schedule: "*-*-* 04:00:00"  # Daily at 4 AM
+  - name: staleFileHandleHandler
+    schedule: "*-*-* *:00:00"   # Every hour

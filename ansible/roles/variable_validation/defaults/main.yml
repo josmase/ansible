@@ -1,0 +1,15 @@
+---
+# Default values for basic validation
+# These provide fallbacks for essential system configuration
+
+user:
+  name: "{{ ansible_user }}"
+  uid: 1000
+  group: "{{ ansible_user }}"
+
+system:
+  timezone: "UTC"
+
+paths:
+  appdata: "/opt/appdata"
+  storage: "/opt/storage"

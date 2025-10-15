@@ -1,0 +1,9 @@
+ssh_key_path: "/home/{{ lookup('env', 'USER') }}/.ssh/id_rsa.pub"
+packages:
+  - git
+ssh_key_filename: id_rsa
+zshrc_path: "/home/{{ ansible_user }}/.zshrc"
+shell_aliases:
+  - 'mv="mv -v"'
+  - 'cp="cp -v"'
+  - 'rm="rm -v"'

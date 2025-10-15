@@ -1,0 +1,65 @@
+---
+# Global System Configuration
+# =========================
+
+# Ansible Settings
+ansible_sudo_pass: "{{ vault_default_sudo_pass }}"
+
+# User and Group Settings
+user:
+  name: ubuntu
+  group: "{{ user.name }}"
+  uid: 1000
+  gid: "{{ user.uid }}"
+
+# SSH Key Settings
+private_key_dest_dir: ~/.ssh/id_rsa.initramfs_{{ inventory_hostname }}/
+private_key: "{{ private_key_dest_dir }}/id_rsa"
+
+# System Settings
+system:
+  # Storage Configuration
+  storage_dir: /mnt/storage  # Base directory for network storage mounts
+  timezone: Europe/Stockholm
+  sudo_pass: "{{ vault_default_sudo_pass }}"
+  email: "{{ vault_email }}"
+
+# Domain Configuration
+domain:
+  local: "{{ vault_local_domain }}"
+  storage: "storage.{{ domain.local }}"
+
+# Directory Structure
+paths:
+  appdata: /opt/appdata
+  storage: /mnt/storage
+
+# Docker Configuration
+# ==================
+docker:
+  # Registry Configuration
+  registry:
+    domain: artifactory.local.hejsan.xyz/docker
+    user: "{{ vault_docker_registry_user }}"
+    password: "{{ vault_docker_registry_password }}"
+  timezone: "{{ system.timezone }}"
+
+# Script Management
+scripts:
+  templates:
+    - common
+    - stop
+    - maintenance
+    - start
+    - update
+    - staleFileHandleHandler
+
+# System Timer Configuration
+timers:
+  directory: /etc/systemd/system/
+  jobs:
+    - maintenance
+    - staleFileHandleHandler
+
+services:
+  templates: []

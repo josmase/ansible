@@ -1,0 +1,5 @@
+---
+# Enable container deployment on these hosts
+docker_containers_enabled: true
+# Enable NFS support for docker volumes
+docker_nfs_enabled: true

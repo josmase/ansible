@@ -1,0 +1,18 @@
+---
+# 3D Printer Support Playbook
+# This playbook sets up and configures services for 3D printer monitoring and control:
+# - Camera streaming service (mjpg-streamer)
+# - Obico server for remote monitoring and AI failure detection
+
+- name: Configure printer camera streaming service
+  hosts: printer_cameras
+  become: true
+  roles:
+    - mjpg-streamer
+
+- name: Configure Obico monitoring server
+  hosts: printer_monitors
+  become: true
+  roles:
+    - docker_setup    # Required for running Obico server in container
+    - obico-server   # Main Obico server configuration

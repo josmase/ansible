@@ -1,0 +1,17 @@
+---
+# Storage Infrastructure Configuration
+# ================================
+
+# Storage Paths
+storage:
+  mount_base: /mnt/drives
+
+# Encryption
+encryption:
+  keyfile: "{{ vault_storage_keyfile | default('') }}"
+
+# Mount Options
+mount:
+  options:
+    default: "defaults,noatime"
+    encrypted: "defaults,noatime,discard"

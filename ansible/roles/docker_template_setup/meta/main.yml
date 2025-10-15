@@ -4,7 +4,7 @@ dependencies:
 
 galaxy_info:
   author: josmase
-  description: Installs and configures Obico server for 3D printer monitoring
+  description: Manages Docker container deployments using templates
   license: MIT
   min_ansible_version: "2.9"
   platforms:
@@ -13,7 +13,8 @@ galaxy_info:
         - focal
         - jammy
   galaxy_tags:
-    - obico
-    - 3dprinting
-    - monitoring
     - docker
+    - containers
+    - compose
+    - templates
+    - deployment

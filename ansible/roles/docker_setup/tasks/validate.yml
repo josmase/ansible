@@ -1,0 +1,29 @@
+---
+# Docker setup validation tasks
+- name: Validate docker setup variables
+  assert:
+    that:
+      - docker_user is defined
+      - docker_user is string
+      - docker_group is defined
+      - docker_group is string
+      - docker_compose_dir is defined
+      - docker_compose_dir is string
+      - docker_compose_dir is match("^/")
+      - docker_script_dir is defined
+      - docker_script_dir is string
+      - docker_script_dir is match("^/")
+      - docker_data_dir is defined
+      - docker_data_dir is string
+      - docker_data_dir is match("^/")
+      - docker_storage_dir is defined
+      - docker_storage_dir is string
+      - docker_storage_dir is match("^/")
+      - docker_script_templates is defined
+      - docker_script_templates is sequence
+    fail_msg: "Required Docker setup variables are missing or invalid"
+    success_msg: "Docker setup variables validated successfully"
+  when: docker_setup_enabled | default(true) | bool
+  tags:
+    - validation
+    - docker

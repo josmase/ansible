@@ -1,23 +1,40 @@
 ---
-- name: Ensure git is installed
+# Tasks for setting up and configuring Obico server
+
+- name: Ensure required packages are installed
   apt:
     name: git
     state: present
     update_cache: yes
+  tags: 
+    - obico
+    - packages
 
 - name: Clone Obico server repository
   git:
     repo: https://github.com/TheSpaghettiDetective/obico-server.git
     dest: "{{ obico_repo_dir }}"
-    version: release
+    version: "{{ obico_version | default('release') }}"
     update: yes
+  register: repo_clone
+  tags:
+    - obico
+    - git
 
-- name: Start Obico server with Docker Compose
-  command: docker compose up -d
+- name: Deploy Obico server using Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ obico_repo_dir }}"
+    state: present
+  register: compose_result
+  tags:
+    - obico
+    - docker
+
+- name: Configure Obico site domain
+  command: docker compose run --rm web ./manage.py site --add {{ inventory_hostname }}
   args:
     chdir: "{{ obico_repo_dir }}"
-
-- name: Ensure Obico site is added for {{ inventory_hostname }} (or else it will always end up in a 500 error)
-  command: docker compose run web ./manage.py site --add {{ inventory_hostname }}
-  args:
-    chdir: "{{ obico_repo_dir }}"
+  when: compose_result.changed
+  tags:
+    - obico
+    - config

@@ -1,0 +1,32 @@
+- name: Deploy service templates
+  template:
+    src: "timers/{{ item.name }}.service.j2"
+    dest: "{{ docker_timer_dir }}/{{ item.name }}.service"
+  loop: "{{ docker_timers }}"
+  when: docker_maintenance_timer_calendar is defined
+
+- name: Deploy timer templates
+  template:
+    src: "timers/{{ item.name }}.timer.j2"
+    dest: "{{ docker_timer_dir }}/{{ item.name }}.timer"
+  loop: "{{ docker_timers }}"
+  when: docker_maintenance_timer_calendar is defined
+
+- name: Enable timer
+  systemd:
+    name: "{{ item.name }}.timer"
+    enabled: yes
+    state: started
+    daemon-reload: yes
+  loop: "{{ docker_timers }}"
+  when: docker_maintenance_timer_calendar is defined
+
+- name: Disable timer if no calendar
+  systemd:
+    name: "{{ item.name }}.timer"
+    enabled: no
+    state: stopped
+    daemon-reload: yes
+  loop: "{{ docker_timers }}"
+  when: docker_maintenance_timer_calendar is undefined
+  ignore_errors: true

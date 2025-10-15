@@ -1,0 +1,19 @@
+---
+# Default variables for developer setup
+
+# Kubernetes configuration
+kubernetes_config_mode: '0600'
+kubernetes_config_dir: "/home/{{ ansible_user }}/.kube"
+
+# Determine first k3s master and its user
+# We use lookup to safely handle missing values
+kubernetes_master_host: >-
+  {{ groups['k3s_masters'][0] if (groups['k3s_masters'] | default([])) | length > 0 else None }}
+
+# Lookup hostvars for the master if it exists
+kubernetes_master_user: >-
+  {{ lookup('vars', 'hostvars')[kubernetes_master_host]['ansible_user'] 
+     if kubernetes_master_host != None and
+        lookup('vars', 'hostvars', default={})[kubernetes_master_host] is defined and
+        lookup('vars', 'hostvars')[kubernetes_master_host]['ansible_user'] is defined
+     else None }}

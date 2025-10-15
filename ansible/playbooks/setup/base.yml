@@ -1,0 +1,66 @@
+- name: Server base software and shell configuration
+  hosts: all_servers
+  tags:
+    - general
+    - shell
+  roles:
+    - role: gantsign.antigen
+      users:
+        - username: "{{ ansible_user }}"
+          antigen_libraries:
+            - name: oh-my-zsh
+          antigen_theme:
+            name: robbyrussell
+          antigen_bundles:
+            - name: git
+            - name: zsh-syntax-highlighting
+              url: zsh-users/zsh-syntax-highlighting
+    - role: base_setup
+
+- name: Docker environment and container configuration
+  hosts: docker_hosts
+  become: true
+  tags:
+    - docker
+    - containers
+  vars_files:
+    - ./vars/docker.yml
+  roles:
+    - docker_setup
+    - role: usb_module_setup
+      vars:
+        usb_module_enabled: true
+    - role: docker_template_setup
+      when: docker_containers_enabled | default(false) | bool
+      tags:
+        - containers
+        - services
+
+- name: Kubernetes storage configuration
+  hosts: k3s_nodes
+  become: true
+  tags:
+    - kubernetes
+    - storage
+  roles:
+    - kubernetes
+
+- name: Development environment configuration
+  hosts: development_infrastructure
+  become: true
+  tags:
+    - developer
+  roles:
+    - role: developer_setup
+
+- name: Network storage configuration
+  hosts: nfs_clients
+  become: true
+  tags:
+    - storage
+    - nfs
+  vars:
+    nfs_mount_point: "{{ system.storage_dir }}"
+    nfs_mount_src: "storage.local.hejsan.xyz:/"
+  roles:
+    - nfs_client_setup

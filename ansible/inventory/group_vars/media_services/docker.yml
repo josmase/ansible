@@ -1,0 +1,5 @@
+---
+# Docker variables for media services
+docker_puid: 1000
+docker_pgid: 1000
+timezone: "Europe/Stockholm"

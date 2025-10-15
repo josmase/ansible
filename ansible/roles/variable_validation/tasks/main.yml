@@ -1,0 +1,82 @@
+---
+# Tasks for validating variable structure and values
+
+- name: Validate user variables
+  assert:
+    that:
+      - user.name is defined
+      - user.name is string
+      - user.uid is defined
+      - user.uid is number
+    fail_msg: "Required user variables are missing or invalid"
+    success_msg: "User variables validated successfully"
+  tags:
+    - validation
+    - user
+
+- name: Validate system variables
+  assert:
+    that:
+      - system.timezone is defined
+      - system.timezone is string
+      - system.timezone is match("^[A-Za-z]+/[A-Za-z_]+$")
+    fail_msg: "Required system variables are missing or invalid"
+    success_msg: "System variables validated successfully"
+  tags:
+    - validation
+    - system
+
+- name: Validate directory structure
+  assert:
+    that:
+      - paths.appdata is defined
+      - paths.appdata is string
+      - paths.appdata is match("^/")
+      - paths.storage is defined
+      - paths.storage is string
+      - paths.storage is match("^/")
+    fail_msg: "Required path variables are missing or invalid"
+    success_msg: "Path variables validated successfully"
+  tags:
+    - validation
+    - paths
+
+# Docker validation has been moved to role-specific variables
+- name: Skip docker configuration validation
+  debug:
+    msg: "Docker validation has been moved to role-specific variables in docker_setup role"
+  tags:
+    - validation
+    - docker
+
+- name: Validate file and directory permissions
+  stat:
+    path: "{{ item }}"
+  register: dir_stats
+  failed_when: >
+    dir_stats.stat.exists and
+    (not dir_stats.stat.isdir or
+     dir_stats.stat.mode is not match("^0[0-7][0-7][0-7]$"))
+  with_items:
+    - "{{ paths.appdata }}"
+    - "{{ paths.storage }}"
+  tags:
+    - validation
+    - permissions
+
+# Service validation is now handled by individual roles
+
+- name: Validate storage configuration
+  assert:
+    that:
+      - storage.mount_base is defined
+      - storage.mount_base is string
+      - storage.mount_base is match("^/")
+      - storage.mount.options is defined
+      - storage.mount.options is mapping
+    fail_msg: "Required storage variables are missing or invalid"
+    success_msg: "Storage variables validated successfully"
+  when: "'storage_servers' in group_names"
+  tags:
+    - validation
+    - storage

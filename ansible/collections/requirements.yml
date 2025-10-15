@@ -1,11 +1,12 @@
 roles:
-  - gantsign.antigen
-  - sdarwin.vnc
-  - community.docker
-  - geerlingguy.nfs
-  - geerlingguy.samba
+  - name: gantsign.antigen
+  - name: sdarwin.vnc
+  - name: geerlingguy.nfs
+  - name: geerlingguy.samba
 
 collections:
-  - community.general
-  - ansible.posix
-  - kewlfft.aur
+  - name: community.general
+  - name: ansible.posix
+  - name: kewlfft.aur
+  - name: community.docker
+    version: ">=4.0.0"  # Required for docker_compose_v2

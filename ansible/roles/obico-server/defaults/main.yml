@@ -1,3 +1,27 @@
 ---
 # Default variables for obico-server role
-obico_repo_dir: /opt/obico-server
+
+# Installation settings
+obico_repo_dir: /opt/obico-server    # Directory where Obico server will be installed
+obico_version: "release"             # Git branch/tag to use for installation
+
+# Docker settings
+obico_docker_network: "obico"        # Docker network name for Obico services
+obico_docker_restart: "unless-stopped"  # Docker restart policy
+
+# Docker setup configuration
+docker_user: "{{ ansible_user }}"
+docker_group: "docker"
+docker_compose_dir: "/opt/docker/compose"
+docker_script_dir: "/opt/docker/scripts"
+docker_data_dir: "/opt/docker/data"
+docker_storage_dir: "/opt/docker/storage"
+docker_script_templates:
+  - "common"
+  - "maintenance"
+  - "staleFileHandleHandler"
+  - "start"
+  - "stop"
+  - "update"
+docker_setup_enabled: true
+docker_nfs_enabled: false  # Obico doesn't need NFS

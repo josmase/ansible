@@ -1,0 +1,13 @@
+---
+- name: Configure Samba shares
+  blockinfile:
+    path: /etc/samba/smb.conf
+    block: "{{ item.content }}"
+    insertafter: EOF
+  loop: "{{ smb_exports }}"
+
+- name: Ensure Samba service is running and updated
+  service:
+    name: smbd
+    state: restarted
+    enabled: yes

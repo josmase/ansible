@@ -1,0 +1,58 @@
+- name: Get running kernel version for Arch
+  command: uname -r
+  register: kernel_version
+  when: ansible_facts['os_family'] == "Archlinux"
+  changed_when: false
+
+- name: Install required packages for Debian-based systems
+  ansible.builtin.package:
+    name: "{{ debian_package }}"
+    state: present
+  register: kernel_modules_install_debian
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Install required packages for Arch-based systems
+  ansible.builtin.package:
+    name: "{{ arch_package }}"
+    state: present
+  register: kernel_modules_install_arch
+  when: ansible_facts['os_family'] == "Archlinux"
+
+- name: Install matching kernel headers for Arch
+  ansible.builtin.package:
+    name: "linux-headers"
+    state: present
+  register: kernel_headers_install_arch
+  when: ansible_facts['os_family'] == "Archlinux"
+
+- name: Check modules directory
+  stat:
+    path: "/lib/modules/{{ ansible_kernel }}"
+  register: modules_dir
+
+- name: Run depmod if modules directory exists
+  command: depmod -a
+  when: modules_dir.stat.exists
+  changed_when: false
+
+- name: Reboot the system if kernel modules or headers were installed (Debian)
+  reboot:
+  when: (ansible_facts['os_family'] == "Debian") and (kernel_modules_install_debian is changed)
+
+- name: Reboot the system if kernel modules or headers were installed (Arch)
+  reboot:
+  when: >
+    (ansible_facts['os_family'] == "Archlinux") and
+    ((kernel_modules_install_arch is changed) or
+     (kernel_headers_install_arch is changed and not kernel_headers_install_arch.failed))
+
+- name: Load kernel modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+    persistent: present
+  register: load_result
+  loop:
+    - ftdi_sio
+    - usbserial
+  when: modules_dir.stat.exists

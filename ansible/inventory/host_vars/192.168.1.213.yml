@@ -1,0 +1,14 @@
+ansible_sudo_pass: "{{ vault_hemmas_password }}"
+ansible_user: hemmas
+
+# Media paths
+movies_dir: "/opt/docker/storage/files/movies"
+series_dir: "/opt/docker/storage/files/series"
+
+# Docker maintenance schedule
+docker_maintenance_timer_calendar: "*-*-* 04:00:00"
+
+sonarr_api_key: "{{ vault_sonarr_api_key }}"
+radarr_api_key: "{{ vault_radarr_api_key }}"
+
+docker_registry_domain: "docker.io"

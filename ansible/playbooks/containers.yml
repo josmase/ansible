@@ -1,6 +1,0 @@
-- hosts:
-    - docker
-  vars_files:
-    - ../vars/vault.yml
-  roles:
-    - docker-templates

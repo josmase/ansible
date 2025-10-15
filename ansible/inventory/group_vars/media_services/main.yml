@@ -1,0 +1,25 @@
+---
+# Media Services Configuration
+# ==========================
+
+# Media Directories
+media:
+  paths:
+    movies: "{{ docker.dirs.storage }}/files/movies"
+    series: "{{ docker.dirs.storage }}/files/series"
+
+# API Configuration
+api:
+  sonarr:
+    key: "{{ vault_sonarr_api_key }}"
+  radarr:
+    key: "{{ vault_radarr_api_key }}"
+
+# Domain Configuration
+domain:
+  media: "media.{{ domain.local }}"
+  docker: "{{ domain.media }}"
+
+# Maintenance Schedule
+maintenance:
+  schedule: "*-*-* 04:00:00"

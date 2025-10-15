@@ -1,0 +1,57 @@
+---
+# Tasks for managing Docker container deployments
+
+- name: Identify existing Docker Compose templates
+  find:
+    paths: "{{ docker_compose_dir }}"
+    patterns: "*.yml"
+  register: existing_docker_templates
+  tags:
+    - docker
+    - templates
+
+- name: Remove outdated Docker Compose templates
+  file:
+    path: "{{ item['path'] }}"
+    state: absent
+  with_items: "{{ existing_docker_templates['files'] }}"
+  tags:
+    - docker
+    - templates
+    - cleanup
+
+- name: Deploy Docker Compose templates
+  template:
+    src: "compose/{{ item }}.yml"
+    dest: "{{ docker_compose_dir }}/{{ item }}.yml"
+    owner: "{{ user.name }}"
+    group: "{{ user.group }}"
+    mode: "0640"
+  loop: "{{ services.templates }}"
+  register: compose_templates
+  tags:
+    - docker
+    - templates
+    - deploy
+
+- name: Deploy supporting files
+  template:
+    src: "extra-files/{{ item }}"
+    dest: "{{ docker_compose_dir }}/{{ item }}"
+    owner: "{{ user.name }}"
+    group: "{{ user.group }}"
+    mode: "0644"
+  loop:
+    - unifi-init-mongo.sh
+  tags:
+    - docker
+    - templates
+    - support
+
+- name: Start container services
+  command: "{{ docker_script_dir }}/start.sh"
+  when: compose_templates.changed
+  tags:
+    - docker
+    - service
+    - start

@@ -1,0 +1,32 @@
+- hosts: all_servers
+  tasks:
+    - name: Update all packages on Debian-based systems
+      become: true
+      apt:
+        upgrade: dist
+        update_cache: yes
+        autoremove: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Update all packages on Arch-based systems
+      become: true
+      pacman:
+        update_cache: yes
+        upgrade: yes
+      when: ansible_os_family == "Archlinux"
+
+- name: Reboot non-critical machines after upgrades
+  hosts:
+    - k3s_cluster
+    - media_services
+    - development_infrastructure
+  tasks:
+    - name: Check if reboot required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+
+    - name: Reboot if required
+      become: true
+      reboot:
+      when: reboot_required_file.stat.exists == true

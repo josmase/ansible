@@ -1,0 +1,9 @@
+[Unit]
+Description=Schedule to run the stale file handle handler
+
+[Timer]
+Persistent=true
+OnCalendar={{ item.schedule }}
+
+[Install]
+WantedBy=timers.target
