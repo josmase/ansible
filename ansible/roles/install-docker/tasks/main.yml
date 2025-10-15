@@ -1,6 +1,9 @@
 - name: Enable NFS dependencies
   become: true
   import_tasks: nfs.yml
+  when: 
+    - docker_templates is defined
+    - "'nfs' in docker_templates"
 - name: Install docker
   become: true
   import_tasks: docker.yml

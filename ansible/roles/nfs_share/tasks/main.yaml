@@ -1,7 +1,9 @@
-- name: install nfs-utils
-  apt:
-    name: nfs-common
+- name: install nfs package
+  package:
+    name: "{{ nfs_package_name }}"
     state: latest
+  vars:
+    nfs_package_name: "{{ 'nfs-common' if ansible_os_family == 'Debian' else 'nfs-utils' }}"
 
 - name: create install directory
   file:

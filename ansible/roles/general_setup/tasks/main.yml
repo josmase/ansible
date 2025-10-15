@@ -1,44 +1,20 @@
-- name: Install all packages
-  become: true
-  apt:
+- name: Install packages (Distribution-agnostic)
+  ansible.builtin.package:
     name: "{{ packages }}"
-    state: latest
+    state: present
 
-#- name: Create .ssh dir
-#  file:
-#    path: ~/.ssh/
-#    state: directory
-
-#- name: generate SSH key "{{ ssh_key_filename }}"
-#  openssh_keypair:
-#    path: "~/.ssh/{{ ssh_key_filename }}"
-#    type: rsa
-#    size: 4096
-#    state: present
-#    force: no
-
-#- name: Put public key in authorized_keys of remotes
-#  become: true
-#  authorized_key:
-#    user: "{{ ansible_user }}"
-#    state: present
-#    key: "{{ lookup('file', '{{ ssh_key_path }}') }}"
-
-- name: Disable that BEEP!
-  # unsetopt LIST_BEEP for all autocomplete beeps
-  # unsetopt BEEP for all beeps
-  lineinfile:
+- name: Disable the BEEP (Zshrc - Common Task)
+  ansible.builtin.lineinfile:
     line: unsetopt BEEP
     path: ~/.zshrc
     state: present
     create: yes
-
-- name: Setup aliases
-  lineinfile:
-    path=~/.zshrc
-    line="alias {{ item }}"
-    state=present
-    create=True
+- name: Setup aliases (Zshrc - Common Task)
+  ansible.builtin.lineinfile:
+    path: ~/.zshrc
+    line: "alias {{ item }}"
+    state: present
+    create: true
   loop:
     - rm="rm -v"
     - cp="cp -v"

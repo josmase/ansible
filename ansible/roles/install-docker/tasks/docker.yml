@@ -1,108 +1,137 @@
-- name: Remove specified Docker-related packages
-  apt:
-    name: "{{ item }}"
-    state: absent
-  loop:
-    - docker.io
-    - docker-doc
-    - docker-compose
-    - docker-compose-v2
-    - podman-docker
-    - containerd
-    - runc
-    - podman
+- name: Update package repositories
+  block:
+    - name: Update package repositories (Debian)
+      apt:
+        update_cache: yes
+      when: ansible_facts['os_family'] == "Debian"
 
-- name: Update APT repositories
-  apt:
-    update_cache: yes
+    - name: Update package repositories (Arch)
+      pacman:
+        update_cache: yes
+      when: ansible_facts['os_family'] == "Archlinux"
 
 - name: Install required packages
-  apt:
-    name: "{{ item }}"
-    state: present
-  loop:
-    - ca-certificates
-    - curl
-    - gnupg
+  block:
+    - name: Install required packages (Debian)
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - ca-certificates
+        - curl
+        - gnupg
+      when: ansible_facts['os_family'] == "Debian"
 
-- name: Create directory for APT keyrings
-  file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: "0755"
+    - name: Install required packages (Arch)
+      pacman:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - ca-certificates
+        - curl
+        - gnupg
+      when: ansible_facts['os_family'] == "Archlinux"
 
-- name: Download and install Docker GPG key
-  shell: |
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
-  args:
-    executable: /bin/bash
+- name: Docker install steps (Debian)
+  block:
+    - name: Create directory for APT keyrings
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
 
-- name: Create APT sources directory
-  file:
-    path: /etc/apt/sources.list.d
-    state: directory
-    mode: "0755"
+    - name: Download and install Docker GPG key
+      shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        chmod a+r /etc/apt/keyrings/docker.gpg
+      args:
+        executable: /bin/bash
 
-- name: Get dpkg architecture
-  command: dpkg --print-architecture
-  register: dpkg_architecture
+    - name: Create APT sources directory
+      file:
+        path: /etc/apt/sources.list.d
+        state: directory
+        mode: "0755"
 
-- name: Add Docker repository to APT sources
-  lineinfile:
-    path: /etc/apt/sources.list.d/docker.list
-    line: "deb [arch={{ dpkg_architecture.stdout }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
-    create: yes
+    - name: Get dpkg architecture
+      command: dpkg --print-architecture
+      register: dpkg_architecture
 
-- name: Install Docker packages
-  apt:
+    - name: Add Docker repository to APT sources
+      lineinfile:
+        path: /etc/apt/sources.list.d/docker.list
+        line: "deb [arch={{ dpkg_architecture.stdout }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        create: yes
+
+    - name: Install Docker packages
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Install Docker packages (Arch)
+  pacman:
     name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-buildx-plugin
-      - docker-compose-plugin
-    state: present
-    update_cache: yes
-
-- name: Create docker group
-  group:
-    name: docker
-    state: present
-
-- name: Add user to group
-  user:
-    name: "{{ main_username }}"
-    groups:
       - docker
-    append: yes
+      - docker-compose
+      - containerd
+    state: present
+  when: ansible_facts['os_family'] == "Archlinux"
 
-- name: Start and Enable docker
-  systemd:
-    name: docker
-    state: started
-    enabled: yes
-    daemon-reload: yes
+- name: Post install
+  block:
+    - name: Create docker group
+      group:
+        name: docker
+        state: present
 
-- name: Create docker template directory
-  file:
-    path: "{{ docker_compose_dir }}"
-    state: directory
-    owner: "{{ main_username }}"
-    group: "{{ main_groupname }}"
+    - name: Add user to group
+      user:
+        name: "{{ main_username }}"
+        groups:
+          - docker
+        append: yes
 
-- name: Create docker script directory
-  file:
-    path: "{{ docker_script_dir }}"
-    state: directory
-    owner: "{{ main_username }}"
-    group: "{{ main_groupname }}"
+    - name: Start and Enable docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+        daemon-reload: yes
 
-- name: Deploy scripts
-  template:
-    src: ../templates/scripts/{{ item }}.sh
-    dest: "{{ docker_script_dir }}/{{ item }}.sh"
-    owner: "{{ main_username }}"
-    group: "{{ main_groupname }}"
-    mode: "0740"
-  loop: "{{ script_templates }}"
+- name: Create docker template and script directories and deploy scripts if docker_templates is defined
+  block:
+    - name: Create docker template directory
+      file:
+        path: "{{ docker_compose_dir }}"
+        state: directory
+        owner: "{{ main_username }}"
+        group: "{{ main_groupname }}"
+
+    - name: Create docker script directory
+      file:
+        path: "{{ docker_script_dir }}"
+        state: directory
+        owner: "{{ main_username }}"
+        group: "{{ main_groupname }}"
+
+    - name: Deploy scripts
+      template:
+        src: ../templates/scripts/{{ item }}.sh
+        dest: "{{ docker_script_dir }}/{{ item }}.sh"
+        owner: "{{ main_username }}"
+        group: "{{ main_groupname }}"
+        mode: "0740"
+      loop: "{{ script_templates }}"
+  when: docker_templates is defined
+
+- name: Check if docker_templates is not defined
+  debug:
+    msg: "docker_templates variable is not defined. Skipping template and script setup steps."
+  when: docker_templates is not defined
