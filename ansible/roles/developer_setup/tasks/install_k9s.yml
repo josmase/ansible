@@ -1,0 +1,26 @@
+---
+# Tasks for installing k9s
+- name: Install k9s on Arch Linux
+  pacman:
+    name: k9s
+    state: present
+  when: ansible_facts['os_family'] == "Archlinux"
+
+- name: Install k9s on Debian/Ubuntu
+  block:
+    - name: Download k9s DEB package
+      get_url:
+        url: https://github.com/derailed/k9s/releases/latest/download/k9s_linux_amd64.deb
+        dest: /tmp/k9s_linux_amd64.deb
+        mode: "0644"
+
+    - name: Install k9s DEB package
+      apt:
+        deb: /tmp/k9s_linux_amd64.deb
+        state: present
+
+    - name: Clean up k9s DEB package
+      file:
+        path: /tmp/k9s_linux_amd64.deb
+        state: absent
+  when: ansible_facts['os_family'] == "Debian"

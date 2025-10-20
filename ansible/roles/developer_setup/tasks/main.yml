@@ -1,24 +1,13 @@
 ---
-- name: Ensure .kube directory exists
-  file:
-    path: "{{ kubernetes_config_dir }}"
-    state: directory
-    mode: '0755'
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+# Setup Kubernetes tools and configuration
+- name: Include Kubernetes config setup tasks
+  ansible.builtin.include_tasks: setup_kubeconfig.yml
+  tags:
+    - kubernetes
+    - config
 
-- name: Fetch Kubernetes config from first master node
-  ansible.builtin.fetch:
-    src: "/home/{{ kubernetes_master_user }}/.kube/config"
-    dest: "{{ kubernetes_config_dir }}/config"
-    flat: yes
-  delegate_to: "{{ kubernetes_master_host }}"
-  become: false
-  when: kubernetes_master_host != None and kubernetes_master_user != None
-
-- name: Set permissions on Kubernetes config
-  ansible.builtin.file:
-    path: "{{ kubernetes_config_dir }}/config"
-    mode: "{{ kubernetes_config_mode }}"
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+- name: Include k9s installation tasks
+  ansible.builtin.include_tasks: install_k9s.yml
+  tags:
+    - kubernetes
+    - k9s

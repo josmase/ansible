@@ -2,6 +2,7 @@
 
 This role sets up a local development environment for Ansible development, including:
 - Kubernetes configuration from master nodes
+- k9s - Terminal-based Kubernetes dashboard
 - Directory structure setup
 - Permissions management
 
