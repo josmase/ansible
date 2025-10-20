@@ -1,0 +1,84 @@
+---
+# Tasks for installing kustomize (Kubernetes configuration management)
+
+- name: Install kustomize on Arch Linux
+  pacman:
+    name: kustomize
+    state: present
+  when: ansible_facts['os_family'] == "Archlinux"
+
+- name: Install kustomize on Debian/Ubuntu
+  block:
+    - name: Check if kustomize is already installed
+      command: which kustomize
+      register: kustomize_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Get latest kustomize version
+      uri:
+        url: https://api.github.com/repos/kubernetes-sigs/kustomize/releases/latest
+        return_content: yes
+      register: kustomize_latest_release
+      when: kustomize_installed.rc != 0
+
+    - name: Set kustomize version
+      set_fact:
+        kustomize_version: "{{ kustomize_latest_release.json.tag_name | regex_replace('^kustomize/', '') }}"
+      when: kustomize_installed.rc != 0
+
+    - name: Determine kustomize binary URL based on architecture
+      set_fact:
+        kustomize_binary_url: >-
+          {%- if ansible_architecture == 'x86_64' -%}
+          https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/{{ kustomize_version }}/kustomize_{{ kustomize_version }}_linux_amd64.tar.gz
+          {%- elif ansible_architecture == 'aarch64' -%}
+          https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/{{ kustomize_version }}/kustomize_{{ kustomize_version }}_linux_arm64.tar.gz
+          {%- else -%}
+          https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/{{ kustomize_version }}/kustomize_{{ kustomize_version }}_linux_amd64.tar.gz
+          {%- endif -%}
+      when: kustomize_installed.rc != 0
+
+    - name: Download kustomize archive
+      get_url:
+        url: "{{ kustomize_binary_url }}"
+        dest: /tmp/kustomize.tar.gz
+        mode: "0644"
+      when: kustomize_installed.rc != 0
+
+    - name: Extract kustomize archive
+      unarchive:
+        src: /tmp/kustomize.tar.gz
+        dest: /tmp
+        remote_src: yes
+      when: kustomize_installed.rc != 0
+
+    - name: Install kustomize binary
+      copy:
+        src: /tmp/kustomize
+        dest: /usr/local/bin/kustomize
+        mode: "0755"
+        owner: root
+        group: root
+        remote_src: yes
+      when: kustomize_installed.rc != 0
+
+    - name: Clean up kustomize installation files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/kustomize.tar.gz
+        - /tmp/kustomize
+      when: kustomize_installed.rc != 0
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Verify kustomize installation
+  command: kustomize version
+  register: kustomize_version_check
+  changed_when: false
+  failed_when: kustomize_version_check.rc != 0
+
+- name: Display kustomize version
+  debug:
+    msg: "kustomize installed successfully: {{ kustomize_version_check.stdout }}"

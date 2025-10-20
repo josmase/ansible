@@ -1,8 +1,22 @@
 # Developer Setup Role
 
-This role sets up a local development environment for Ansible development, including:
+This role sets up a local development environment for Kubernetes and GitOps workflows, including:
+
+## Kubernetes Tools
+- **kubectl** - Kubernetes command-line tool (latest stable version)
+- **k9s** - Terminal-based Kubernetes dashboard
+- **kind** - Kubernetes in Docker (local cluster tool, built from source)
+- **kustomize** - Kubernetes configuration management tool
+- **kubeconform** - Kubernetes manifest validation tool
+- **Flux** - GitOps tool for Kubernetes
+
+## Security & Configuration Tools
+- **age** / **age-keygen** - Modern encryption tool
+- **sops** - Secrets management tool
+- **yq** - YAML processor and query tool
+
+## Setup Tasks
 - Kubernetes configuration from master nodes
-- k9s - Terminal-based Kubernetes dashboard
 - Directory structure setup
 - Permissions management
 

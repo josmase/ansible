@@ -1,0 +1,116 @@
+---
+# Tasks for installing Flux (GitOps tool)
+
+- name: Install Flux on Arch Linux
+  block:
+    - name: Check if flux is available in AUR
+      command: yay -Ss flux-bin
+      register: flux_aur_check
+      changed_when: false
+      failed_when: false
+
+    - name: Install flux from binary if not in AUR
+      block:
+        - name: Get latest flux version
+          uri:
+            url: https://api.github.com/repos/fluxcd/flux2/releases/latest
+            return_content: yes
+          register: flux_latest_release
+
+        - name: Set flux version
+          set_fact:
+            flux_version: "{{ flux_latest_release.json.tag_name }}"
+
+        - name: Download flux binary
+          get_url:
+            url: "https://github.com/fluxcd/flux2/releases/download/{{ flux_version }}/flux_{{ flux_version | regex_replace('^v', '') }}_linux_amd64.tar.gz"
+            dest: /tmp/flux.tar.gz
+            mode: "0644"
+
+        - name: Extract flux archive
+          unarchive:
+            src: /tmp/flux.tar.gz
+            dest: /tmp
+            remote_src: yes
+
+        - name: Install flux binary
+          copy:
+            src: /tmp/flux
+            dest: /usr/local/bin/flux
+            mode: "0755"
+            owner: root
+            group: root
+            remote_src: yes
+
+        - name: Clean up flux installation files
+          file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - /tmp/flux.tar.gz
+            - /tmp/flux
+  when: ansible_facts['os_family'] == "Archlinux"
+
+- name: Install Flux on Debian/Ubuntu
+  block:
+    - name: Check if flux is already installed
+      command: which flux
+      register: flux_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Get latest flux version
+      uri:
+        url: https://api.github.com/repos/fluxcd/flux2/releases/latest
+        return_content: yes
+      register: flux_latest_release
+      when: flux_installed.rc != 0
+
+    - name: Set flux version
+      set_fact:
+        flux_version: "{{ flux_latest_release.json.tag_name }}"
+      when: flux_installed.rc != 0
+
+    - name: Download flux binary
+      get_url:
+        url: "https://github.com/fluxcd/flux2/releases/download/{{ flux_version }}/flux_{{ flux_version | regex_replace('^v', '') }}_linux_amd64.tar.gz"
+        dest: /tmp/flux.tar.gz
+        mode: "0644"
+      when: flux_installed.rc != 0
+
+    - name: Extract flux archive
+      unarchive:
+        src: /tmp/flux.tar.gz
+        dest: /tmp
+        remote_src: yes
+      when: flux_installed.rc != 0
+
+    - name: Install flux binary
+      copy:
+        src: /tmp/flux
+        dest: /usr/local/bin/flux
+        mode: "0755"
+        owner: root
+        group: root
+        remote_src: yes
+      when: flux_installed.rc != 0
+
+    - name: Clean up flux installation files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/flux.tar.gz
+        - /tmp/flux
+      when: flux_installed.rc != 0
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Verify flux installation
+  command: flux --version
+  register: flux_version_check
+  changed_when: false
+  failed_when: flux_version_check.rc != 0
+
+- name: Display flux version
+  debug:
+    msg: "flux installed successfully: {{ flux_version_check.stdout }}"

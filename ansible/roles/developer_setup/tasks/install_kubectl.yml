@@ -1,0 +1,79 @@
+---
+# Tasks for installing kubectl (Kubernetes CLI)
+
+- name: Ensure required packages are installed for kubectl
+  package:
+    name:
+      - curl
+    state: present
+
+- name: Get latest stable kubectl version
+  uri:
+    url: https://dl.k8s.io/release/stable.txt
+    return_content: yes
+  register: kubectl_stable_version
+
+- name: Determine kubectl binary URL based on architecture
+  set_fact:
+    kubectl_binary_url: >-
+      {%- if ansible_architecture == 'x86_64' -%}
+      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/amd64/kubectl
+      {%- elif ansible_architecture == 'aarch64' -%}
+      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/arm64/kubectl
+      {%- else -%}
+      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/amd64/kubectl
+      {%- endif -%}
+    kubectl_checksum_url: >-
+      {%- if ansible_architecture == 'x86_64' -%}
+      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/amd64/kubectl.sha256
+      {%- elif ansible_architecture == 'aarch64' -%}
+      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/arm64/kubectl.sha256
+      {%- else -%}
+      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/amd64/kubectl.sha256
+      {%- endif -%}
+
+- name: Download kubectl binary
+  get_url:
+    url: "{{ kubectl_binary_url }}"
+    dest: /tmp/kubectl
+    mode: "0755"
+
+- name: Download kubectl checksum
+  get_url:
+    url: "{{ kubectl_checksum_url }}"
+    dest: /tmp/kubectl.sha256
+    mode: "0644"
+
+- name: Verify kubectl binary checksum
+  shell: |
+    echo "$(cat /tmp/kubectl.sha256)  /tmp/kubectl" | sha256sum --check
+  register: kubectl_checksum_result
+  changed_when: false
+  failed_when: kubectl_checksum_result.rc != 0
+
+- name: Install kubectl binary
+  copy:
+    src: /tmp/kubectl
+    dest: /usr/local/bin/kubectl
+    mode: "0755"
+    owner: root
+    group: root
+    remote_src: yes
+
+- name: Clean up temporary kubectl files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/kubectl
+    - /tmp/kubectl.sha256
+
+- name: Verify kubectl installation
+  command: kubectl version --client --output=yaml
+  register: kubectl_version_output
+  changed_when: false
+  failed_when: false
+
+- name: Display kubectl version
+  debug:
+    msg: "kubectl installed successfully: {{ kubectl_stable_version.content | trim }}"

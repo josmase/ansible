@@ -24,3 +24,13 @@
         path: /tmp/k9s_linux_amd64.deb
         state: absent
   when: ansible_facts['os_family'] == "Debian"
+
+- name: Verify k9s installation
+  command: k9s version
+  register: k9s_version_check
+  changed_when: false
+  failed_when: k9s_version_check.rc != 0
+
+- name: Display k9s version
+  debug:
+    msg: "k9s installed successfully: {{ k9s_version_check.stdout }}"

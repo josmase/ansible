@@ -1,0 +1,60 @@
+---
+# Tasks for installing yq (YAML processor)
+
+- name: Install yq on Arch Linux
+  pacman:
+    name: yq
+    state: present
+  when: ansible_facts['os_family'] == "Archlinux"
+
+- name: Install yq on Debian/Ubuntu
+  block:
+    - name: Check if yq is already installed
+      command: which yq
+      register: yq_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Get latest yq version
+      uri:
+        url: https://api.github.com/repos/mikefarah/yq/releases/latest
+        return_content: yes
+      register: yq_latest_release
+      when: yq_installed.rc != 0
+
+    - name: Set yq version
+      set_fact:
+        yq_version: "{{ yq_latest_release.json.tag_name }}"
+      when: yq_installed.rc != 0
+
+    - name: Determine yq binary URL based on architecture
+      set_fact:
+        yq_binary_url: >-
+          {%- if ansible_architecture == 'x86_64' -%}
+          https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/yq_linux_amd64
+          {%- elif ansible_architecture == 'aarch64' -%}
+          https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/yq_linux_arm64
+          {%- else -%}
+          https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/yq_linux_amd64
+          {%- endif -%}
+      when: yq_installed.rc != 0
+
+    - name: Download yq binary
+      get_url:
+        url: "{{ yq_binary_url }}"
+        dest: /usr/local/bin/yq
+        mode: "0755"
+        owner: root
+        group: root
+      when: yq_installed.rc != 0
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Verify yq installation
+  command: yq --version
+  register: yq_version_check
+  changed_when: false
+  failed_when: yq_version_check.rc != 0
+
+- name: Display yq version
+  debug:
+    msg: "yq installed successfully: {{ yq_version_check.stdout }}"

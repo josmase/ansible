@@ -1,0 +1,48 @@
+---
+# Tasks for installing sops (secrets management)
+
+- name: Install sops on Arch Linux
+  pacman:
+    name: sops
+    state: present
+  when: ansible_facts['os_family'] == "Archlinux"
+
+- name: Install sops on Debian/Ubuntu
+  block:
+    - name: Check if sops is already installed
+      command: which sops
+      register: sops_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Get latest sops version
+      uri:
+        url: https://api.github.com/repos/getsops/sops/releases/latest
+        return_content: yes
+      register: sops_latest_release
+      when: sops_installed.rc != 0
+
+    - name: Set sops version
+      set_fact:
+        sops_version: "{{ sops_latest_release.json.tag_name | regex_replace('^v', '') }}"
+      when: sops_installed.rc != 0
+
+    - name: Download sops binary
+      get_url:
+        url: "https://github.com/getsops/sops/releases/download/v{{ sops_version }}/sops-v{{ sops_version }}.linux.amd64"
+        dest: /usr/local/bin/sops
+        mode: "0755"
+        owner: root
+        group: root
+      when: sops_installed.rc != 0
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Verify sops installation
+  command: sops --version
+  register: sops_version_check
+  changed_when: false
+  failed_when: sops_version_check.rc != 0
+
+- name: Display sops version
+  debug:
+    msg: "sops installed successfully: {{ sops_version_check.stdout }}"

@@ -1,0 +1,120 @@
+---
+# Tasks for installing kubeconform (Kubernetes manifest validation)
+
+- name: Install kubeconform on Arch Linux
+  block:
+    - name: Check if kubeconform is already installed
+      command: which kubeconform
+      register: kubeconform_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Get latest kubeconform version
+      uri:
+        url: https://api.github.com/repos/yannh/kubeconform/releases/latest
+        return_content: yes
+      register: kubeconform_latest_release
+      when: kubeconform_installed.rc != 0
+
+    - name: Set kubeconform version
+      set_fact:
+        kubeconform_version: "{{ kubeconform_latest_release.json.tag_name }}"
+      when: kubeconform_installed.rc != 0
+
+    - name: Download kubeconform archive
+      get_url:
+        url: "https://github.com/yannh/kubeconform/releases/download/{{ kubeconform_version }}/kubeconform-linux-amd64.tar.gz"
+        dest: /tmp/kubeconform.tar.gz
+        mode: "0644"
+      when: kubeconform_installed.rc != 0
+
+    - name: Extract kubeconform archive
+      unarchive:
+        src: /tmp/kubeconform.tar.gz
+        dest: /tmp
+        remote_src: yes
+      when: kubeconform_installed.rc != 0
+
+    - name: Install kubeconform binary
+      copy:
+        src: /tmp/kubeconform
+        dest: /usr/local/bin/kubeconform
+        mode: "0755"
+        owner: root
+        group: root
+        remote_src: yes
+      when: kubeconform_installed.rc != 0
+
+    - name: Clean up kubeconform installation files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/kubeconform.tar.gz
+        - /tmp/kubeconform
+      when: kubeconform_installed.rc != 0
+  when: ansible_facts['os_family'] == "Archlinux"
+
+- name: Install kubeconform on Debian/Ubuntu
+  block:
+    - name: Check if kubeconform is already installed
+      command: which kubeconform
+      register: kubeconform_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Get latest kubeconform version
+      uri:
+        url: https://api.github.com/repos/yannh/kubeconform/releases/latest
+        return_content: yes
+      register: kubeconform_latest_release
+      when: kubeconform_installed.rc != 0
+
+    - name: Set kubeconform version
+      set_fact:
+        kubeconform_version: "{{ kubeconform_latest_release.json.tag_name }}"
+      when: kubeconform_installed.rc != 0
+
+    - name: Download kubeconform archive
+      get_url:
+        url: "https://github.com/yannh/kubeconform/releases/download/{{ kubeconform_version }}/kubeconform-linux-amd64.tar.gz"
+        dest: /tmp/kubeconform.tar.gz
+        mode: "0644"
+      when: kubeconform_installed.rc != 0
+
+    - name: Extract kubeconform archive
+      unarchive:
+        src: /tmp/kubeconform.tar.gz
+        dest: /tmp
+        remote_src: yes
+      when: kubeconform_installed.rc != 0
+
+    - name: Install kubeconform binary
+      copy:
+        src: /tmp/kubeconform
+        dest: /usr/local/bin/kubeconform
+        mode: "0755"
+        owner: root
+        group: root
+        remote_src: yes
+      when: kubeconform_installed.rc != 0
+
+    - name: Clean up kubeconform installation files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/kubeconform.tar.gz
+        - /tmp/kubeconform
+      when: kubeconform_installed.rc != 0
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Verify kubeconform installation
+  command: kubeconform -v
+  register: kubeconform_version_check
+  changed_when: false
+  failed_when: kubeconform_version_check.rc != 0
+
+- name: Display kubeconform version
+  debug:
+    msg: "kubeconform installed successfully: {{ kubeconform_version_check.stdout }}"

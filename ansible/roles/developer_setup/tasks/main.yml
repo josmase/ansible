@@ -1,5 +1,11 @@
 ---
 # Setup Kubernetes tools and configuration
+- name: Include kubectl installation tasks
+  ansible.builtin.include_tasks: install_kubectl.yml
+  tags:
+    - kubernetes
+    - kubectl
+
 - name: Include Kubernetes config setup tasks
   ansible.builtin.include_tasks: setup_kubeconfig.yml
   tags:
@@ -11,3 +17,51 @@
   tags:
     - kubernetes
     - k9s
+
+- name: Include kind installation tasks
+  ansible.builtin.include_tasks: install_kind.yml
+  tags:
+    - kubernetes
+    - kind
+
+- name: Include kustomize installation tasks
+  ansible.builtin.include_tasks: install_kustomize.yml
+  tags:
+    - kubernetes
+    - kustomize
+
+- name: Include kubeconform installation tasks
+  ansible.builtin.include_tasks: install_kubeconform.yml
+  tags:
+    - kubernetes
+    - validation
+    - kubeconform
+
+- name: Include Flux installation tasks
+  ansible.builtin.include_tasks: install_flux.yml
+  tags:
+    - kubernetes
+    - gitops
+    - flux
+
+# Setup secrets and configuration management tools
+- name: Include age installation tasks
+  ansible.builtin.include_tasks: install_age.yml
+  tags:
+    - security
+    - encryption
+    - age
+
+- name: Include sops installation tasks
+  ansible.builtin.include_tasks: install_sops.yml
+  tags:
+    - security
+    - secrets
+    - sops
+
+- name: Include yq installation tasks
+  ansible.builtin.include_tasks: install_yq.yml
+  tags:
+    - tools
+    - yaml
+    - yq

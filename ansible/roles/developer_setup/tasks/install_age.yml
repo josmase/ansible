@@ -1,0 +1,71 @@
+---
+# Tasks for installing age (encryption tool)
+
+- name: Install age on Arch Linux
+  pacman:
+    name: age
+    state: present
+  when: ansible_facts['os_family'] == "Archlinux"
+
+- name: Install age on Debian/Ubuntu
+  block:
+    - name: Check if age is already installed
+      command: which age
+      register: age_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Download age latest release
+      shell: |
+        LATEST_VERSION=$(curl -s https://api.github.com/repos/FiloSottile/age/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+        curl -LO "https://github.com/FiloSottile/age/releases/download/v${LATEST_VERSION}/age-v${LATEST_VERSION}-linux-amd64.tar.gz"
+      args:
+        chdir: /tmp
+        creates: /usr/local/bin/age
+      when: age_installed.rc != 0
+
+    - name: Extract age archive
+      unarchive:
+        src: "/tmp/age-v*.tar.gz"
+        dest: /tmp
+        remote_src: yes
+      when: age_installed.rc != 0
+
+    - name: Install age binaries
+      copy:
+        src: "/tmp/age/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+        remote_src: yes
+      loop:
+        - age
+        - age-keygen
+      when: age_installed.rc != 0
+
+    - name: Clean up age installation files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/age-v*.tar.gz
+        - /tmp/age
+      when: age_installed.rc != 0
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Verify age installation
+  command: age --version
+  register: age_version_check
+  changed_when: false
+  failed_when: age_version_check.rc != 0
+
+- name: Verify age-keygen installation
+  command: age-keygen --version
+  register: age_keygen_version_check
+  changed_when: false
+  failed_when: age_keygen_version_check.rc != 0
+
+- name: Display age version
+  debug:
+    msg: "age installed successfully: {{ age_version_check.stdout }}"

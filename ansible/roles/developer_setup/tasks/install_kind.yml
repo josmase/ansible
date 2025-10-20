@@ -1,0 +1,54 @@
+---
+# Tasks for installing kind (Kubernetes in Docker)
+# Kind is built from source using make for the latest version
+
+- name: Ensure required packages are installed
+  package:
+    name:
+      - git
+      - make
+    state: present
+
+- name: Create temporary directory for kind source
+  tempfile:
+    state: directory
+    suffix: kind
+  register: kind_temp_dir
+
+- name: Clone kind repository
+  git:
+    repo: https://github.com/kubernetes-sigs/kind.git
+    dest: "{{ kind_temp_dir.path }}/kind"
+    version: main
+    depth: 1
+
+- name: Build kind from source
+  command: make build
+  args:
+    chdir: "{{ kind_temp_dir.path }}/kind"
+  environment:
+    PATH: "/usr/local/bin:/usr/bin:/bin"
+
+- name: Install kind binary
+  copy:
+    src: "{{ kind_temp_dir.path }}/kind/bin/kind"
+    dest: /usr/local/bin/kind
+    mode: "0755"
+    owner: root
+    group: root
+    remote_src: yes
+
+- name: Clean up temporary directory
+  file:
+    path: "{{ kind_temp_dir.path }}"
+    state: absent
+
+- name: Verify kind installation
+  command: kind version
+  register: kind_version_check
+  changed_when: false
+  failed_when: kind_version_check.rc != 0
+
+- name: Display kind version
+  debug:
+    msg: "kind installed successfully: {{ kind_version_check.stdout }}"
