@@ -114,6 +114,34 @@
     chdir: "{{ orcaslicer_build_dir }}"
   when: not orcaslicer_installed.stat.exists
 
+- name: Get installed commit hash
+  command: git rev-parse HEAD
+  args:
+    chdir: "{{ orcaslicer_build_dir }}"
+  register: installed_commit
+  when: not orcaslicer_installed.stat.exists
+
+- name: Create OrcaSlicer installation directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  loop:
+    - "{{ orcaslicer_install_dir }}"
+    - "{{ orcaslicer_install_dir }}/bin"
+  when: not orcaslicer_installed.stat.exists
+
+- name: Install OrcaSlicer resources directory
+  synchronize:
+    src: "{{ orcaslicer_build_dir }}/resources/"
+    dest: "{{ orcaslicer_resources_dir }}/"
+    delete: no
+    recursive: yes
+  delegate_to: "{{ inventory_hostname }}"
+  when: not orcaslicer_installed.stat.exists
+
 - name: Install OrcaSlicer binary
   copy:
     src: "{{ orcaslicer_build_dir }}/build/package/bin/orca-slicer"
@@ -130,6 +158,13 @@
     chmod +x {{ orcaslicer_install_appimage }}
   when: not orcaslicer_installed.stat.exists
 
+- name: Create symlink in /usr/local/bin
+  file:
+    src: "{{ orcaslicer_install_bin }}"
+    dest: /usr/local/bin/orca-slicer
+    state: link
+  when: not orcaslicer_installed.stat.exists
+
 - name: Create desktop entry for OrcaSlicer
   copy:
     dest: /usr/share/applications/orcaslicer.desktop
@@ -140,12 +175,21 @@
       [Desktop Entry]
       Name=OrcaSlicer
       Comment=3D Printer Slicer
-      Exec={{ orcaslicer_install_appimage }} %u
+      Exec={{ orcaslicer_install_bin }} %u
       Icon=orcaslicer
       Terminal=false
       Type=Application
       Categories=Graphics;3DGraphics;Engineering;
       MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;x-scheme-handler/orcaslicer;
+  when: not orcaslicer_installed.stat.exists
+
+- name: Save installed version commit hash
+  copy:
+    content: "{{ installed_commit.stdout }}"
+    dest: "{{ orcaslicer_version_file }}"
+    mode: "0644"
+    owner: root
+    group: root
   when: not orcaslicer_installed.stat.exists
 
 - name: Clean up OrcaSlicer build directory

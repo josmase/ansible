@@ -7,12 +7,13 @@ install_slicing_software: true
 install_printing_tools: true
 
 # OrcaSlicer installation paths
+orcaslicer_install_dir: "/usr/local/orca-slicer"
 orcaslicer_build_dir: "/home/{{ ansible_user | default(ansible_user_id) }}/tmp/OrcaSlicer"
 orcaslicer_check_dir: "/home/{{ ansible_user | default(ansible_user_id) }}/tmp/OrcaSlicer-check"
-orcaslicer_install_bin: "/usr/local/bin/orca-slicer"
-orcaslicer_install_appimage: "/usr/local/bin/OrcaSlicer.AppImage"
-orcaslicer_version_dir: "/usr/local/share/orcaslicer"
-orcaslicer_version_file: "/usr/local/share/orcaslicer/version.txt"
+orcaslicer_install_bin: "{{ orcaslicer_install_dir }}/bin/orca-slicer"
+orcaslicer_install_appimage: "{{ orcaslicer_install_dir }}/OrcaSlicer.AppImage"
+orcaslicer_resources_dir: "{{ orcaslicer_install_dir }}/resources"
+orcaslicer_version_file: "{{ orcaslicer_install_dir }}/version.txt"
 
 # OrcaSlicer build configuration
 # Limit parallel jobs to prevent OOM issues

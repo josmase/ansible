@@ -12,3 +12,11 @@
   tags:
     - slicing
     - orcaslicer
+
+# Uninstall slicing software
+- name: Include OrcaSlicer uninstallation tasks
+  ansible.builtin.include_tasks: uninstall_orcaslicer.yml
+  when: uninstall_slicing_software | default(false) | bool
+  tags:
+    - uninstall
+    - orcaslicer-uninstall

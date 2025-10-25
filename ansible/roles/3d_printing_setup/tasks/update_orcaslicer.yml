@@ -100,18 +100,18 @@
             group: root
             remote_src: yes
 
+        - name: Update OrcaSlicer resources directory
+          synchronize:
+            src: "{{ orcaslicer_build_dir }}/resources/"
+            dest: "{{ orcaslicer_resources_dir }}/"
+            delete: yes
+            recursive: yes
+          delegate_to: "{{ inventory_hostname }}"
+
         - name: Install updated OrcaSlicer AppImage
           shell: |
             find {{ orcaslicer_build_dir }}/build -maxdepth 1 -name "OrcaSlicer*.AppImage" -not -name "appimagetool.AppImage" -exec cp {} {{ orcaslicer_install_appimage }} \;
             chmod +x {{ orcaslicer_install_appimage }}
-
-        - name: Create version tracking directory
-          file:
-            path: "{{ orcaslicer_version_dir }}"
-            state: directory
-            mode: "0755"
-            owner: root
-            group: root
 
         - name: Save installed version commit hash
           copy:
@@ -131,7 +131,7 @@
               [Desktop Entry]
               Name=OrcaSlicer
               Comment=3D Printer Slicer
-              Exec={{ orcaslicer_install_appimage }} %u
+              Exec={{ orcaslicer_install_bin }} %u
               Icon=orcaslicer
               Terminal=false
               Type=Application

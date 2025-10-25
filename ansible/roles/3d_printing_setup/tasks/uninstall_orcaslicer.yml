@@ -1,0 +1,33 @@
+---
+- name: Check if OrcaSlicer is installed
+  stat:
+    path: "{{ orcaslicer_install_bin }}"
+  register: orcaslicer_check
+
+- name: Remove OrcaSlicer installation directory
+  file:
+    path: "{{ orcaslicer_install_dir }}"
+    state: absent
+  when: orcaslicer_check.stat.exists
+
+- name: Remove OrcaSlicer symlink
+  file:
+    path: /usr/local/bin/orca-slicer
+    state: absent
+  when: orcaslicer_check.stat.exists
+
+- name: Remove OrcaSlicer desktop entry
+  file:
+    path: /usr/share/applications/orcaslicer.desktop
+    state: absent
+  when: orcaslicer_check.stat.exists
+
+- name: Display uninstall status
+  debug:
+    msg: "OrcaSlicer has been uninstalled"
+  when: orcaslicer_check.stat.exists
+
+- name: Display status when not installed
+  debug:
+    msg: "OrcaSlicer is not installed"
+  when: not orcaslicer_check.stat.exists
