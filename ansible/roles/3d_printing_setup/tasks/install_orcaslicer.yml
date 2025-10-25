@@ -140,12 +140,12 @@
       [Desktop Entry]
       Name=OrcaSlicer
       Comment=3D Printer Slicer
-      Exec={{ orcaslicer_install_appimage }} %F
+      Exec={{ orcaslicer_install_appimage }} %u
       Icon=orcaslicer
       Terminal=false
       Type=Application
       Categories=Graphics;3DGraphics;Engineering;
-      MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;
+      MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;x-scheme-handler/orcaslicer;
   when: not orcaslicer_installed.stat.exists
 
 - name: Clean up OrcaSlicer build directory
