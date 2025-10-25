@@ -1,0 +1,166 @@
+---
+# Tasks for installing OrcaSlicer (3D printing slicer)
+# Builds from source following official instructions
+
+- name: Install OrcaSlicer dependencies for Arch Linux
+  pacman:
+    name:
+      - autoconf
+      - automake
+      - base-devel
+      - cmake
+      - curl
+      - dbus
+      - eglexternalplatform
+      - extra-cmake-modules
+      - file
+      - gcc
+      - gettext
+      - git
+      - git-lfs
+      - glew
+      - gstreamer
+      - gtk3
+      - libmspack
+      - libsecret
+      - libspnav
+      - openssl
+      - libtool
+      - make
+      - mesa
+      - ninja
+      - patch
+      - pkgconf
+      - texinfo
+      - webkit2gtk
+      - wayland-protocols
+      - wget
+    state: present
+  when: ansible_facts['os_family'] == "Archlinux"
+
+- name: Install OrcaSlicer dependencies for Debian/Ubuntu
+  apt:
+    name:
+      - autoconf
+      - automake
+      - cmake
+      - curl
+      - libcurl4-openssl-dev
+      - libdbus-1-dev
+      - eglexternalplatform-dev
+      - extra-cmake-modules
+      - file
+      - gettext
+      - git
+      - git-lfs
+      - libglew-dev
+      - libgstreamerd-3-dev
+      - libgtk-3-dev
+      - libmspack-dev
+      - libsecret-1-dev
+      - libspnav-dev
+      - libssl-dev
+      - libtool
+      - libudev-dev
+      - libfuse-dev
+      - m4
+      - ninja-build
+      - texinfo
+      - libwebkit2gtk-4.0-dev
+      - wget
+    state: present
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Check if OrcaSlicer is already installed
+  stat:
+    path: "{{ orcaslicer_install_bin }}"
+  register: orcaslicer_installed
+
+- name: Clean up old OrcaSlicer build directory
+  file:
+    path: "{{ orcaslicer_build_dir }}"
+    state: absent
+  when: not orcaslicer_installed.stat.exists
+
+- name: Clone OrcaSlicer repository
+  git:
+    repo: https://github.com/SoftFever/OrcaSlicer.git
+    dest: "{{ orcaslicer_build_dir }}"
+    version: main
+    depth: 1
+  when: not orcaslicer_installed.stat.exists
+
+- name: Pull Git LFS files for OrcaSlicer
+  command: git lfs pull
+  args:
+    chdir: "{{ orcaslicer_build_dir }}"
+  when: not orcaslicer_installed.stat.exists
+
+- name: Build OrcaSlicer dependencies
+  command: ./build_linux.sh -d -r -j {{ orcaslicer_build_jobs }}
+  args:
+    chdir: "{{ orcaslicer_build_dir }}"
+  when: not orcaslicer_installed.stat.exists
+
+- name: Build OrcaSlicer from source
+  command: ./build_linux.sh -s -r -j {{ orcaslicer_build_jobs }}
+  args:
+    chdir: "{{ orcaslicer_build_dir }}"
+  when: not orcaslicer_installed.stat.exists
+
+- name: Build OrcaSlicer AppImage
+  command: ./build_linux.sh -i -r -j {{ orcaslicer_build_jobs }}
+  args:
+    chdir: "{{ orcaslicer_build_dir }}"
+  when: not orcaslicer_installed.stat.exists
+
+- name: Install OrcaSlicer binary
+  copy:
+    src: "{{ orcaslicer_build_dir }}/build/package/bin/orca-slicer"
+    dest: "{{ orcaslicer_install_bin }}"
+    mode: "0755"
+    owner: root
+    group: root
+    remote_src: yes
+  when: not orcaslicer_installed.stat.exists
+
+- name: Install OrcaSlicer AppImage
+  shell: |
+    find {{ orcaslicer_build_dir }}/build -maxdepth 1 -name "OrcaSlicer*.AppImage" -not -name "appimagetool.AppImage" -exec cp {} {{ orcaslicer_install_appimage }} \;
+    chmod +x {{ orcaslicer_install_appimage }}
+  when: not orcaslicer_installed.stat.exists
+
+- name: Create desktop entry for OrcaSlicer
+  copy:
+    dest: /usr/share/applications/orcaslicer.desktop
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      [Desktop Entry]
+      Name=OrcaSlicer
+      Comment=3D Printer Slicer
+      Exec={{ orcaslicer_install_appimage }} %F
+      Icon=orcaslicer
+      Terminal=false
+      Type=Application
+      Categories=Graphics;3DGraphics;Engineering;
+      MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;
+  when: not orcaslicer_installed.stat.exists
+
+- name: Clean up OrcaSlicer build directory
+  file:
+    path: "{{ orcaslicer_build_dir }}"
+    state: absent
+  when: not orcaslicer_installed.stat.exists
+
+- name: Verify OrcaSlicer installation
+  command: "{{ orcaslicer_install_bin }} --version"
+  register: orcaslicer_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Display OrcaSlicer installation status
+  debug:
+    msg: "OrcaSlicer installed successfully"
+  when: orcaslicer_version_check.rc == 0

@@ -53,6 +53,15 @@
   roles:
     - role: developer_setup
 
+- name: 3D printing and modeling workstation setup
+  hosts: 3d_printing_workstations
+  become: true
+  tags:
+    - 3d-printing
+    - modeling
+  roles:
+    - role: 3d_printing_setup
+
 - name: Network storage configuration
   hosts: nfs_clients
   become: true

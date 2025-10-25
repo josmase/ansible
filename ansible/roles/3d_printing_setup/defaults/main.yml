@@ -1,0 +1,21 @@
+---
+# Default variables for 3D printing setup
+
+# Enable/disable specific software categories
+install_modeling_software: true
+install_slicing_software: true
+install_printing_tools: true
+
+# OrcaSlicer installation paths
+orcaslicer_build_dir: "/home/{{ ansible_user | default(ansible_user_id) }}/tmp/OrcaSlicer"
+orcaslicer_check_dir: "/home/{{ ansible_user | default(ansible_user_id) }}/tmp/OrcaSlicer-check"
+orcaslicer_install_bin: "/usr/local/bin/orca-slicer"
+orcaslicer_install_appimage: "/usr/local/bin/OrcaSlicer.AppImage"
+orcaslicer_version_dir: "/usr/local/share/orcaslicer"
+orcaslicer_version_file: "/usr/local/share/orcaslicer/version.txt"
+
+# OrcaSlicer build configuration
+# Limit parallel jobs to prevent OOM issues
+# Each C++ compilation can use 2-3GB RAM, so we limit to stay under 20GB total
+# Set to 0 to use all available cores (not recommended for systems with <64GB RAM)
+orcaslicer_build_jobs: 6

@@ -1,0 +1,163 @@
+---
+# Tasks for updating OrcaSlicer to the latest version
+
+- name: Check if OrcaSlicer is installed
+  stat:
+    path: "{{ orcaslicer_install_bin }}"
+  register: orcaslicer_check
+
+- name: Update OrcaSlicer
+  block:
+    - name: Get current OrcaSlicer version
+      command: "{{ orcaslicer_install_bin }} --version"
+      register: current_orcaslicer_version
+      changed_when: false
+      failed_when: false
+
+    - name: Clone/Update OrcaSlicer repository to check version
+      git:
+        repo: https://github.com/SoftFever/OrcaSlicer.git
+        dest: "{{ orcaslicer_check_dir }}"
+        version: main
+        depth: 1
+
+    - name: Get latest commit hash from repository
+      command: git rev-parse HEAD
+      args:
+        chdir: "{{ orcaslicer_check_dir }}"
+      register: latest_commit
+      changed_when: false
+
+    - name: Get current installed commit hash
+      shell: |
+        if [ -f {{ orcaslicer_version_file }} ]; then
+          cat {{ orcaslicer_version_file }}
+        else
+          echo "unknown"
+        fi
+      register: current_commit
+      changed_when: false
+
+    - name: Check if update is needed
+      set_fact:
+        update_needed: "{{ latest_commit.stdout != current_commit.stdout }}"
+
+    - name: Display update status
+      debug:
+        msg: "OrcaSlicer is already up to date ({{ current_commit.stdout[:8] }})"
+      when: not update_needed
+
+    - name: Build and install OrcaSlicer update
+      block:
+        - name: Remove temporary check directory
+          file:
+            path: "{{ orcaslicer_check_dir }}"
+            state: absent
+
+        - name: Clone OrcaSlicer repository for build
+          git:
+            repo: https://github.com/SoftFever/OrcaSlicer.git
+            dest: "{{ orcaslicer_build_dir }}"
+            version: main
+            force: yes
+
+        - name: Pull latest Git LFS files
+          command: git lfs pull
+          args:
+            chdir: "{{ orcaslicer_build_dir }}"
+
+        - name: Build OrcaSlicer dependencies
+          command: ./build_linux.sh -d -j {{ orcaslicer_build_jobs }}
+          args:
+            chdir: "{{ orcaslicer_build_dir }}"
+
+        - name: Build OrcaSlicer from source
+          command: ./build_linux.sh -s -j {{ orcaslicer_build_jobs }}
+          args:
+            chdir: "{{ orcaslicer_build_dir }}"
+
+        - name: Build OrcaSlicer AppImage
+          command: ./build_linux.sh -i -j {{ orcaslicer_build_jobs }}
+            args:
+            chdir: "{{ orcaslicer_build_dir }}"
+
+        - name: Backup current OrcaSlicer binary
+          copy:
+            src: "{{ orcaslicer_install_bin }}"
+            dest: "{{ orcaslicer_install_bin }}.bak"
+            mode: "0755"
+            owner: root
+            group: root
+            remote_src: yes
+          ignore_errors: true
+
+        - name: Install updated OrcaSlicer binary
+          copy:
+            src: "{{ orcaslicer_build_dir }}/build/package/bin/orca-slicer"
+            dest: "{{ orcaslicer_install_bin }}"
+            mode: "0755"
+            owner: root
+            group: root
+            remote_src: yes
+
+        - name: Install updated OrcaSlicer AppImage
+          shell: |
+            find {{ orcaslicer_build_dir }}/build -maxdepth 1 -name "OrcaSlicer*.AppImage" -not -name "appimagetool.AppImage" -exec cp {} {{ orcaslicer_install_appimage }} \;
+            chmod +x {{ orcaslicer_install_appimage }}
+
+        - name: Create version tracking directory
+          file:
+            path: "{{ orcaslicer_version_dir }}"
+            state: directory
+            mode: "0755"
+            owner: root
+            group: root
+
+        - name: Save installed version commit hash
+          copy:
+            content: "{{ latest_commit.stdout }}"
+            dest: "{{ orcaslicer_version_file }}"
+            mode: "0644"
+            owner: root
+            group: root
+
+        - name: Update desktop entry for OrcaSlicer
+          copy:
+            dest: /usr/share/applications/orcaslicer.desktop
+            mode: "0644"
+            owner: root
+            group: root
+            content: |
+              [Desktop Entry]
+              Name=OrcaSlicer
+              Comment=3D Printer Slicer
+              Exec={{ orcaslicer_install_appimage }} %F
+              Icon=orcaslicer
+              Terminal=false
+              Type=Application
+              Categories=Graphics;3DGraphics;Engineering;
+              MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;
+
+        - name: Clean up OrcaSlicer build directory
+          file:
+            path: "{{ orcaslicer_build_dir }}"
+            state: absent
+
+        - name: Verify OrcaSlicer update
+          command: "{{ orcaslicer_install_bin }} --version"
+          register: orcaslicer_updated_version
+          changed_when: false
+          failed_when: false
+
+        - name: Display OrcaSlicer version after update
+          debug:
+            msg: "OrcaSlicer updated successfully to commit {{ latest_commit.stdout[:8] }}"
+          when: orcaslicer_updated_version.rc == 0
+      when: update_needed
+
+    - name: Clean up temporary check directory
+      file:
+        path: "{{ orcaslicer_check_dir }}"
+        state: absent
+      when: not update_needed
+  when: orcaslicer_check.stat.exists

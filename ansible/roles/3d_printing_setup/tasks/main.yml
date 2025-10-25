@@ -1,0 +1,14 @@
+---
+# Main tasks file for 3D printing setup
+
+- name: Display 3D printing setup start
+  debug:
+    msg: "Starting 3D printing and modeling software installation"
+
+# Install slicing software
+- name: Include OrcaSlicer installation tasks
+  ansible.builtin.include_tasks: install_orcaslicer.yml
+  when: install_slicing_software | default(true) | bool
+  tags:
+    - slicing
+    - orcaslicer

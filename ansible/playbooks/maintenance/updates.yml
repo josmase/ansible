@@ -15,11 +15,24 @@
         upgrade: yes
       when: ansible_os_family == "Archlinux"
 
+- name: Update 3D printing software
+  hosts: 3d_printing_workstations
+  become: true
+  tags:
+    - 3d-printing
+    - orcaslicer
+  tasks:
+    - name: Include OrcaSlicer update tasks
+      ansible.builtin.include_role:
+        name: 3d_printing_setup
+        tasks_from: update_orcaslicer
+
 - name: Reboot non-critical machines after upgrades
   hosts:
     - k3s_cluster
     - media_services
     - development_infrastructure
+    - 3d_printing_workstations
   tasks:
     - name: Check if reboot required
       stat:
