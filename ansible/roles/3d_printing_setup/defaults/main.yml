@@ -1,10 +1,10 @@
 ---
 # Default variables for 3D printing setup
 
-# Enable/disable specific software categories
-install_modeling_software: true
-install_slicing_software: true
-install_printing_tools: true
+# OrcaSlicer operation mode
+# Valid values: 'install', 'update', 'uninstall'
+# Default: 'install'
+orcaslicer_operation: install
 
 # OrcaSlicer installation paths
 orcaslicer_install_dir: "/usr/local/orca-slicer"

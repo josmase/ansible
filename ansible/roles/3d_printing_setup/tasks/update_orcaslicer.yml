@@ -78,7 +78,7 @@
 
         - name: Build OrcaSlicer AppImage
           command: ./build_linux.sh -i -j {{ orcaslicer_build_jobs }}
-            args:
+          args:
             chdir: "{{ orcaslicer_build_dir }}"
 
         - name: Backup current OrcaSlicer binary
@@ -121,7 +121,59 @@
             owner: root
             group: root
 
-        - name: Update desktop entry for OrcaSlicer
+        - name: Get actual user UID (not escalated)
+          command: id -u {{ ansible_user }}
+          register: actual_user_uid_update
+          changed_when: false
+
+        - name: Check if running Wayland session
+          stat:
+            path: "/run/user/{{ actual_user_uid_update.stdout }}/wayland-0"
+          register: wayland_socket_update
+          changed_when: false
+
+        - name: Check NVIDIA driver version
+          command: nvidia-smi --query-gpu=driver_version --format=csv,noheader
+          register: nvidia_driver_update
+          changed_when: false
+          failed_when: false
+          when: wayland_socket_update.stat.exists
+
+        - name: Check if using NVIDIA GPU
+          shell: lsmod | grep -i nvidia
+          register: gpu_vendor_update
+          changed_when: false
+          failed_when: false
+          when: wayland_socket_update.stat.exists
+
+        - name: Set NVIDIA Wayland workaround flag for update
+          set_fact:
+            needs_nvidia_wayland_fix_update: true
+          when:
+            - wayland_socket_update.stat.exists
+            - gpu_vendor_update.rc == 0
+            - nvidia_driver_update.stdout is defined
+            - nvidia_driver_update.stdout | regex_replace('^([0-9]+).*', '\\1') | int > 555
+
+        - name: Create OrcaSlicer wrapper script for NVIDIA+Wayland
+          copy:
+            dest: "{{ orcaslicer_install_dir }}/orca-slicer-wrapper.sh"
+            mode: "0755"
+            owner: root
+            group: root
+            content: |
+              #!/bin/bash
+              # NVIDIA Wayland workaround for driver versions > 555
+              export LC_ALL=C
+              export __GLX_VENDOR_LIBRARY_NAME=mesa
+              export __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json
+              export MESA_LOADER_DRIVER_OVERRIDE=zink
+              export GALLIUM_DRIVER=zink
+              export WEBKIT_DISABLE_DMABUF_RENDERER=1
+              exec "{{ orcaslicer_install_bin }}" "$@"
+          when: needs_nvidia_wayland_fix_update | default(false)
+
+        - name: Update desktop entry for OrcaSlicer (with NVIDIA Wayland wrapper)
           copy:
             dest: /usr/share/applications/orcaslicer.desktop
             mode: "0644"
@@ -131,12 +183,31 @@
               [Desktop Entry]
               Name=OrcaSlicer
               Comment=3D Printer Slicer
-              Exec={{ orcaslicer_install_bin }} %u
+              Exec={{ orcaslicer_install_dir }}/orca-slicer-wrapper.sh %u
               Icon=orcaslicer
               Terminal=false
               Type=Application
               Categories=Graphics;3DGraphics;Engineering;
               MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;x-scheme-handler/orcaslicer;
+          when: needs_nvidia_wayland_fix_update | default(false)
+
+        - name: Update desktop entry for OrcaSlicer (standard)
+          copy:
+            dest: /usr/share/applications/orcaslicer.desktop
+            mode: "0644"
+            owner: root
+            group: root
+            content: |
+              [Desktop Entry]
+              Name=OrcaSlicer
+              Comment=3D Printer Slicer
+              Exec=env LC_ALL=C {{ orcaslicer_install_bin }} %u
+              Icon=orcaslicer
+              Terminal=false
+              Type=Application
+              Categories=Graphics;3DGraphics;Engineering;
+              MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;x-scheme-handler/orcaslicer;
+          when: not (needs_nvidia_wayland_fix_update | default(false))
 
         - name: Clean up OrcaSlicer build directory
           file:

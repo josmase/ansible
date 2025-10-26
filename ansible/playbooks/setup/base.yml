@@ -59,6 +59,8 @@
   tags:
     - 3d-printing
     - modeling
+  vars:
+    orcaslicer_operation: install
   roles:
     - role: 3d_printing_setup
 

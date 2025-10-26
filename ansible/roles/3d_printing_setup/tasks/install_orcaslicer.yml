@@ -165,7 +165,69 @@
     state: link
   when: not orcaslicer_installed.stat.exists
 
-- name: Create desktop entry for OrcaSlicer
+# Check for NVIDIA + Wayland environment (driver versions > 555 need workarounds)
+- name: Get actual user UID (not escalated)
+  command: id -u {{ ansible_user }}
+  register: actual_user_uid
+  changed_when: false
+  when: not orcaslicer_installed.stat.exists
+
+- name: Check if running Wayland session
+  stat:
+    path: "/run/user/{{ actual_user_uid.stdout }}/wayland-0"
+  register: wayland_socket
+  changed_when: false
+  when: not orcaslicer_installed.stat.exists
+
+- name: Check NVIDIA driver version
+  command: nvidia-smi --query-gpu=driver_version --format=csv,noheader
+  register: nvidia_driver
+  changed_when: false
+  failed_when: false
+  when:
+    - not orcaslicer_installed.stat.exists
+    - wayland_socket.stat.exists
+
+- name: Check if using NVIDIA GPU
+  shell: lsmod | grep -i nvidia
+  register: gpu_vendor
+  changed_when: false
+  failed_when: false
+  when:
+    - not orcaslicer_installed.stat.exists
+    - wayland_socket.stat.exists
+
+- name: Set NVIDIA Wayland workaround flag
+  set_fact:
+    needs_nvidia_wayland_fix: true
+  when:
+    - not orcaslicer_installed.stat.exists
+    - wayland_socket.stat.exists
+    - gpu_vendor.rc == 0
+    - nvidia_driver.stdout is defined
+    - nvidia_driver.stdout | regex_replace('^([0-9]+).*', '\\1') | int > 555
+
+- name: Create OrcaSlicer wrapper script for NVIDIA+Wayland
+  copy:
+    dest: "{{ orcaslicer_install_dir }}/orca-slicer-wrapper.sh"
+    mode: "0755"
+    owner: root
+    group: root
+    content: |
+      #!/bin/bash
+      # NVIDIA Wayland workaround for driver versions > 555
+      export LC_ALL=C
+      export __GLX_VENDOR_LIBRARY_NAME=mesa
+      export __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json
+      export MESA_LOADER_DRIVER_OVERRIDE=zink
+      export GALLIUM_DRIVER=zink
+      export WEBKIT_DISABLE_DMABUF_RENDERER=1
+      exec "{{ orcaslicer_install_bin }}" "$@"
+  when:
+    - not orcaslicer_installed.stat.exists
+    - needs_nvidia_wayland_fix | default(false)
+
+- name: Create desktop entry for OrcaSlicer (with NVIDIA Wayland wrapper)
   copy:
     dest: /usr/share/applications/orcaslicer.desktop
     mode: "0644"
@@ -175,13 +237,35 @@
       [Desktop Entry]
       Name=OrcaSlicer
       Comment=3D Printer Slicer
-      Exec={{ orcaslicer_install_bin }} %u
+      Exec={{ orcaslicer_install_dir }}/orca-slicer-wrapper.sh %u
       Icon=orcaslicer
       Terminal=false
       Type=Application
       Categories=Graphics;3DGraphics;Engineering;
       MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;x-scheme-handler/orcaslicer;
-  when: not orcaslicer_installed.stat.exists
+  when:
+    - not orcaslicer_installed.stat.exists
+    - needs_nvidia_wayland_fix | default(false)
+
+- name: Create desktop entry for OrcaSlicer (standard)
+  copy:
+    dest: /usr/share/applications/orcaslicer.desktop
+    mode: "0644"
+    owner: root
+    group: root
+    content: |
+      [Desktop Entry]
+      Name=OrcaSlicer
+      Comment=3D Printer Slicer
+      Exec=env LC_ALL=C {{ orcaslicer_install_bin }} %u
+      Icon=orcaslicer
+      Terminal=false
+      Type=Application
+      Categories=Graphics;3DGraphics;Engineering;
+      MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;x-scheme-handler/orcaslicer;
+  when:
+    - not orcaslicer_installed.stat.exists
+    - not (needs_nvidia_wayland_fix | default(false))
 
 - name: Save installed version commit hash
   copy:

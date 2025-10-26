@@ -19,13 +19,13 @@
   hosts: 3d_printing_workstations
   become: true
   tags:
+    - maintenance
     - 3d-printing
     - orcaslicer
-  tasks:
-    - name: Include OrcaSlicer update tasks
-      ansible.builtin.include_role:
-        name: 3d_printing_setup
-        tasks_from: update_orcaslicer
+  vars:
+    orcaslicer_operation: update
+  roles:
+    - role: 3d_printing_setup
 
 - name: Reboot non-critical machines after upgrades
   hosts:

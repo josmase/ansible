@@ -7,16 +7,24 @@
 
 # Install slicing software
 - name: Include OrcaSlicer installation tasks
-  ansible.builtin.include_tasks: install_orcaslicer.yml
-  when: install_slicing_software | default(true) | bool
+  ansible.builtin.import_tasks: install_orcaslicer.yml
+  when: orcaslicer_operation | default('install') == 'install'
   tags:
     - slicing
     - orcaslicer
 
+# Update slicing software  
+- name: Include OrcaSlicer update tasks
+  ansible.builtin.import_tasks: update_orcaslicer.yml
+  when: orcaslicer_operation | default('install') == 'update'
+  tags:
+    - update
+    - orcaslicer-update
+
 # Uninstall slicing software
 - name: Include OrcaSlicer uninstallation tasks
-  ansible.builtin.include_tasks: uninstall_orcaslicer.yml
-  when: uninstall_slicing_software | default(false) | bool
+  ansible.builtin.import_tasks: uninstall_orcaslicer.yml
+  when: orcaslicer_operation | default('install') == 'uninstall'
   tags:
     - uninstall
     - orcaslicer-uninstall
