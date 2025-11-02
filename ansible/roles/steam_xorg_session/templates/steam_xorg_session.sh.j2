@@ -1,0 +1,30 @@
+#!/bin/bash
+# Minimal Xorg session wrapper for launching Steam under X11
+set -euo pipefail
+
+{% if steam_xorg_session_environment %}
+# Export custom environment overrides for the Xorg gaming session
+{% for key, value in steam_xorg_session_environment.items() %}
+export {{ key }}={{ value | to_json }}
+{% endfor %}
+{% endif %}
+if [ -f "$HOME/.Xresources" ]; then
+  xrdb -merge "$HOME/.Xresources" || true
+fi
+
+# Provide a neutral background before session compositor launches
+if command -v xsetroot >/dev/null 2>&1; then
+  xsetroot -solid '#202020'
+fi
+
+sleep {{ steam_xorg_session_autostart_delay | int }}
+{% if steam_xorg_session_use_gamescope %}
+session_cmd=( "gamescope" "--steam" "--" "{{ steam_xorg_session_steam_binary }}" )
+exec "${session_cmd[@]}" "$@"
+{% else %}
+if command -v openbox >/dev/null 2>&1; then
+  openbox &
+fi
+
+exec "{{ steam_xorg_session_steam_binary }}" "$@"
+{% endif %}

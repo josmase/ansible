@@ -1,0 +1,25 @@
+---
+steam_xorg_session_packages:
+  Archlinux:
+    - xorg-server
+    - xorg-xinit
+    - xorg-xsetroot
+    - openbox
+  Debian:
+    - xorg
+    - x11-xserver-utils
+    - openbox
+steam_xorg_session_gamescope_packages:
+  Archlinux:
+    - gamescope
+steam_xorg_session_steam_package:
+  Archlinux: steam
+  Debian: steam
+steam_xorg_session_script_path: /usr/local/bin/steam-xorg-session
+steam_xorg_session_desktop_entry_path: /usr/share/xsessions/steam-xorg.desktop
+steam_xorg_session_name: "Steam (Xorg)"
+steam_xorg_session_comment: "Minimal X11 session for Steam and Proton gaming"
+steam_xorg_session_steam_binary: /usr/bin/steam
+steam_xorg_session_environment: {}
+steam_xorg_session_autostart_delay: 1
+steam_xorg_session_use_gamescope: false

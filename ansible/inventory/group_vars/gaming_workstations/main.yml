@@ -1,0 +1,5 @@
+---
+steam_xorg_session_environment:
+  STEAM_USE_WAYLAND: "0"
+steam_xorg_session_autostart_delay: 2
+steam_xorg_session_use_gamescope: false

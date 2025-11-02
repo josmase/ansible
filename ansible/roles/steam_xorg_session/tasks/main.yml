@@ -1,0 +1,73 @@
+---
+- name: Determine package list for current platform
+  set_fact:
+    steam_xorg_session_os_packages: "{{ steam_xorg_session_packages.get(ansible_facts['os_family'], []) }}"
+    steam_xorg_session_os_gamescope_packages: "{{ steam_xorg_session_gamescope_packages.get(ansible_facts['os_family'], []) }}"
+
+- name: Determine Steam package for current platform
+  set_fact:
+    steam_xorg_session_os_steam_package: "{{ steam_xorg_session_steam_package.get(ansible_facts['os_family'], '') }}"
+
+- name: Build final package list
+  set_fact:
+    steam_xorg_session_resolved_packages: "{{ steam_xorg_session_os_packages + (steam_xorg_session_os_gamescope_packages if steam_xorg_session_use_gamescope else []) }}"
+
+- name: Ensure platform is supported
+  fail:
+    msg: "steam_xorg_session does not have package mappings for {{ ansible_facts['os_family'] }}"
+  when: steam_xorg_session_os_packages | length == 0
+
+- name: Ensure gamescope mapping exists when enabled
+  fail:
+    msg: "steam_xorg_session does not define gamescope packages for {{ ansible_facts['os_family'] }}"
+  when:
+    - steam_xorg_session_use_gamescope
+    - steam_xorg_session_os_gamescope_packages | length == 0
+
+- name: Ensure Steam package is defined
+  fail:
+    msg: "steam_xorg_session does not define a Steam package for {{ ansible_facts['os_family'] }}"
+  when: steam_xorg_session_os_steam_package | length == 0
+
+- name: Ensure required packages are installed
+  package:
+    name: "{{ steam_xorg_session_resolved_packages }}"
+    state: present
+  when: steam_xorg_session_resolved_packages | length > 0
+
+- name: Ensure Steam is installed
+  package:
+    name: "{{ steam_xorg_session_os_steam_package }}"
+    state: present
+
+- name: Ensure launcher directory exists
+  file:
+    path: "{{ steam_xorg_session_script_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy Steam Xorg session launcher
+  template:
+    src: steam_xorg_session.sh.j2
+    dest: "{{ steam_xorg_session_script_path }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Ensure xsessions directory exists
+  file:
+    path: "{{ steam_xorg_session_desktop_entry_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy Steam Xorg desktop entry
+  template:
+    src: steam_xorg_session.desktop.j2
+    dest: "{{ steam_xorg_session_desktop_entry_path }}"
+    owner: root
+    group: root
+    mode: "0644"

@@ -53,6 +53,14 @@
   roles:
     - role: developer_setup
 
+- name: Gaming workstation configuration
+  hosts: gaming_workstations
+  become: true
+  tags:
+    - gaming
+  roles:
+    - role: steam_xorg_session
+
 - name: 3D printing and modeling workstation setup
   hosts: 3d_printing_workstations
   become: true
