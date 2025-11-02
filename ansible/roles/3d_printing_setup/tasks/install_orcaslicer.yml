@@ -32,7 +32,7 @@
       - patch
       - pkgconf
       - texinfo
-      - webkit2gtk
+      - webkitgtk-6.0
       - wayland-protocols
       - wget
     state: present
@@ -95,6 +95,15 @@
   args:
     chdir: "{{ orcaslicer_build_dir }}"
   when: not orcaslicer_installed.stat.exists
+
+- name: Patch CMakeLists.txt to use WebKitGTK 6.0 (fixes device tab crash)
+  replace:
+    path: "{{ orcaslicer_build_dir }}/src/slic3r/CMakeLists.txt"
+    regexp: 'pkg_check_modules\(webkit2gtk REQUIRED webkit2gtk-4\.1\)'
+    replace: 'pkg_check_modules(webkit2gtk REQUIRED webkitgtk-6.0)'
+  when:
+    - not orcaslicer_installed.stat.exists
+    - ansible_facts['os_family'] == "Archlinux"
 
 - name: Build OrcaSlicer dependencies
   command: ./build_linux.sh -d -r -j {{ orcaslicer_build_jobs }}
