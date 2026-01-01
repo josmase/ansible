@@ -4,6 +4,7 @@ FROM alpine:3.23.2@sha256:865b95f46d98cf867a156fe4a135ad3fe50d2056aa3f25ed31662d
 ARG NODE_VERSION=""
 ARG NVM_VERSION=""
 ARG TERRAFORM_VERSION=""
+ARG OPENTOFU_VERSION=""
 ARG K8S_VERSION=""
 ARG K9S_VERSION=""
 ARG FLUX_VERSION=""
@@ -53,6 +54,15 @@ RUN if [ -z "$TERRAFORM_VERSION" ]; then \
     unzip "terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -d /usr/local/bin && \
     chmod +x "$(which terraform)" && \
     rm "terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
+
+## Install OpenTofu CLI
+ENV OPENTOFU_VERSION=${OPENTOFU_VERSION}
+RUN if [ -z "$OPENTOFU_VERSION" ]; then \
+    OPENTOFU_VERSION=$(curl -s https://api.github.com/repos/opentofu/opentofu/releases/latest | grep -o '"tag_name": ".*"' | cut -d'"' -f4 | sed 's/^v//'); \
+    fi && \
+    curl -sLO "https://github.com/opentofu/opentofu/releases/download/v${OPENTOFU_VERSION}/tofu_${OPENTOFU_VERSION}_amd64.apk" && \
+    apk add --allow-untrusted "tofu_${OPENTOFU_VERSION}_amd64.apk" && \
+    rm "tofu_${OPENTOFU_VERSION}_amd64.apk"
 
 # Install Kubernetes CLI
 ENV K8S_VERSION=${K8S_VERSION}
