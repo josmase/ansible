@@ -1,0 +1,19 @@
+---
+- name: "Set authorized_keys for jellyfin user"
+  authorized_key:
+    user: "{{ jellyfin_user }}"
+    state: present
+    key: "{{ lookup('file', ssh_key_file) }}"
+  when: ssh_key_file is defined
+
+- name: "Test SSH connectivity"
+  shell: "ffmpeg -version | head -1"
+  changed_when: false
+  register: ssh_test
+  failed_when: false
+  become: yes
+  become_user: "{{ jellyfin_user }}"
+
+- name: "Display SSH test result"
+  debug:
+    msg: "FFmpeg version available to jellyfin user: {{ ssh_test.stdout }}"

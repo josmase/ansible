@@ -1,0 +1,21 @@
+---
+# FFmpeg Configuration for GPU transcode server
+ffmpeg_enable_hardware_accel: false # Set to true when GPU driver is installed
+ffmpeg_hw_accel_type: nvidia
+
+# NVIDIA Driver Configuration
+nvidia_driver_version: "535"
+
+# NFS Configuration
+nfs_mounts:
+  - mount_point: /mnt/jellyfin-cache
+    nfs_src: "storage.local.hejsan.xyz:/kubernetes/jellyfin-cache"
+    opts: "soft,lock,vers=4"
+  - mount_point: /mnt/storage/files
+    nfs_src: "storage.local.hejsan.xyz:/files"
+    opts: "soft,lock,vers=4"
+
+# Jellyfin User Configuration
+jellyfin_user: jellyfin
+jellyfin_uid: 1001
+jellyfin_gid: 1001

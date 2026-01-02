@@ -1,0 +1,23 @@
+---
+- name: "Install FFmpeg and dependencies"
+  include_tasks: install-ffmpeg.yaml
+
+- name: "Setup jellyfin user and permissions"
+  include_tasks: setup-jellyfin-user.yaml
+
+- name: "Configure SSH for rffmpeg"
+  include_tasks: setup-ssh.yaml
+
+- name: "Setup hardware acceleration"
+  include_tasks: setup-hardware-accel.yaml
+  when: ffmpeg_enable_hardware_accel | bool
+
+- name: "Verify NFS cache mount (set by nfs_client_setup role)"
+  stat:
+    path: "{{ nfs_mount_point }}"
+  register: nfs_mount_stat
+
+- name: "Display mount status"
+  debug:
+    msg: "NFS cache mounted successfully at {{ nfs_mount_point }}"
+  when: nfs_mount_stat.stat.exists

@@ -1,0 +1,48 @@
+---
+- name: "Create jellyfin group"
+  group:
+    name: "{{ jellyfin_user }}"
+    gid: "{{ jellyfin_gid }}"
+    state: present
+
+- name: "Create jellyfin user"
+  user:
+    name: "{{ jellyfin_user }}"
+    uid: "{{ jellyfin_uid }}"
+    group: "{{ jellyfin_user }}"
+    home: "/home/{{ jellyfin_user }}"
+    shell: /bin/bash
+    state: present
+
+- name: "Create .ssh directory for jellyfin user"
+  file:
+    path: "/home/{{ jellyfin_user }}/.ssh"
+    state: directory
+    owner: "{{ jellyfin_user }}"
+    group: "{{ jellyfin_user }}"
+    mode: "0700"
+
+- name: "Verify cache mount directory exists"
+  file:
+    path: "{{ nfs_mount_point }}"
+    state: directory
+    mode: "0755"
+
+- name: "Create transcodes directory in NFS mount"
+  file:
+    path: "{{ nfs_mount_point }}/transcodes"
+    state: directory
+    mode: "0777"
+
+- name: "Create /config/cache directory for symlink"
+  file:
+    path: "/config/cache"
+    state: directory
+    mode: "0755"
+
+- name: "Create symlink from /config/cache/transcodes to NFS transcodes"
+  file:
+    src: "{{ nfs_mount_point }}/transcodes"
+    dest: "/config/cache/transcodes"
+    state: link
+    force: yes

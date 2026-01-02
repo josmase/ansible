@@ -5,15 +5,35 @@
   vars:
     nfs_package_name: "{{ 'nfs-common' if ansible_os_family == 'Debian' else 'nfs-utils' }}"
 
-- name: create install directory
+- name: create mount directories
   file:
-    path: "{{ nfs_mount_point }}"
+    path: "{{ item.mount_point }}"
     state: directory
+  loop: "{{ nfs_mounts }}"
+  when: nfs_mounts is defined
 
 - name: Bind storage to nfs exports
   ansible.posix.mount:
     state: mounted
+    path: "{{ item.mount_point }}"
+    src: "{{ item.nfs_src }}"
+    fstype: nfs
+    opts: "{{ item.opts }}"
+  loop: "{{ nfs_mounts }}"
+  when: nfs_mounts is defined
+
+# Legacy single mount support (deprecated)
+- name: create install directory (legacy)
+  file:
     path: "{{ nfs_mount_point }}"
-    src: "{{ nfs_mount_src}}"
+    state: directory
+  when: nfs_mount_point is defined and nfs_mounts is not defined
+
+- name: Bind storage to nfs exports (legacy)
+  ansible.posix.mount:
+    state: mounted
+    path: "{{ nfs_mount_point }}"
+    src: "{{ nfs_mount_src }}"
     fstype: nfs
     opts: soft,lock,vers=4
+  when: nfs_mount_point is defined and nfs_mounts is not defined

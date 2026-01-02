@@ -1,0 +1,9 @@
+---
+ffmpeg_package_names:
+  - ffmpeg
+
+nfs_client_package:
+  Debian: nfs-common
+  RedHat: nfs-utils
+
+ssh_key_file: "jellyfin-rffmpeg-key.pub"

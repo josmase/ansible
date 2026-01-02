@@ -1,0 +1,57 @@
+---
+- name: "Install NFS client"
+  package:
+    name: "{{ nfs_client_package[ansible_os_family] }}"
+    state: present
+
+- name: "Install dependencies for Jellyfin FFmpeg"
+  package:
+    name:
+      - curl
+      - gnupg
+      - apt-transport-https
+      - ca-certificates
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: "Check if Jellyfin FFmpeg is already installed"
+  stat:
+    path: /usr/lib/jellyfin-ffmpeg/ffmpeg
+  register: jellyfin_ffmpeg_installed
+
+- name: "Download Jellyfin FFmpeg package"
+  get_url:
+    url: "https://repo.jellyfin.org/files/ffmpeg/ubuntu/latest-7.x/amd64/jellyfin-ffmpeg7_7.1.3-1-{{ ansible_distribution_release }}_amd64.deb"
+    dest: /tmp/jellyfin-ffmpeg.deb
+    mode: '0644'
+  when: not jellyfin_ffmpeg_installed.stat.exists
+
+- name: "Install Jellyfin FFmpeg package"
+  apt:
+    deb: /tmp/jellyfin-ffmpeg.deb
+    state: present
+  when: not jellyfin_ffmpeg_installed.stat.exists
+
+- name: "Clean up downloaded package"
+  file:
+    path: /tmp/jellyfin-ffmpeg.deb
+    state: absent
+  when: not jellyfin_ffmpeg_installed.stat.exists
+
+- name: "Verify Jellyfin FFmpeg installation"
+  command: "/usr/lib/jellyfin-ffmpeg/ffmpeg -version"
+  changed_when: false
+  register: jellyfin_ffmpeg_version
+
+- name: "Display Jellyfin FFmpeg version"
+  debug:
+    msg: "{{ jellyfin_ffmpeg_version.stdout_lines[0] }}"
+
+- name: "Check for tonemap_cuda filter"
+  shell: "/usr/lib/jellyfin-ffmpeg/ffmpeg -filters 2>&1 | grep -q tonemap_cuda && echo 'found' || echo 'not found'"
+  changed_when: false
+  register: tonemap_cuda_check
+
+- name: "Display tonemap_cuda availability"
+  debug:
+    msg: "tonemap_cuda filter: {{ tonemap_cuda_check.stdout }}"

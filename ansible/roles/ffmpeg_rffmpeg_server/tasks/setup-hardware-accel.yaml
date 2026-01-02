@@ -1,0 +1,81 @@
+---
+- name: "Setup NVIDIA GPU support"
+  block:
+    - name: "Install NVIDIA driver (Ubuntu)"
+      package:
+        name: nvidia-driver-{{ nvidia_driver_version }}
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: "Install NVIDIA driver (RHEL)"
+      dnf:
+        name: "nvidia-driver.x86_64"
+        state: present
+      when: ansible_os_family == 'RedHat'
+
+    - name: "Install NVIDIA video codec SDK"
+      package:
+        name: libnvidia-encode-{{ nvidia_driver_version }}
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: "Add jellyfin user to video group"
+      user:
+        name: "{{ jellyfin_user }}"
+        groups: video
+        append: yes
+
+    - name: "Verify NVIDIA GPU"
+      command: "nvidia-smi"
+      changed_when: false
+      register: nvidia_smi
+
+    - name: "Display GPU info"
+      debug:
+        msg: "{{ nvidia_smi.stdout_lines[0:3] }}"
+
+  when: ffmpeg_hw_accel_type == 'nvidia'
+
+- name: "Setup Intel Quick Sync support"
+  block:
+    - name: "Install Intel Media SDK dependencies"
+      package:
+        name:
+          - intel-media-driver
+          - libva
+          - libva-utils
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: "Add jellyfin user to video group"
+      user:
+        name: "{{ jellyfin_user }}"
+        groups: video,render
+        append: yes
+
+    - name: "Verify Intel GPU"
+      command: "vainfo"
+      changed_when: false
+      register: vainfo
+
+    - name: "Display GPU info"
+      debug:
+        msg: "{{ vainfo.stdout_lines[0:5] }}"
+
+  when: ffmpeg_hw_accel_type == 'intel'
+
+- name: "Setup AMD GPU support"
+  block:
+    - name: "Install AMD drivers and ROCm"
+      package:
+        name: rocm-hip-sdk
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: "Add jellyfin user to render group"
+      user:
+        name: "{{ jellyfin_user }}"
+        groups: render,video
+        append: yes
+
+  when: ffmpeg_hw_accel_type == 'amd'

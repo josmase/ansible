@@ -1,0 +1,37 @@
+---
+- name: Setup Jellyfin Remote Transcode Server with rffmpeg
+  hosts: jellyfin_transcode_servers
+  become: true
+
+  roles:
+    - base_setup
+    - nfs_client_setup
+    - ffmpeg_rffmpeg_server
+
+  post_tasks:
+    - name: "Summary of Transcode Server Setup"
+      debug:
+        msg: |
+          ====================================
+          Transcode Server Setup Complete
+          ====================================
+          
+          Host: {{ inventory_hostname }}
+          
+          FFmpeg Location: /usr/lib/jellyfin-ffmpeg/ffmpeg
+          Jellyfin User: {{ jellyfin_user }}
+          
+          NFS Mounts:
+          {% for mount in nfs_mounts %}
+            - {{ mount.mount_point }} -> {{ mount.nfs_src }}
+          {% endfor %}
+          
+          Hardware Acceleration:
+            - Enabled: {{ ffmpeg_enable_hardware_accel }}
+            - Type: {{ ffmpeg_hw_accel_type }}
+          
+          Next Steps:
+          1. Ensure both /mnt/jellyfin-cache and /mnt/storage/files are accessible
+          2. Verify jellyfin user has correct permissions
+          3. Test rffmpeg connection from Jellyfin pod
+          4. Attempt a transcode to verify GPU acceleration with tonemap_cuda
