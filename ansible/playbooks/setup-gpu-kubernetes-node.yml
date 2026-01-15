@@ -110,7 +110,7 @@
           apiVersion: v1
           kind: Node
           metadata:
-            name: "{{ inventory_hostname }}"
+            name: "{{ ansible_hostname | lower }}"
             labels:
               gpu: "true"
               node.kubernetes.io/storage-tier: "low"
