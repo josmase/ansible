@@ -1,0 +1,70 @@
+---
+- name: "Create containerd config directory"
+  file:
+    path: /etc/containerd
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: "Check if containerd config exists"
+  stat:
+    path: /etc/containerd/config.toml
+  register: containerd_config_stat
+  become: true
+
+- name: "Generate default containerd config if not present"
+  shell: |
+    containerd config default > /etc/containerd/config.toml
+  become: true
+  when: not containerd_config_stat.stat.exists
+
+- name: "Configure containerd for NVIDIA GPU support"
+  block:
+    - name: "Backup original containerd config"
+      copy:
+        src: /etc/containerd/config.toml
+        dest: /etc/containerd/config.toml.backup
+        remote_src: true
+      become: true
+
+    - name: "Check if NVIDIA runtime already configured"
+      shell: grep -q 'containerd.runtimes.nvidia' /etc/containerd/config.toml
+      register: nvidia_runtime_check
+      changed_when: false
+      failed_when: false
+      become: true
+
+    - name: "Add NVIDIA runtime to containerd config"
+      shell: |
+        cat >> /etc/containerd/config.toml << 'NVIDIA_EOF'
+
+        # NVIDIA GPU Support Configuration
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+          runtime_engine = ""
+          runtime_root = ""
+          runtime_type = "io.containerd.runc.v2"
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+            BinaryName = "/usr/bin/nvidia-container-runtime"
+            SystemdCgroup = true
+
+        # Default runtime
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+          SystemdCgroup = true
+        NVIDIA_EOF
+      become: true
+      changed_when: true
+      when: nvidia_runtime_check.rc != 0
+
+    - name: "Restart containerd to apply configuration"
+      systemd:
+        name: containerd
+        state: restarted
+      become: true
+      notify: "Containerd restarted"
+
+    - name: "Verify containerd is running"
+      systemd:
+        name: containerd
+        state: started
+        enabled: true
+      become: true

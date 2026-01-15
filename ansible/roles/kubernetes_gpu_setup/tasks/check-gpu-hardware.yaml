@@ -1,0 +1,39 @@
+---
+- name: "Check for NVIDIA GPU hardware"
+  shell: |
+    lspci | grep -i 'nvidia\|3d controller'
+  register: gpu_hardware_check
+  changed_when: false
+  ignore_errors: true
+
+- name: "Display GPU hardware detected"
+  debug:
+    msg: |
+      GPU Hardware Found:
+      {{ gpu_hardware_check.stdout }}
+  when: gpu_hardware_check.rc == 0
+
+- name: "Warn if no GPU hardware detected"
+  debug:
+    msg: "WARNING: No NVIDIA GPU hardware detected. Continuing with driver installation for future GPU support."
+  when: gpu_hardware_check.rc != 0
+
+- name: "Collect GPU information"
+  shell: |
+    echo "GPU Detection Report:"
+    echo "===================="
+    echo "lspci output:"
+    lspci -vv 2>/dev/null | grep -A 20 -i 'nvidia' || echo "No NVIDIA devices found via lspci"
+    echo ""
+    echo "Current nvidia-smi status:"
+    nvidia-smi 2>/dev/null || echo "nvidia-smi not yet installed"
+  register: gpu_info
+  changed_when: false
+  ignore_errors: true
+
+- name: "Save GPU detection report"
+  copy:
+    content: "{{ gpu_info.stdout }}"
+    dest: /var/log/gpu-detection-report.txt
+  become: true
+  ignore_errors: true

@@ -1,0 +1,138 @@
+---
+# Playbook to setup GPU-enabled Kubernetes node
+# Installs NVIDIA drivers, container toolkit, and prepares node for GPU workloads
+# Note: This playbook assumes the node is already joined to the k3s cluster
+
+- name: "Setup GPU-enabled Kubernetes Node"
+  hosts: "k3s_gpu_node"
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: "Display node information"
+      debug:
+        msg: |
+          Setting up GPU node: {{ inventory_hostname }}
+          IP Address: {{ ansible_default_ipv4.address }}
+          Distribution: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Kernel: {{ ansible_kernel }}
+
+    - name: "Verify node is already joined to k3s cluster"
+      shell: |
+        if [ -f /usr/local/bin/k3s ]; then
+          echo "k3s is installed"
+          exit 0
+        else
+          echo "ERROR: k3s is not installed. Node must be joined to cluster first via k3s-ansible"
+          exit 1
+        fi
+      changed_when: false
+      ignore_errors: true
+      register: k3s_check
+
+    - name: "Fail if k3s not installed"
+      fail:
+        msg: |
+          GPU node {{ inventory_hostname }} does not have k3s installed.
+          
+          Since your cluster uses k3s-ansible, please join the node first:
+          
+          1. Add to your k3s-ansible hosts.ini or inventory/hosts.yml:
+             [node]
+             gpu.local.hejsan.xyz
+          
+          2. Run from k3s-ansible directory:
+             ansible-playbook site.yml -i inventory/hosts.yml -l gpu.local.hejsan.xyz
+          
+          3. Wait for node to be Ready (may take 5-10 minutes):
+             kubectl get nodes -w
+          
+          4. Then re-run this GPU setup playbook
+      when: k3s_check.rc != 0
+
+    - name: "Install kubernetes Python library for node management"
+      pip:
+        name: kubernetes
+        state: present
+        executable: pip3
+        extra_args: "--break-system-packages"
+      become: true
+
+  roles:
+    - name: "base_setup"
+      description: "Run standard base system setup"
+      
+    - name: "kubernetes"
+      description: "Configure Kubernetes-specific settings (multipath, nvme, etc.)"
+      
+    - name: "kubernetes_gpu_setup"
+      description: "Install and configure NVIDIA GPU drivers and container runtime"
+      vars:
+        gpu_enable: true
+        gpu_type: "nvidia"
+
+  post_tasks:
+    - name: "Retrieve GPU setup verification report"
+      slurp:
+        src: /var/log/gpu-setup-verification.txt
+      register: gpu_verification_report
+      ignore_errors: true
+
+    - name: "Display GPU setup summary"
+      debug:
+        msg: "{{ gpu_verification_report.content | b64decode }}"
+      when: gpu_verification_report is succeeded
+      ignore_errors: true
+
+    - name: "Create .kube directory on GPU node"
+      file:
+        path: "{{ ansible_env.HOME }}/.kube"
+        state: directory
+        mode: '0755'
+
+    - name: "Fetch kubeconfig from master node"
+      slurp:
+        src: /etc/rancher/k3s/k3s.yaml
+      register: kubeconfig_content
+      delegate_to: "{{ groups['k3s_masters'][0] }}"
+      become: true
+
+    - name: "Copy kubeconfig to GPU node"
+      copy:
+        content: "{{ kubeconfig_content.content | b64decode | regex_replace('127.0.0.1:6443', groups['k3s_masters'][0] + ':6443') }}"
+        dest: "{{ ansible_env.HOME }}/.kube/config"
+        mode: '0600'
+
+    - name: "Label and taint GPU node for dedicated workload scheduling"
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Node
+          metadata:
+            name: "{{ inventory_hostname }}"
+            labels:
+              gpu: "true"
+              node.kubernetes.io/storage-tier: "low"
+          spec:
+            taints:
+              - key: "workload"
+                value: "gpu-only"
+                effect: "NoSchedule"
+
+    - name: "Display node readiness check"
+      shell: |
+        echo "Node Status:"
+        systemctl status containerd || echo "Containerd status check skipped"
+        echo ""
+        echo "GPU Setup Complete! Next steps:"
+        echo "1. Verify GPU label: kubectl get nodes -L gpu"
+        echo "2. Wait for NVIDIA Device Plugin: kubectl get pods -n nvidia-device-plugin -w"
+        echo "3. Enable GPU for Jellyfin: uncomment deployment-gpu-patch.yaml in flux/apps/production/media/jellyfin/kustomization.yaml"
+        echo "4. Verify GPU access: kubectl exec -n media -it <jellyfin-pod> -- nvidia-smi"
+      register: node_status
+      changed_when: false
+
+    - name: "Print next steps"
+      debug:
+        msg: "{{ node_status.stdout }}"

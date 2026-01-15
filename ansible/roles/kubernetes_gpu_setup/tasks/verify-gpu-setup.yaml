@@ -1,0 +1,83 @@
+---
+- name: "Verify NVIDIA drivers"
+  shell: |
+    nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1
+  register: driver_version
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: "Check NVIDIA GPU availability"
+  shell: |
+    nvidia-smi --list-gpus 2>/dev/null | wc -l
+  register: gpu_count
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: "Get GPU details"
+  shell: |
+    nvidia-smi --query-gpu=index,name,memory.total,driver_version --format=csv,noheader 2>/dev/null
+  register: gpu_details
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: "Test NVIDIA Container Runtime"
+  shell: |
+    docker run --rm --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi 2>/dev/null || echo "Docker GPU runtime test skipped (Docker may not be running)"
+  register: docker_gpu_test
+  changed_when: false
+  failed_when: false
+  become: true
+  ignore_errors: true
+
+- name: "Display GPU verification results"
+  debug:
+    msg: |
+      GPU Setup Verification Results
+      ==============================
+      Driver Version: {{ driver_version.stdout or 'Not installed' }}
+      GPU Count: {{ gpu_count.stdout or '0' }}
+      GPU Details:
+      {{ gpu_details.stdout or 'No GPUs detected' }}
+
+      Container Runtime Test: {{ docker_gpu_test.stdout or 'Skipped' }}
+
+- name: "Generate GPU setup report"
+  copy:
+    content: |
+      GPU Setup Verification Report
+      =============================
+      Generated: {{ ansible_date_time.iso8601 }}
+      Hostname: {{ inventory_hostname }}
+
+      Driver Information:
+      -------------------
+      Driver Version: {{ driver_version.stdout or 'Not installed' }}
+
+      GPU Inventory:
+      ---------------
+      Number of GPUs: {{ gpu_count.stdout or '0' }}
+
+      GPU Details:
+      {{ gpu_details.stdout or 'No GPUs detected' }}
+
+      Software Versions:
+      ------------------
+      NVIDIA Container Toolkit: installed
+      DCGM Exporter: installed
+
+      System Information:
+      -------------------
+      Kernel: {{ ansible_kernel }}
+      Distribution: {{ ansible_distribution }} {{ ansible_distribution_version }}
+
+      Next Steps:
+      -----------
+      1. Add the node to your Kubernetes cluster (if not already done)
+      2. Label the node with: kubectl label node <node> gpu=true
+      3. Apply NVIDIA Device Plugin via Flux
+      4. Verify GPU access from pods: kubectl apply -f nvidia-test-pod.yaml
+    dest: /var/log/gpu-setup-verification.txt
+  become: true

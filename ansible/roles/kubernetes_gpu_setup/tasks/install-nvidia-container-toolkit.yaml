@@ -1,0 +1,50 @@
+---
+- name: "Add NVIDIA Container Toolkit repository key"
+  apt_key:
+    url: "https://nvidia.github.io/libnvidia-container/gpgkey"
+    state: present
+  become: true
+  register: nvidia_toolkit_key
+  until: nvidia_toolkit_key is succeeded
+  retries: 3
+  delay: 10
+
+- name: "Add NVIDIA Container Toolkit repository"
+  apt_repository:
+    repo: "deb https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /"
+    state: present
+    filename: nvidia-container-toolkit
+  become: true
+  register: nvidia_toolkit_repo
+  until: nvidia_toolkit_repo is succeeded
+  retries: 3
+  delay: 10
+
+- name: "Update package lists after adding NVIDIA toolkit repo"
+  apt:
+    update_cache: true
+    cache_valid_time: 300
+  become: true
+  register: apt_update_toolkit
+  until: apt_update_toolkit is succeeded
+  retries: 3
+  delay: 10
+
+- name: "Install NVIDIA Container Toolkit"
+  apt:
+    name:
+      - nvidia-container-toolkit
+      - nvidia-container-runtime
+    state: present
+  become: true
+  register: nvidia_toolkit_install
+  until: nvidia_toolkit_install is succeeded
+  retries: 3
+  delay: 10
+
+- name: "Verify NVIDIA Container Toolkit installation"
+  shell: |
+    which nvidia-container-runtime && echo "NVIDIA Container Toolkit installed" || echo "Installation failed"
+  register: toolkit_verify
+  changed_when: false
+  become: true

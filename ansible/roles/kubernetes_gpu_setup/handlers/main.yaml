@@ -1,0 +1,20 @@
+---
+- name: "Containerd restarted"
+  debug:
+    msg: "Containerd has been restarted to apply GPU configuration"
+
+- name: "Rebuild GRUB and reboot for driver update"
+  shell: |
+    update-grub2
+  become: true
+  changed_when: true
+
+- name: "Reboot system for driver update"
+  listen: "Rebuild GRUB and reboot for driver update"
+  reboot:
+    msg: "Rebooting to load NVIDIA drivers"
+    connect_timeout: 5
+    reboot_timeout: 300
+    pre_reboot_delay: 15
+    post_reboot_delay: 15
+  become: true

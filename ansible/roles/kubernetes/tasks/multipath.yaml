@@ -23,15 +23,26 @@
       }
     insertafter: EOF
 
+- name: Check if multipathd service exists
+  command: systemctl list-unit-files multipathd.service
+  register: multipathd_check
+  changed_when: false
+  failed_when: false
+
 - name: Restart multipathd service
   service:
     name: multipathd
     state: restarted
+  when: multipathd_check.rc == 0
 
 - name: Verify multipath configuration
   command: multipath -t
   register: multipath_output
+  changed_when: false
+  failed_when: false
+  when: multipathd_check.rc == 0
 
 - name: Output verification result
   debug:
     msg: "{{ multipath_output.stdout }}"
+  when: multipathd_check.rc == 0 and multipath_output is defined

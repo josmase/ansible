@@ -1,0 +1,26 @@
+---
+- name: "Check GPU hardware availability"
+  include_tasks: check-gpu-hardware.yaml
+
+- name: "Install NVIDIA drivers"
+  include_tasks: install-nvidia-drivers.yaml
+  when: gpu_type == "nvidia"
+
+- name: "Install NVIDIA Container Toolkit"
+  include_tasks: install-nvidia-container-toolkit.yaml
+  when: gpu_type == "nvidia"
+
+- name: "Configure containerd for GPU support"
+  include_tasks: configure-containerd-gpu.yaml
+  when:
+    - gpu_type == "nvidia"
+    - containerd_gpu_config | bool
+
+- name: "Install DCGM Exporter for GPU monitoring"
+  include_tasks: install-dcgm-exporter.yaml
+  when:
+    - gpu_type == "nvidia"
+    - install_dcgm_exporter | bool
+
+- name: "Verify GPU setup"
+  include_tasks: verify-gpu-setup.yaml

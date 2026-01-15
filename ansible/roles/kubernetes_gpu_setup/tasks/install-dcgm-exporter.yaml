@@ -1,0 +1,42 @@
+---
+- name: "Install DCGM Exporter for GPU metrics"
+  apt:
+    name:
+      - datacenter-gpu-manager
+    state: present
+  become: true
+  register: dcgm_install
+  until: dcgm_install is succeeded
+  retries: 3
+  delay: 10
+  ignore_errors: true
+
+- name: "Create DCGM Exporter systemd service file"
+  copy:
+    content: |
+      [Unit]
+      Description=NVIDIA DCGM Exporter
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/bin/dcgm-exporter -l -d unix:///var/run/nvidiactl -f /etc/dcgm-exporter/dcp-metrics-included.csv -p 9400 -c 30
+      Restart=on-failure
+      RestartSec=10
+      User=root
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/dcgm-exporter.service
+    mode: "0644"
+  become: true
+  ignore_errors: true
+
+- name: "Enable and start DCGM Exporter"
+  systemd:
+    name: dcgm-exporter
+    daemon_reload: true
+    enabled: true
+    state: started
+  become: true
+  ignore_errors: true

@@ -1,0 +1,100 @@
+---
+- name: "Update system package lists"
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+  register: apt_update_result
+  until: apt_update_result is succeeded
+  retries: 3
+  delay: 10
+
+- name: "Install build essentials and dependencies"
+  apt:
+    name:
+      - build-essential
+      - dkms
+      - linux-headers-{{ ansible_kernel }}
+      - linux-headers-generic
+      - wget
+      - curl
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+    state: present
+  become: true
+  register: apt_install_result
+  until: apt_install_result is succeeded
+  retries: 3
+  delay: 10
+
+- name: "Download NVIDIA CUDA keyring package"
+  get_url:
+    url: "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu{{ ansible_distribution_version | replace('.', '') }}/x86_64/cuda-keyring_1.1-1_all.deb"
+    dest: "/tmp/cuda-keyring.deb"
+    mode: "0644"
+  become: true
+  register: keyring_download
+  until: keyring_download is succeeded
+  retries: 3
+  delay: 10
+
+- name: "Install NVIDIA CUDA keyring package"
+  apt:
+    deb: "/tmp/cuda-keyring.deb"
+    state: present
+  become: true
+
+- name: "Update apt cache after adding NVIDIA repository"
+  apt:
+    update_cache: true
+  become: true
+
+- name: "Disable Nouveau graphics driver (if present)"
+  lineinfile:
+    path: /etc/modprobe.d/blacklist.conf
+    line: "blacklist nouveau"
+    create: true
+    state: present
+  become: true
+  notify: "Rebuild GRUB and reboot for driver update"
+
+- name: "Disable Nouveau in GRUB (Ubuntu)"
+  lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX="'
+    line: 'GRUB_CMDLINE_LINUX="nouveau.modeset=0"'
+    state: present
+  become: true
+  register: grub_updated
+  notify: "Rebuild GRUB and reboot for driver update"
+
+- name: "Install NVIDIA drivers from Ubuntu repositories"
+  apt:
+    name:
+      - "nvidia-driver-{{ nvidia_driver_version }}"
+      - "nvidia-utils-{{ nvidia_driver_version }}"
+      - "libnvidia-common-{{ nvidia_driver_version }}"
+      - "libnvidia-gl-{{ nvidia_driver_version }}"
+    state: present
+  become: true
+  register: nvidia_driver_install
+  until: nvidia_driver_install is succeeded
+  retries: 3
+  delay: 10
+
+- name: "Wait for driver installation to complete"
+  wait_for:
+    timeout: 180
+  when: nvidia_driver_install.changed
+
+- name: "Verify NVIDIA drivers installation"
+  shell: |
+    which nvidia-smi && echo "NVIDIA drivers installed" || echo "NVIDIA drivers not found"
+  register: nvidia_verify
+  changed_when: false
+  until: "'NVIDIA drivers installed' in nvidia_verify.stdout"
+  retries: 3
+  delay: 30
+  become: true

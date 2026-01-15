@@ -1,0 +1,30 @@
+---
+# GPU Hardware Configuration
+gpu_enable: true
+gpu_type: "nvidia"  # nvidia, intel, or amd
+
+# NVIDIA Configuration
+nvidia_driver_version: "570"  # Latest NVIDIA driver version
+nvidia_container_runtime_version: "3.16.0"
+
+# CUDA Configuration
+cuda_version: "12.1"  # CUDA version for compatibility
+
+# Kernel Module Configuration
+nvidia_kernel_modules:
+  - "nvidia"
+  - "nvidia_modeset"
+  - "nvidia_uvm"
+
+# System Tuning
+enable_system_tuning: true
+disable_power_management: true  # GPU should stay powered on
+
+# Device Plugin Configuration
+install_device_plugin: false  # Device plugin will be deployed via Flux
+install_dcgm_exporter: true   # Prometheus GPU metrics
+dcgm_version: "3.4.4"
+
+# Container Runtime Configuration
+containerd_gpu_config: true
+docker_gpu_config: true
