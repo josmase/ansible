@@ -1,0 +1,22 @@
+---
+# Default settings for Wyoming Whisper (STT) + Piper (TTS).
+
+wyoming_whisper_image: rhasspy/wyoming-whisper
+wyoming_whisper_tag: latest
+wyoming_whisper_container_name: wyoming-whisper
+
+wyoming_whisper_port: 10300
+wyoming_whisper_bind_address: 0.0.0.0
+wyoming_whisper_model: small
+wyoming_whisper_language: en
+wyoming_whisper_device: cpu
+
+wyoming_piper_image: rhasspy/wyoming-piper
+wyoming_piper_tag: latest
+wyoming_piper_container_name: wyoming-piper
+
+wyoming_piper_port: 10200
+wyoming_piper_bind_address: 0.0.0.0
+wyoming_piper_voice: en_US-lessac-medium
+
+wyoming_voice_compose_dir: "{{ docker_compose_dir }}/wyoming-voice"

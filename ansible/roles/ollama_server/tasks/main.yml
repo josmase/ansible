@@ -1,19 +1,21 @@
 ---
-- name: Ensure role is running on Arch Linux
+- name: Ensure OS is supported
   assert:
     that:
-      - ansible_facts['os_family'] == "Archlinux"
-    fail_msg: "ollama_server role supports Archlinux only."
+      - ansible_facts['os_family'] in ["Archlinux", "Debian"]
+    fail_msg: "ollama_server role supports Archlinux and Debian/Ubuntu only."
 
 - name: Check for configured AUR helper
   command: "{{ ollama_aur_helper }} --version"
   register: ollama_aur_helper_check
   changed_when: false
+  when: ansible_facts['os_family'] == "Archlinux"
 
 - name: Check for existing Ollama share directory
   stat:
     path: /usr/share/ollama
   register: ollama_share_dir
+  when: ansible_facts['os_family'] == "Archlinux"
 
 - name: Install Ollama from AUR
   command: "{{ ollama_aur_helper }} -S --noconfirm --needed {{ ollama_package_name }}"
@@ -21,7 +23,40 @@
   changed_when: "'there is nothing to do' not in ollama_install.stdout | lower"
   become: true
   become_user: "{{ ansible_user }}"
-  when: not ollama_share_dir.stat.exists
+  when:
+    - ansible_facts['os_family'] == "Archlinux"
+    - not ollama_share_dir.stat.exists
+
+- name: Ensure curl is installed (Ubuntu)
+  apt:
+    name: curl
+    state: present
+    update_cache: true
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Check for existing Ollama binary (Ubuntu)
+  command: command -v ollama
+  register: ollama_binary_check
+  changed_when: false
+  failed_when: false
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Download Ollama install script (Ubuntu)
+  get_url:
+    url: https://ollama.com/install.sh
+    dest: /tmp/ollama-install.sh
+    mode: "0755"
+  when:
+    - ansible_facts['os_family'] == "Debian"
+    - ollama_binary_check.rc != 0
+
+- name: Run Ollama install script (Ubuntu)
+  command: /tmp/ollama-install.sh
+  args:
+    creates: /usr/local/bin/ollama
+  when:
+    - ansible_facts['os_family'] == "Debian"
+    - ollama_binary_check.rc != 0
 
 - name: Ensure Ollama system user exists
   user:

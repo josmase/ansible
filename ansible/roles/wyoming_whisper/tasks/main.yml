@@ -1,0 +1,25 @@
+---
+- name: Ensure OS is supported
+  assert:
+    that:
+      - ansible_facts['os_family'] in ["Archlinux", "Debian"]
+    fail_msg: "wyoming_whisper role supports Archlinux and Debian/Ubuntu only."
+
+- name: Create compose directory
+  file:
+    path: "{{ wyoming_voice_compose_dir }}"
+    state: directory
+    owner: "{{ docker_user | default(ansible_user) }}"
+    group: "{{ docker_group | default('docker') }}"
+    mode: "0750"
+
+- name: Deploy docker compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ wyoming_voice_compose_dir }}/docker-compose.yml"
+    mode: "0640"
+
+- name: Start Wyoming STT/TTS containers
+  community.docker.docker_compose_v2:
+    project_src: "{{ wyoming_voice_compose_dir }}"
+    state: present

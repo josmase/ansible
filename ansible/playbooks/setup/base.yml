@@ -73,13 +73,27 @@
     - role: 3d_printing_setup
 
 - name: Ollama server setup
-  hosts: archlinux.localdomain
+  hosts: ubuntu-ms-7977.localdomain
   become: true
   tags:
     - ollama
     - ai
+    - homeassistant
   roles:
     - role: ollama_server
+
+- name: Wyoming voice services setup
+  hosts: ubuntu-ms-7977.localdomain
+  become: true
+  tags:
+    - wyoming
+    - whisper
+    - piper
+    - stt
+    - tts
+    - homeassistant
+  roles:
+    - role: wyoming_whisper
 
 - name: Network storage configuration
   hosts: nfs_clients

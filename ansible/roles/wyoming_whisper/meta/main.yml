@@ -1,9 +1,10 @@
 ---
-dependencies: []
+dependencies:
+  - role: docker_setup
 
 galaxy_info:
   author: josmase
-  description: Install and configure a network-accessible Ollama server on Arch Linux
+  description: Run Wyoming Whisper (STT) and Piper (TTS) containers for Home Assistant
   license: MIT
   min_ansible_version: "2.9"
   platforms:
@@ -14,9 +15,9 @@ galaxy_info:
       versions:
         - all
   galaxy_tags:
-    - ollama
-    - llm
-    - ai
-    - server
-    - archlinux
-    - ubuntu
+    - wyoming
+    - whisper
+    - piper
+    - stt
+    - tts
+    - docker

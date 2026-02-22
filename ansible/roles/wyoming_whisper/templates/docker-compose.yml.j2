@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  wyoming-whisper:
+    image: "{{ wyoming_whisper_image }}:{{ wyoming_whisper_tag }}"
+    container_name: "{{ wyoming_whisper_container_name }}"
+    restart: unless-stopped
+    ports:
+      - "{{ wyoming_whisper_bind_address }}:{{ wyoming_whisper_port }}:{{ wyoming_whisper_port }}"
+    command: >-
+      --uri tcp://0.0.0.0:{{ wyoming_whisper_port }}
+      --model {{ wyoming_whisper_model }}
+      --language {{ wyoming_whisper_language }}
+      --device {{ wyoming_whisper_device }}
+
+  wyoming-piper:
+    image: "{{ wyoming_piper_image }}:{{ wyoming_piper_tag }}"
+    container_name: "{{ wyoming_piper_container_name }}"
+    restart: unless-stopped
+    ports:
+      - "{{ wyoming_piper_bind_address }}:{{ wyoming_piper_port }}:{{ wyoming_piper_port }}"
+    command: >-
+      --uri tcp://0.0.0.0:{{ wyoming_piper_port }}
+      --voice {{ wyoming_piper_voice }}
