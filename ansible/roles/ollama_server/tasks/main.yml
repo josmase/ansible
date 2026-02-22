@@ -1,0 +1,84 @@
+---
+- name: Ensure role is running on Arch Linux
+  assert:
+    that:
+      - ansible_facts['os_family'] == "Archlinux"
+    fail_msg: "ollama_server role supports Archlinux only."
+
+- name: Check for configured AUR helper
+  command: "{{ ollama_aur_helper }} --version"
+  register: ollama_aur_helper_check
+  changed_when: false
+
+- name: Check for existing Ollama share directory
+  stat:
+    path: /usr/share/ollama
+  register: ollama_share_dir
+
+- name: Install Ollama from AUR
+  command: "{{ ollama_aur_helper }} -S --noconfirm --needed {{ ollama_package_name }}"
+  register: ollama_install
+  changed_when: "'there is nothing to do' not in ollama_install.stdout | lower"
+  become: true
+  become_user: "{{ ansible_user }}"
+  when: not ollama_share_dir.stat.exists
+
+- name: Ensure Ollama system user exists
+  user:
+    name: "{{ ollama_user }}"
+    system: true
+    create_home: false
+    shell: /usr/bin/nologin
+
+- name: Ensure models directory exists
+  file:
+    path: "{{ ollama_models_dir }}"
+    state: directory
+    owner: "{{ ollama_user }}"
+    group: "{{ ollama_group }}"
+    mode: "0755"
+
+- name: Create systemd drop-in directory
+  file:
+    path: "/etc/systemd/system/{{ ollama_service_name }}.service.d"
+    state: directory
+    mode: "0755"
+
+- name: Configure Ollama service environment
+  template:
+    src: override.conf.j2
+    dest: "/etc/systemd/system/{{ ollama_service_name }}.service.d/override.conf"
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart ollama
+
+- name: Ensure Ollama service is enabled and running
+  systemd:
+    name: "{{ ollama_service_name }}"
+    state: started
+    enabled: true
+
+- name: Wait for Ollama API to be ready
+  command: ollama list
+  register: ollama_list
+  retries: 5
+  delay: 2
+  until: ollama_list.rc == 0
+  changed_when: false
+  environment:
+    OLLAMA_HOST: "127.0.0.1:{{ ollama_port }}"
+  when: ollama_pull_model | bool
+
+- name: Check if model is already present
+  set_fact:
+    ollama_model_present: "{{ (ollama_list.stdout | regex_search('^' ~ ollama_model ~ '\\s', multiline=True)) is not none }}"
+  when: ollama_pull_model | bool
+
+- name: Pull default model
+  command: "ollama pull {{ ollama_model }}"
+  environment:
+    OLLAMA_HOST: "127.0.0.1:{{ ollama_port }}"
+  when:
+    - ollama_pull_model | bool
+    - not ollama_model_present

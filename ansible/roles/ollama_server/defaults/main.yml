@@ -1,0 +1,16 @@
+---
+# Default settings for the Ollama server role.
+
+ollama_aur_helper: yay
+ollama_package_name: ollama
+ollama_service_name: ollama
+
+ollama_listen_address: 0.0.0.0
+ollama_port: 11434
+ollama_models_dir: /var/lib/ollama
+
+ollama_user: ollama
+ollama_group: ollama
+
+ollama_pull_model: true
+ollama_model: llama3.1:8b

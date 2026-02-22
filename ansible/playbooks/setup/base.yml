@@ -72,6 +72,15 @@
   roles:
     - role: 3d_printing_setup
 
+- name: Ollama server setup
+  hosts: archlinux.localdomain
+  become: true
+  tags:
+    - ollama
+    - ai
+  roles:
+    - role: ollama_server
+
 - name: Network storage configuration
   hosts: nfs_clients
   become: true

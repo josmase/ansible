@@ -1,0 +1,10 @@
+---
+- name: Reload systemd
+  systemd:
+    daemon-reload: true
+
+- name: Restart ollama
+  systemd:
+    name: "{{ ollama_service_name }}"
+    state: restarted
+    enabled: true
