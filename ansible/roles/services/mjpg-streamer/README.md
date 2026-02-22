@@ -30,7 +30,7 @@ None
 ```yaml
 - hosts: cameras
   roles:
-    - mjpg-streamer
+    - services/mjpg-streamer
   vars:
     mjpg_streamer_port: "8090"
     mjpg_streamer_resolution: "1920x1080"

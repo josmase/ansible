@@ -29,7 +29,7 @@ All variables live in `defaults/main.yml`.
   hosts: gaming_workstations
   become: true
   roles:
-    - steam_xorg_session
+    - workstation/steam_xorg_session
 ```
 
 ## Notes

@@ -5,12 +5,12 @@ This role manages Docker Compose templates and container deployments for various
 ## Requirements
 
 - Ansible 2.9 or higher
-- Docker and Docker Compose (handled by docker_setup role)
+- Docker and Docker Compose (handled by container/docker_setup role)
 
 ## Role Variables
 
 ```yaml
-# From docker_setup role
+# From container/docker_setup role
 docker_compose_dir: /opt/docker           # Directory for docker-compose files
 docker_script_dir: /opt/docker/scripts    # Directory for maintenance scripts
 
@@ -27,7 +27,7 @@ main_groupname: "group"                   # Group for deployed files
 
 ## Dependencies
 
-- docker_setup (must be applied before this role)
+- container/docker_setup (must be applied before this role)
 
 ## Available Templates
 
@@ -67,8 +67,8 @@ main_groupname: "group"                   # Group for deployed files
 ```yaml
 - hosts: docker_hosts
   roles:
-    - docker_setup
-    - docker_template_setup
+    - container/docker_setup
+    - container/docker_template_setup
   vars:
     docker_templates:
       - pihole

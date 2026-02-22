@@ -15,7 +15,7 @@
             - name: git
             - name: zsh-syntax-highlighting
               url: zsh-users/zsh-syntax-highlighting
-    - role: base_setup
+    - role: core/base_setup
 
 - name: Docker environment and container configuration
   hosts: docker_hosts
@@ -26,11 +26,11 @@
   vars_files:
     - ./vars/docker.yml
   roles:
-    - docker_setup
-    - role: usb_module_setup
+    - container/docker_setup
+    - role: core/usb_module_setup
       vars:
         usb_module_enabled: true
-    - role: docker_template_setup
+    - role: container/docker_template_setup
       when: docker_containers_enabled | default(false) | bool
       tags:
         - containers
@@ -43,7 +43,7 @@
     - kubernetes
     - storage
   roles:
-    - kubernetes
+    - platform/kubernetes
 
 - name: Development environment configuration
   hosts: development_infrastructure
@@ -51,7 +51,7 @@
   tags:
     - developer
   roles:
-    - role: developer_setup
+    - role: workstation/developer_setup
 
 - name: Gaming workstation configuration
   hosts: gaming_workstations
@@ -59,7 +59,7 @@
   tags:
     - gaming
   roles:
-    - role: steam_xorg_session
+    - role: workstation/steam_xorg_session
 
 - name: 3D printing and modeling workstation setup
   hosts: 3d_printing_workstations
@@ -70,7 +70,7 @@
   vars:
     orcaslicer_operation: install
   roles:
-    - role: 3d_printing_setup
+    - role: workstation/3d_printing_setup
 
 - name: Ollama server setup
   hosts: ubuntu-ms-7977.localdomain
@@ -80,7 +80,7 @@
     - ai
     - homeassistant
   roles:
-    - role: ollama_server
+    - role: services/ollama_server
 
 - name: Wyoming voice services setup
   hosts: ubuntu-ms-7977.localdomain
@@ -93,7 +93,7 @@
     - tts
     - homeassistant
   roles:
-    - role: wyoming_whisper
+    - role: services/wyoming_whisper
 
 - name: Network storage configuration
   hosts: nfs_clients
@@ -105,4 +105,4 @@
     nfs_mount_point: "{{ system.storage_dir }}"
     nfs_mount_src: "storage.local.hejsan.xyz:/"
   roles:
-    - nfs_client_setup
+    - storage/nfs_client_setup

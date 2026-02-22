@@ -9,7 +9,7 @@
   hosts: storage_servers
   become: true
   roles:
-    - filesystem_setup
+    - storage/filesystem_setup
 
 - name: Deploy network file sharing services
   hosts: storage_servers
@@ -17,7 +17,7 @@
   roles:
     - geerlingguy.samba
     - geerlingguy.nfs
-    - network_share_setup
+    - storage/network_share_setup
 
 - name: Configure NFS client mounts
   hosts: nfs_clients
@@ -26,7 +26,7 @@
     nfs_mount_point: "{{ system.storage_dir }}"
     nfs_mount_src: "storage.local.hejsan.xyz:/"
   roles:
-    - nfs_client_setup
+    - storage/nfs_client_setup
 
 - name: Configure SMB client mounts
   hosts: smb_client
@@ -37,4 +37,4 @@
     mount_gid: "{{ main_gid }}"
     mount_uid: "{{ main_uid }}"
   roles:
-    - smb_client_setup
+    - storage/smb_client_setup

@@ -70,7 +70,7 @@ None
 ```yaml
 - hosts: localhost
   roles:
-    - role: developer_setup
+    - role: workstation/developer_setup
       vars:
         git_email: "developer@company.com"
         git_name: "John Doe"

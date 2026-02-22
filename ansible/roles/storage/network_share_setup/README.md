@@ -30,7 +30,7 @@ smb_exports:       # List of Samba shares to configure
   roles:
     - geerlingguy.samba
     - geerlingguy.nfs
-    - network_share_setup
+    - storage/network_share_setup
   vars:
     smb_exports:
       - name: public

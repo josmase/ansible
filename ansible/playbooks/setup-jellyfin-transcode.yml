@@ -4,9 +4,9 @@
   become: true
 
   roles:
-    - base_setup
-    - nfs_client_setup
-    - ffmpeg_rffmpeg_server
+    - core/base_setup
+    - storage/nfs_client_setup
+    - services/ffmpeg_rffmpeg_server
 
   post_tasks:
     - name: "Summary of Transcode Server Setup"

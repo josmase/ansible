@@ -48,7 +48,7 @@ None. This role is self-contained and does not rely on external roles.
 - hosts: workstations
   become: true
   roles:
-    - role: 3d_printing_setup
+    - role: workstation/3d_printing_setup
 ```
 
 ## Tags

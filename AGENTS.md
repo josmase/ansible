@@ -23,15 +23,22 @@ ansible/
 │   ├── setup/          # Setup playbooks
 │   ├── maintenance/    # Maintenance tasks
 │   └── services/       # Service deployment playbooks
-└── roles/              # Reusable roles
+└── roles/              # Reusable roles grouped by domain
+  ├── core/
+  ├── container/
+  ├── platform/
+  ├── storage/
+  ├── services/
+  ├── workstation/
+  └── validation/
     └── role_name/      # Individual role
-        ├── defaults/   # Default variables
-        ├── files/      # Static files
-        ├── handlers/   # Notification handlers
-        ├── meta/      # Role metadata
-        ├── tasks/     # Task definitions
-        ├── templates/ # Jinja2 templates
-        └── vars/      # Role variables
+      ├── defaults/   # Default variables
+      ├── files/      # Static files
+      ├── handlers/   # Notification handlers
+      ├── meta/      # Role metadata
+      ├── tasks/     # Task definitions
+      ├── templates/ # Jinja2 templates
+      └── vars/      # Role variables
 ```
 
 ## Naming Conventions

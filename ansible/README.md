@@ -113,7 +113,7 @@ ansible-playbook playbooks/maintenance/reboot.yml --limit "k3s_cluster"
 ansible-playbook playbooks/setup/printer.yml --limit "printer_support"
 
 # Update only Obico server
-ansible-playbook playbooks/services/containers.yml --tags "obico" --limit "printer_support"
+ansible-playbook playbooks/setup/printer.yml --limit "printer_monitors"
 ```
 
 ## Project Structure
@@ -123,11 +123,17 @@ ansible/
 ├── playbooks/           # All playbooks organized by function
 │   ├── site.yml        # Main entry point
 │   ├── setup/          # Initial setup playbooks
-│   ├── services/       # Service management
 │   └── maintenance/    # System maintenance
-├── roles/              # Reusable roles
-├── group_vars/         # Group variables
-├── host_vars/         # Host-specific variables
+├── roles/              # Reusable roles grouped by domain
+│   ├── core/
+│   ├── container/
+│   ├── platform/
+│   ├── storage/
+│   ├── services/
+│   ├── workstation/
+│   └── validation/
+├── inventory/group_vars/ # Group variables
+├── inventory/host_vars/  # Host-specific variables
 └── collections/       # Collection requirements
 ```
 

@@ -25,7 +25,7 @@
   vars:
     orcaslicer_operation: update
   roles:
-    - role: 3d_printing_setup
+    - role: workstation/3d_printing_setup
 
 - name: Reboot non-critical machines after upgrades
   hosts:

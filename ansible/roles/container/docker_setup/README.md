@@ -55,7 +55,7 @@ None.
     docker_setup_enabled: true
     docker_nfs_enabled: false
   roles:
-    - docker_setup
+    - container/docker_setup
 ```
 
 ### Full Setup with NFS and Maintenance
@@ -66,13 +66,13 @@ None.
     docker_nfs_enabled: true
     docker_maintenance_timer_calendar: "0 3 * * *"  # Run at 3 AM daily
   roles:
-    - docker_setup
+    - container/docker_setup
 ```
 
 ```yaml
 - hosts: docker_hosts
   roles:
-    - role: docker_setup
+    - role: container/docker_setup
       vars:
         docker_templates:
           - nfs

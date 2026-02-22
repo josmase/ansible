@@ -5,7 +5,7 @@ This role installs and configures the Obico server (formerly The Spaghetti Detec
 ## Requirements
 
 - Ansible 2.9 or higher
-- Docker and Docker Compose (handled by docker_setup role)
+- Docker and Docker Compose (handled by container/docker_setup role)
 - Git for repository cloning
 
 ## Role Variables
@@ -18,15 +18,15 @@ obico_version: "release"               # Git branch/tag to use
 
 ## Dependencies
 
-- docker_setup (must be applied before this role)
+- container/docker_setup (must be applied before this role)
 
 ## Example Playbook
 
 ```yaml
 - hosts: printer_monitoring
   roles:
-    - docker_setup
-    - obico-server
+    - container/docker_setup
+    - services/obico-server
   vars:
     obico_repo_dir: "/srv/obico"
 ```

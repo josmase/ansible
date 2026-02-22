@@ -13,4 +13,4 @@
     git_name: "Jonas Lundberg"
     ansible_root_dir: "{{ playbook_dir }}/.."
   roles:
-    - developer_setup
+    - workstation/developer_setup

@@ -8,11 +8,11 @@
   hosts: printer_cameras
   become: true
   roles:
-    - mjpg-streamer
+    - services/mjpg-streamer
 
 - name: Configure Obico monitoring server
   hosts: printer_monitors
   become: true
   roles:
-    - docker_setup    # Required for running Obico server in container
-    - obico-server   # Main Obico server configuration
+    - container/docker_setup    # Required for running Obico server in container
+    - services/obico-server   # Main Obico server configuration

@@ -59,13 +59,13 @@
       become: true
 
   roles:
-    - name: "base_setup"
+    - name: "core/base_setup"
       description: "Run standard base system setup"
       
-    - name: "kubernetes"
+    - name: "platform/kubernetes"
       description: "Configure Kubernetes-specific settings (multipath, nvme, etc.)"
       
-    - name: "kubernetes_gpu_setup"
+    - name: "platform/kubernetes_gpu_setup"
       description: "Install and configure NVIDIA GPU drivers and container runtime"
       vars:
         gpu_enable: true
