@@ -4,6 +4,7 @@
 
 # Ansible Settings
 ansible_sudo_pass: "{{ vault_default_sudo_pass }}"
+x_ansible_download_dir: /tmp
 
 # User and Group Settings
 user:

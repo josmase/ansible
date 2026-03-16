@@ -21,12 +21,18 @@
         version: main
         depth: 1
 
+    - name: Check if OrcaSlicer check directory exists
+      stat:
+        path: "{{ orcaslicer_check_dir }}"
+      register: orcaslicer_check_dir_stat
+
     - name: Get latest commit hash from repository
       command: git rev-parse HEAD
       args:
         chdir: "{{ orcaslicer_check_dir }}"
       register: latest_commit
       changed_when: false
+      when: orcaslicer_check_dir_stat.stat.exists
 
     - name: Get current installed commit hash
       shell: |
@@ -40,7 +46,7 @@
 
     - name: Check if update is needed
       set_fact:
-        update_needed: "{{ latest_commit.stdout != current_commit.stdout }}"
+        update_needed: "{{ (latest_commit.stdout | default(current_commit.stdout)) != current_commit.stdout }}"
 
     - name: Display update status
       debug:
@@ -122,7 +128,7 @@
 
         - name: Save installed version commit hash
           copy:
-            content: "{{ latest_commit.stdout }}"
+            content: "{{ latest_commit.stdout | default(current_commit.stdout) }}"
             dest: "{{ orcaslicer_version_file }}"
             mode: "0644"
             owner: root
@@ -229,7 +235,7 @@
 
         - name: Display OrcaSlicer version after update
           debug:
-            msg: "OrcaSlicer updated successfully to commit {{ latest_commit.stdout[:8] }}"
+            msg: "OrcaSlicer updated successfully to commit {{ (latest_commit.stdout | default(current_commit.stdout))[:8] }}"
           when: orcaslicer_updated_version.rc == 0
       when: update_needed
 

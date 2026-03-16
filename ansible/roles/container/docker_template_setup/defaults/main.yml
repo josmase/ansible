@@ -15,3 +15,4 @@ docker_script_templates:
   - "update"
 docker_setup_enabled: true
 docker_nfs_enabled: false
+timezone: "{{ system.timezone | default('UTC') }}"

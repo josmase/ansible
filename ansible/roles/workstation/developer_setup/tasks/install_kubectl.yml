@@ -12,24 +12,30 @@
     url: https://dl.k8s.io/release/stable.txt
     return_content: yes
   register: kubectl_stable_version
+  changed_when: false
+  failed_when: false
+
+- name: Resolve kubectl version
+  set_fact:
+    kubectl_version_resolved: "{{ kubectl_version | default((kubectl_stable_version.content | trim) if (kubectl_stable_version is defined and kubectl_stable_version.content is defined) else 'v1.32.0') }}"
 
 - name: Determine kubectl binary URL based on architecture
   set_fact:
     kubectl_binary_url: >-
       {%- if ansible_architecture == 'x86_64' -%}
-      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/amd64/kubectl
+      https://dl.k8s.io/release/{{ kubectl_version_resolved }}/bin/linux/amd64/kubectl
       {%- elif ansible_architecture == 'aarch64' -%}
-      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/arm64/kubectl
+      https://dl.k8s.io/release/{{ kubectl_version_resolved }}/bin/linux/arm64/kubectl
       {%- else -%}
-      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/amd64/kubectl
+      https://dl.k8s.io/release/{{ kubectl_version_resolved }}/bin/linux/amd64/kubectl
       {%- endif -%}
     kubectl_checksum_url: >-
       {%- if ansible_architecture == 'x86_64' -%}
-      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/amd64/kubectl.sha256
+      https://dl.k8s.io/release/{{ kubectl_version_resolved }}/bin/linux/amd64/kubectl.sha256
       {%- elif ansible_architecture == 'aarch64' -%}
-      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/arm64/kubectl.sha256
+      https://dl.k8s.io/release/{{ kubectl_version_resolved }}/bin/linux/arm64/kubectl.sha256
       {%- else -%}
-      https://dl.k8s.io/release/{{ kubectl_stable_version.content | trim }}/bin/linux/amd64/kubectl.sha256
+      https://dl.k8s.io/release/{{ kubectl_version_resolved }}/bin/linux/amd64/kubectl.sha256
       {%- endif -%}
 
 - name: Download kubectl binary
@@ -37,12 +43,14 @@
     url: "{{ kubectl_binary_url }}"
     dest: /tmp/kubectl
     mode: "0755"
+  when: not ansible_check_mode
 
 - name: Download kubectl checksum
   get_url:
     url: "{{ kubectl_checksum_url }}"
     dest: /tmp/kubectl.sha256
     mode: "0644"
+  when: not ansible_check_mode
 
 - name: Verify kubectl binary checksum
   shell: |
@@ -50,6 +58,7 @@
   register: kubectl_checksum_result
   changed_when: false
   failed_when: kubectl_checksum_result.rc != 0
+  when: not ansible_check_mode
 
 - name: Install kubectl binary
   copy:
@@ -59,6 +68,7 @@
     owner: root
     group: root
     remote_src: yes
+  when: not ansible_check_mode
 
 - name: Clean up temporary kubectl files
   file:
@@ -67,6 +77,7 @@
   loop:
     - /tmp/kubectl
     - /tmp/kubectl.sha256
+  when: not ansible_check_mode
 
 - name: Verify kubectl installation
   command: kubectl version --client --output=yaml
@@ -76,4 +87,4 @@
 
 - name: Display kubectl version
   debug:
-    msg: "kubectl installed successfully: {{ kubectl_stable_version.content | trim }}"
+    msg: "kubectl installed successfully: {{ kubectl_version_resolved }}"

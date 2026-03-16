@@ -1,6 +1,7 @@
 - name: Get all devices
   command: lsblk -o NAME,UUID,FSTYPE,SIZE --json
   register: all_devices
+  check_mode: false
 
 - name: Print all devices
   debug:

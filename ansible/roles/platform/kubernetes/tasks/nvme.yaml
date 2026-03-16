@@ -15,6 +15,8 @@
     name: nvme_tcp
     state: present
     persistent: present
+  register: nvme_tcp_load_result
+  failed_when: false
 
 - name: Verify nvme_tcp module is loaded
   shell: "lsmod | grep nvme_tcp"

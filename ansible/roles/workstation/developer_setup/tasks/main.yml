@@ -2,36 +2,42 @@
 # Setup Kubernetes tools and configuration
 - name: Include kubectl installation tasks
   ansible.builtin.include_tasks: install_kubectl.yml
+  when: not ansible_check_mode
   tags:
     - kubernetes
     - kubectl
 
 - name: Include Kubernetes config setup tasks
   ansible.builtin.include_tasks: setup_kubeconfig.yml
+  when: not ansible_check_mode
   tags:
     - kubernetes
     - config
 
 - name: Include k9s installation tasks
   ansible.builtin.include_tasks: install_k9s.yml
+  when: not ansible_check_mode
   tags:
     - kubernetes
     - k9s
 
 - name: Include kind installation tasks
   ansible.builtin.include_tasks: install_kind.yml
+  when: not ansible_check_mode
   tags:
     - kubernetes
     - kind
 
 - name: Include kustomize installation tasks
   ansible.builtin.include_tasks: install_kustomize.yml
+  when: not ansible_check_mode
   tags:
     - kubernetes
     - kustomize
 
 - name: Include kubeconform installation tasks
   ansible.builtin.include_tasks: install_kubeconform.yml
+  when: not ansible_check_mode
   tags:
     - kubernetes
     - validation
@@ -39,6 +45,7 @@
 
 - name: Include Flux installation tasks
   ansible.builtin.include_tasks: install_flux.yml
+  when: not ansible_check_mode
   tags:
     - kubernetes
     - gitops
@@ -47,6 +54,7 @@
 # Setup secrets and configuration management tools
 - name: Include age installation tasks
   ansible.builtin.include_tasks: install_age.yml
+  when: not ansible_check_mode
   tags:
     - security
     - encryption
@@ -54,6 +62,7 @@
 
 - name: Include sops installation tasks
   ansible.builtin.include_tasks: install_sops.yml
+  when: not ansible_check_mode
   tags:
     - security
     - secrets
@@ -61,6 +70,7 @@
 
 - name: Include yq installation tasks
   ansible.builtin.include_tasks: install_yq.yml
+  when: not ansible_check_mode
   tags:
     - tools
     - yaml

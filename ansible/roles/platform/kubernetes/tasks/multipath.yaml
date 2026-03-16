@@ -23,26 +23,33 @@
       }
     insertafter: EOF
 
-- name: Check if multipathd service exists
-  command: systemctl list-unit-files multipathd.service
-  register: multipathd_check
+- name: Gather service facts
+  service_facts:
+
+- name: Check if multipath command exists
+  command: command -v multipath
+  register: multipath_binary_check
   changed_when: false
   failed_when: false
+
+- name: Determine multipathd service availability
+  set_fact:
+    multipathd_service_present: "{{ 'multipathd.service' in ansible_facts.services }}"
 
 - name: Restart multipathd service
   service:
     name: multipathd
     state: restarted
-  when: multipathd_check.rc == 0
+  when: multipathd_service_present
 
 - name: Verify multipath configuration
   command: multipath -t
   register: multipath_output
   changed_when: false
   failed_when: false
-  when: multipathd_check.rc == 0
+  when: multipath_binary_check.rc == 0
 
 - name: Output verification result
   debug:
     msg: "{{ multipath_output.stdout }}"
-  when: multipathd_check.rc == 0 and multipath_output is defined
+  when: multipath_binary_check.rc == 0 and multipath_output is defined

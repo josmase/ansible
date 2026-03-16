@@ -26,6 +26,7 @@
     project_src: "{{ obico_repo_dir }}"
     state: present
   register: compose_result
+  when: not ansible_check_mode
   tags:
     - obico
     - docker
@@ -34,7 +35,7 @@
   command: docker compose run --rm web ./manage.py site --add {{ inventory_hostname }}
   args:
     chdir: "{{ obico_repo_dir }}"
-  when: compose_result.changed
+  when: compose_result is defined and compose_result.changed
   tags:
     - obico
     - config

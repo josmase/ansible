@@ -41,11 +41,18 @@
 - name: "Verify Jellyfin FFmpeg installation"
   command: "/usr/lib/jellyfin-ffmpeg/ffmpeg -version"
   changed_when: false
+  failed_when: false
   register: jellyfin_ffmpeg_version
 
 - name: "Display Jellyfin FFmpeg version"
   debug:
     msg: "{{ jellyfin_ffmpeg_version.stdout_lines[0] }}"
+  when: jellyfin_ffmpeg_version.stdout_lines | default([]) | length > 0
+
+- name: "Display Jellyfin FFmpeg verification status when version is unavailable"
+  debug:
+    msg: "Jellyfin FFmpeg version output unavailable (possibly check mode or package absent)."
+  when: jellyfin_ffmpeg_version.stdout_lines | default([]) | length == 0
 
 - name: "Check for tonemap_cuda filter"
   shell: "/usr/lib/jellyfin-ffmpeg/ffmpeg -filters 2>&1 | grep -q tonemap_cuda && echo 'found' || echo 'not found'"

@@ -45,11 +45,13 @@
     deb: "/tmp/cuda-keyring.deb"
     state: present
   become: true
+  when: not ansible_check_mode
 
 - name: "Update apt cache after adding NVIDIA repository"
   apt:
     update_cache: true
   become: true
+  when: not ansible_check_mode
 
 - name: "Disable Nouveau graphics driver (if present)"
   lineinfile:
@@ -83,11 +85,14 @@
   until: nvidia_driver_install is succeeded
   retries: 3
   delay: 10
+  when: not ansible_check_mode
 
 - name: "Wait for driver installation to complete"
   wait_for:
     timeout: 180
-  when: nvidia_driver_install.changed
+  when:
+    - not ansible_check_mode
+    - nvidia_driver_install.changed
 
 - name: "Verify NVIDIA drivers installation"
   shell: |
@@ -98,3 +103,4 @@
   retries: 3
   delay: 30
   become: true
+  when: not ansible_check_mode

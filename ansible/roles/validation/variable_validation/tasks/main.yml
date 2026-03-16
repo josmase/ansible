@@ -72,8 +72,7 @@
       - storage.mount_base is defined
       - storage.mount_base is string
       - storage.mount_base is match("^/")
-      - storage.mount.options is defined
-      - storage.mount.options is mapping
+      - (storage.mount is defined and storage.mount.options is defined and storage.mount.options is mapping) or (mount is defined and mount.options is defined and mount.options is mapping)
     fail_msg: "Required storage variables are missing or invalid"
     success_msg: "Storage variables validated successfully"
   when: "'storage_servers' in group_names"

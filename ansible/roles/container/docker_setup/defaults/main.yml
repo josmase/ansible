@@ -6,6 +6,9 @@ docker_user: "{{ ansible_user }}"  # Default to ansible user
 docker_group: "docker"            # Default docker group
 docker_user_id: 1000             # Default UID
 docker_group_id: 1000            # Default GID
+docker_puid: "{{ docker_user_id }}"
+docker_pgid: "{{ docker_group_id }}"
+docker_guid: "{{ docker_group_id }}"
 
 # Directory Configuration
 docker_base_dir: /opt/docker     # Base directory for Docker files
