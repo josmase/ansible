@@ -64,3 +64,9 @@ timers:
 
 services:
   templates: []
+
+# Lutris Configuration
+# ===================
+lutris_base_path:
+  Debian: "/media/ubuntu/Games"
+  Archlinux: "{{ lookup('env', 'HOME') }}/Games"
