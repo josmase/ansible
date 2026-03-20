@@ -12,3 +12,4 @@ done
 gow_log "[start] Starting Desktop"
 
 source /opt/gow/launch-comp.sh
+launcher

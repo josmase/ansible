@@ -3,21 +3,22 @@ set -e
 
 source /opt/gow/bash-lib/utils.sh
 
-export GAMESCOPE_WIDTH=${GAMESCOPE_WIDTH:-1920}
-export GAMESCOPE_HEIGHT=${GAMESCOPE_HEIGHT:-1080}
-export GAMESCOPE_REFRESH=${GAMESCOPE_REFRESH:-60}
-
 function launcher() {
+  export GAMESCOPE_WIDTH=${GAMESCOPE_WIDTH:-1920}
+  export GAMESCOPE_HEIGHT=${GAMESCOPE_HEIGHT:-1080}
+  export GAMESCOPE_REFRESH=${GAMESCOPE_REFRESH:-60}
+
   if [ -n "$RUN_GAMESCOPE" ]; then
     gow_log "[Gamescope] - Starting desktop session"
     export DISPLAY=:0
     export GDK_BACKEND=x11
+    export GTK_THEME=Arc-Dark:dark
     
     dbus-run-session -- bash -c "
       Xwayland :0 &
-      sleep 2
+      sleep 3
       openbox-session &
-      sleep 1
+      sleep 2
       lxpanel &
       pcmanfm --desktop &
       wait
