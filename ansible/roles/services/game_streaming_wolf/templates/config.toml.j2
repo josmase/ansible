@@ -214,6 +214,9 @@ name = "User"
 \
 """
 
+{% endif %}
+
+{% if wolf_desktop_enabled | bool %}
     [[profiles.apps]]
     title = 'Desktop'
     start_virtual_compositor = true
