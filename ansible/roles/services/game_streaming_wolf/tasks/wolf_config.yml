@@ -28,7 +28,6 @@
     mode: '0644'
     backup: yes
   register: wolf_config_result
-  when: config_check.stdout != "version_ok"
 
 - name: Update Lutris app compositor
   ansible.builtin.shell: |
