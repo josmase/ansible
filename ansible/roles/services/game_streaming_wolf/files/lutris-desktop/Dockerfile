@@ -5,7 +5,7 @@ FROM ${BASE_APP_IMAGE}
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    matchbox-window-manager \
+    openbox \
     lxpanel \
     pcmanfm \
     dbus-x11 \
