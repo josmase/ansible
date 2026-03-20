@@ -10,14 +10,29 @@
     - "{{ wolf_config_dir }}"
     - "{{ wolf_config_dir }}/cfg"
 
-- name: Check if config.toml exists and has correct version
+- name: Extract existing paired_clients before config update
   ansible.builtin.shell: |
-    if [ -f "{{ wolf_config_dir }}/cfg/config.toml" ]; then
-      grep -q "config_version = 6" "{{ wolf_config_dir }}/cfg/config.toml" && echo "version_ok" || echo "version_mismatch"
+    CONFIG_FILE="{{ wolf_config_dir }}/cfg/config.toml"
+    if [ -f "$CONFIG_FILE" ]; then
+      # Check if paired_clients section exists with actual data
+      if grep -q "^\\[\\[paired_clients\\]\\]" "$CONFIG_FILE"; then
+        # Extract everything from [[paired_clients]] to next [[ (which is [[profiles]])
+        sed -n '/^\[\[paired_clients\]\]/,/^[[]/p' "$CONFIG_FILE" > /tmp/wolf_paired_clients.txt
+        if [ -s /tmp/wolf_paired_clients.txt ]; then
+          # Remove the last line which is [[profiles]]
+          head -n -1 /tmp/wolf_paired_clients.txt > /tmp/wolf_paired_clients_clean.txt
+          mv /tmp/wolf_paired_clients_clean.txt /tmp/wolf_paired_clients.txt
+          echo "preserved"
+        else
+          echo "empty"
+        fi
+      else
+        echo "none"
+      fi
     else
-      echo "not_exists"
+      echo "none"
     fi
-  register: config_check
+  register: paired_clients_check
   changed_when: false
   check_mode: no
 
@@ -29,20 +44,46 @@
     backup: yes
   register: wolf_config_result
 
-- name: Update Lutris app compositor
+- name: Restore paired_clients if they existed
   ansible.builtin.shell: |
-    # Update compositor settings based on wolf_compositor variable
-    if [ "{{ wolf_compositor }}" = "gamescope" ]; then
-      sed -i "s/'RUN_SWAY=1'/'RUN_GAMESCOPE=1', 'GAMESCOPE_WIDTH={{ wolf_gamescope_width }}', 'GAMESCOPE_HEIGHT={{ wolf_gamescope_height }}', 'GAMESCOPE_REFRESH={{ wolf_gamescope_refresh }}'/" "{{ wolf_config_dir }}/cfg/config.toml"
+    CONFIG_FILE="{{ wolf_config_dir }}/cfg/config.toml"
+    PAIRED_FILE="/tmp/wolf_paired_clients.txt"
+    
+    if [ -f "$PAIRED_FILE" ] && [ -s "$PAIRED_FILE" ]; then
+      # Find the line with "paired_clients = []" 
+      PAIRED_LINE=$(grep -n "^paired_clients = \[\]" "$CONFIG_FILE" | head -1 | cut -d: -f1)
+      
+      if [ -n "$PAIRED_LINE" ]; then
+        # Find the line with [[profiles]] 
+        PROFILES_LINE=$(grep -n "^\\[\\[profiles\\]\\]" "$CONFIG_FILE" | head -1 | cut -d: -f1)
+        
+        if [ -n "$PROFILES_LINE" ]; then
+          # Keep lines 1 to (PAIRED_LINE - 1) to skip both paired_clients = [] and empty line
+          head -n "$((PAIRED_LINE - 1))" "$CONFIG_FILE" > /tmp/wolf_new_config.toml
+          # Add the preserved paired_clients section
+          cat "$PAIRED_FILE" >> /tmp/wolf_new_config.toml
+          echo "" >> /tmp/wolf_new_config.toml
+          # Add the rest from profiles onwards
+          tail -n +"$PROFILES_LINE" "$CONFIG_FILE" >> /tmp/wolf_new_config.toml
+          mv /tmp/wolf_new_config.toml "$CONFIG_FILE"
+          echo "restored"
+        else
+          echo "profiles_not_found"
+        fi
+      else
+        echo "paired_clients_line_not_found"
+      fi
+    else
+      echo "skipped"
     fi
-  register: compositor_update
-  changed_when: compositor_update.rc == 0
-  when: config_check.stdout == "version_ok" and wolf_compositor == "gamescope"
+  register: paired_clients_restore
+  changed_when: paired_clients_restore.stdout == "restored"
+  when: paired_clients_check.stdout == "preserved"
 
 - name: Show config deployment status
   ansible.builtin.debug:
     msg: |
-      Wolf config.toml status: {{ config_check.stdout }}
-      Compositor: {{ wolf_compositor }}
-      Lutris app: {{ 'Enabled (' + wolf_lutris_image + ')' if wolf_lutris_app_enabled else 'Disabled' }}
+      Wolf config.toml deployed successfully
+      Paired clients: {{ paired_clients_check.stdout }}
+      Paired clients restored: {{ paired_clients_restore.stdout | default('none') }}
       Config file: {{ wolf_config_dir }}/cfg/config.toml
