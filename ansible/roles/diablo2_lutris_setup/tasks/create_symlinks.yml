@@ -1,0 +1,43 @@
+---
+- name: Check if main instance Diablo II folder exists
+  ansible.builtin.stat:
+    path: "{{ diablo2_source_path }}"
+  register: diablo2_source_stat
+  tags: symlinks
+
+- name: Fail if main instance Diablo II folder does not exist
+  ansible.builtin.fail:
+    msg: |
+      ERROR: Diablo II Resurrected folder not found in {{ diablo2_main_instance }}.
+      Please install Diablo 2 through Lutris GUI on {{ diablo2_main_instance }} first, then re-run with --tags symlinks.
+      Expected path: {{ diablo2_source_path }}
+  when: not diablo2_source_stat.stat.exists
+  tags: symlinks
+
+- name: Remove existing Diablo II folder from destination instances
+  ansible.builtin.file:
+    path: "{{ lutris_base_path }}/{{ item }}/drive_c/Program Files (x86)/Diablo II Resurrected"
+    state: absent
+  loop: "{{ diablo2_destination_instances }}"
+  tags: symlinks
+
+- name: Create symlinks for destination instances
+  ansible.builtin.file:
+    src: "{{ diablo2_source_path }}"
+    dest: "{{ lutris_base_path }}/{{ item }}/drive_c/Program Files (x86)/Diablo II Resurrected"
+    state: link
+  loop: "{{ diablo2_destination_instances }}"
+  tags: symlinks
+
+- name: Verify symlinks
+  ansible.builtin.stat:
+    path: "{{ lutris_base_path }}/{{ item }}/drive_c/Program Files (x86)/Diablo II Resurrected"
+  loop: "{{ diablo2_destination_instances }}"
+  register: symlink_check
+  tags: symlinks
+
+- name: Display symlink status
+  ansible.builtin.debug:
+    msg: "Symlinks created successfully! {{ diablo2_destination_instances | join(' and ') }} now point to {{ diablo2_main_instance }}'s Diablo II Resurrected folder."
+  when: symlink_check.results | map(attribute='stat.islnk') | select('defined') | list | length == diablo2_destination_instances | length
+  tags: symlinks

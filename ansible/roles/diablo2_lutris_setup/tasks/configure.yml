@@ -1,0 +1,26 @@
+---
+- name: Set display names for instances
+  ansible.builtin.set_fact:
+    diablo2_instance_names: |
+      {% set names = [] %}
+      {% for instance in diablo2_all_instances %}
+      {%   if instance == diablo2_main_instance %}
+      {%     set _ = names.append({'name': instance, 'display': instance ~ ' (Primary)', 'desc': 'Primary Diablo 2 Resurrected installation'}) %}
+      {%   elif loop.index <= diablo2_destination_instances.index(instance) + 1 %}
+      {%     set _ = names.append({'name': instance, 'display': instance, 'desc': 'Symlinks to ' ~ diablo2_main_instance}) %}
+      {%   else %}
+      {%     set _ = names.append({'name': instance, 'display': instance, 'desc': 'Symlinks to ' ~ diablo2_main_instance}) %}
+      {%   endif %}
+      {% endfor %}
+      {{ names }}
+
+- name: Create Lutris YAML config for all instances
+  ansible.builtin.template:
+    src: battlenet.yml.j2
+    dest: "{{ lutris_base_path }}/{{ item.name }}/{{ item.name }}.yml"
+    mode: '0644'
+  loop: "{{ diablo2_instance_names }}"
+  vars:
+    instance_name: "{{ item.name }}"
+    instance_display_name: "{{ item.display }}"
+    instance_description: "{{ item.desc }}"

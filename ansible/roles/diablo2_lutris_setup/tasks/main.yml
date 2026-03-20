@@ -1,0 +1,16 @@
+---
+- name: Install Lutris
+  include_tasks: install_lutris.yml
+  tags: lutris
+
+- name: Setup directories and prefixes
+  include_tasks: setup_directories.yml
+  tags: setup
+
+- name: Create Diablo II symlinks
+  include_tasks: create_symlinks.yml
+  tags: symlinks
+
+- name: Configure Lutris instances
+  include_tasks: configure.yml
+  tags: configure

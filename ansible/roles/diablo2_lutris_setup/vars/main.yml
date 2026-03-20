@@ -1,0 +1,5 @@
+lutris_arch_packages:
+  - lutris
+
+lutris_debian_packages:
+  - lutris

@@ -1,0 +1,9 @@
+diablo2_main_instance: "battlenet1"
+diablo2_destination_instances:
+  - "battlenet2"
+  - "battlenet3"
+
+diablo2_folder_path: "Program Files (x86)/Diablo II Resurrected"
+
+diablo2_all_instances: "{{ [diablo2_main_instance] + diablo2_destination_instances }}"
+diablo2_source_path: "{{ lutris_base_path }}/{{ diablo2_main_instance }}/drive_c/Program Files (x86)/Diablo II Resurrected"

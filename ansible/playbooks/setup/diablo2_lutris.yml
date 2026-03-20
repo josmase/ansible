@@ -1,0 +1,7 @@
+---
+- name: Setup Diablo 2 Resurrected with Lutris
+  hosts: all
+  become: true
+
+  roles:
+    - diablo2_lutris_setup

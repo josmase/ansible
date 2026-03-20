@@ -1,0 +1,18 @@
+game:
+  core: null
+  description: {{ instance_description }}
+  developer: Blizzard Entertainment
+  executable: null
+  game_name: {{ instance_display_name }}
+  id: {{ instance_name }}
+  installer: []
+  main_file: null
+  name: {{ instance_display_name }}
+  version: null
+runner: wine
+wine:
+  arch: win64
+  esync: true
+  fsync: true
+  prefix: {{ lutris_base_path }}/{{ instance_name }}/drive_c
+  version: proton-7.0

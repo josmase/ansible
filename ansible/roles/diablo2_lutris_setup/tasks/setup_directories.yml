@@ -1,0 +1,28 @@
+---
+- name: Create Lutris game directories
+  ansible.builtin.file:
+    path: "{{ lutris_base_path }}/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ diablo2_all_instances }}"
+
+- name: Create Wine prefix directories
+  ansible.builtin.file:
+    path: "{{ lutris_base_path }}/{{ item }}/drive_c/Program Files (x86)"
+    state: directory
+    mode: '0755'
+  loop: "{{ diablo2_all_instances }}"
+
+- name: Create Diablo II folder structure for main instance
+  ansible.builtin.file:
+    path: "{{ lutris_base_path }}/{{ diablo2_main_instance }}/drive_c/Program Files (x86)/Diablo II Resurrected"
+    state: directory
+    mode: '0755'
+
+- name: Initialize Wine prefix for all instances
+  ansible.builtin.shell: |
+    WINEPREFIX="{{ lutris_base_path }}/{{ item }}/drive_c" wineboot --init 2>/dev/null || true
+  args:
+    creates: "{{ lutris_base_path }}/{{ item }}/drive_c/user.reg"
+  changed_when: true
+  loop: "{{ diablo2_all_instances }}"
