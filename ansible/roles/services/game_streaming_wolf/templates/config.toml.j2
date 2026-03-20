@@ -34,7 +34,13 @@ id = "moonlight-profile-id"
             'GOW_REQUIRED_DEVICES=/dev/input/event* /dev/dri/* /dev/nvidia*',
             'WOLF_SOCKET_PATH=/var/run/wolf/wolf.sock',
             'WOLF_UI_AUTOUPDATE=False',
+{% if ansible_os_family == "Archlinux" %}
+            'LOGLEVEL=INFO',
+            'NVIDIA_DRIVER_CAPABILITIES=all',
+            'GBM_BACKEND=nvidia-drm'
+{% else %}
             'LOGLEVEL=INFO'
+{% endif %}
         ]
         image = 'ghcr.io/games-on-whales/wolf-ui:main'
         mounts = [
@@ -233,8 +239,8 @@ name = "User"
             'GOW_REQUIRED_DEVICES=/dev/input/* /dev/dri/* /dev/nvidia*',
         ]
         mounts = [
-            "/media/ubuntu/lutris/data:/var/lutris:rw",
-            "/media/ubuntu/lutris/games:/var/lutris/Games:rw"
+            "{{ wolf_desktop_storage_path }}/data:/var/lutris:rw",
+            "{{ wolf_desktop_storage_path }}/games:/var/lutris/Games:rw"
         ]
         ports = []
         base_create_json = '''{
