@@ -4,44 +4,35 @@ set -e
 source /opt/gow/bash-lib/utils.sh
 
 function launcher() {
-  export GAMESCOPE_WIDTH=${GAMESCOPE_WIDTH:-1920}
-  export GAMESCOPE_HEIGHT=${GAMESCOPE_HEIGHT:-1080}
-  export GAMESCOPE_REFRESH=${GAMESCOPE_REFRESH:-60}
-
-  if [ -n "$RUN_GAMESCOPE" ]; then
-    gow_log "[Gamescope] - Starting: \`$@`"
-
-    GAMESCOPE_MODE=${GAMESCOPE_MODE:-"-b"}
-    /usr/games/gamescope "${GAMESCOPE_MODE}" -W "${GAMESCOPE_WIDTH}" -H "${GAMESCOPE_HEIGHT}" -r "${GAMESCOPE_REFRESH}" -- "$@"
-  elif [ -n "$RUN_SWAY" ]; then
-    gow_log "[Sway + Openbox] - Starting desktop environment"
-
-    export SWAYSOCK=${XDG_RUNTIME_DIR}/sway.socket
-    export SWAY_STOP_ON_APP_EXIT=${SWAY_STOP_ON_APP_EXIT:-"no"}
-    export XDG_CURRENT_DESKTOP=sway
-    export XDG_SESSION_DESKTOP=sway
-    export XDG_SESSION_TYPE=wayland
-
-    # Setup default config on first run
-    if [ ! -d "$HOME/.config/openbox" ]; then
-      mkdir -p $HOME/.config/openbox $HOME/.config/tint2
-      cp -r /opt/gow/openbox/* $HOME/.config/openbox/
-      cp -r /opt/gow/tint2/* $HOME/.config/tint2/
-      mkdir -p ~/Desktop ~/Documents ~/Downloads ~/Games ~/Pictures
-    fi
-
-    # Sway config for resolution
-    mkdir -p $HOME/.config/sway/
-    cp /cfg/sway/config $HOME/.config/sway/config
-    echo "output * resolution ${GAMESCOPE_WIDTH}x${GAMESCOPE_HEIGHT} position 0,0" >> $HOME/.config/sway/config
-
-    # Start sway with Openbox session
-    echo -n "workspace main; exec /opt/gow/start-desktop" >> $HOME/.config/sway/config
-
-    dbus-run-session -- sway --unsupported-gpu
-  else
-    gow_log "[exec] Starting: $@"
-
-    exec $@
+  # Setup default config on first run
+  if [ ! -d "$HOME/.config/openbox" ]; then
+    mkdir -p $HOME/.config/openbox $HOME/.config/tint2
+    cp -r /opt/gow/openbox/* $HOME/.config/openbox/
+    cp -r /opt/gow/tint2/* $HOME/.config/tint2/
+    mkdir -p ~/Desktop ~/Documents ~/Downloads ~/Games ~/Pictures
+    chmod 755 ~/Desktop ~/Documents ~/Downloads ~/Games ~/Pictures
   fi
+
+  export DESKTOP_SESSION=openbox
+  export XDG_CURRENT_DESKTOP=openbox
+  export XDG_SESSION_TYPE="x11"
+  export _JAVA_AWT_WM_NONREPARENTING=1
+  export GDK_BACKEND=x11
+  export MOZ_ENABLE_WAYLAND=0
+  export QT_QPA_PLATFORM="xcb"
+  export QT_AUTO_SCREEN_SCALE_FACTOR=1
+  export QT_ENABLE_HIGHDPI_SCALING=1
+  export DISPLAY=:0
+  export GTK_THEME=Arc-Dark:dark
+
+  export REAL_WAYLAND_DISPLAY=$WAYLAND_DISPLAY
+  unset WAYLAND_DISPLAY
+
+  gow_log "[Openbox] - Starting desktop environment"
+
+  # Start Xwayland + Openbox + tint2 with dbus-run-session
+  dbus-run-session -- bash -E -c "WAYLAND_DISPLAY=\$REAL_WAYLAND_DISPLAY Xwayland :0 & sleep 2 && openbox-session & sleep 1 && tint2 & pcmanfm --desktop & wait"
 }
+
+# Run launcher if this script is executed directly
+launcher
