@@ -42,6 +42,7 @@ wolf_lutris_image: "ghcr.io/games-on-whales/lutris:edge"
 # Desktop Configuration (Openbox + tint2)
 wolf_desktop_enabled: true
 wolf_desktop_image: "lutris-desktop:local"
+wolf_desktop_keymap: "se"  # Keyboard layout (e.g., se=Swedish, us=US, de=German, gb=UK)
 
 # Nvidia Configuration (Manual Install)
 wolf_nvidia_enabled: true
