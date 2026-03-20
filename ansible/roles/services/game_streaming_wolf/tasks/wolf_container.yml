@@ -95,6 +95,12 @@
     recreate: yes
   register: wolf_container_result
 
+- name: Run ldconfig in Wolf container
+  ansible.builtin.shell: |
+    docker exec {{ wolf_container_name }} ldconfig
+  changed_when: true
+  when: wolf_nvidia_enabled | bool
+
 - name: Show Wolf container status
   ansible.builtin.debug:
     msg: |
