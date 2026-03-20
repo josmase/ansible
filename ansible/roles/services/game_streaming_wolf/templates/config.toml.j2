@@ -229,7 +229,10 @@ name = "User"
             'XKB_DEFAULT_LAYOUT={{ wolf_desktop_keymap }}',
             'GOW_REQUIRED_DEVICES=/dev/input/* /dev/dri/* /dev/nvidia* /media/ubuntu/lutris/',
         ]
-        mounts = ["/media/ubuntu/lutris:/var/lutris/:rw"]
+        mounts = [
+            "/media/ubuntu/lutris/data:/var/lutris:rw",
+            "/media/ubuntu/lutris/games:/var/lutris/Games:rw"
+        ]
         ports = []
         base_create_json = '''{
           "HostConfig": {

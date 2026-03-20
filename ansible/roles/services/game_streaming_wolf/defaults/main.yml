@@ -43,7 +43,7 @@ wolf_lutris_image: "ghcr.io/games-on-whales/lutris:edge"
 wolf_desktop_enabled: true
 wolf_desktop_image: "lutris-desktop:local"
 wolf_desktop_keymap: "se"  # Keyboard layout (e.g., se=Swedish, us=US, de=German, gb=UK)
-wolf_desktop_storage_path: "/media/{{ ansible_user }}/lutris"  # Host path for WolfDesktop persistent storage
+wolf_desktop_storage_path: "/media/{{ ansible_user }}/lutris"  # Base host path for WolfDesktop persistent storage
 wolf_desktop_storage_owner: "1000"  # UID for container user
 
 # Nvidia Configuration (Manual Install)
