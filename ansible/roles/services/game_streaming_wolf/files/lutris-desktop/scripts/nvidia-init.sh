@@ -32,10 +32,6 @@ if [ -f /usr/nvidia/bin/nvidia-smi ]; then
     ldconfig
     gow_log "[nvidia] Updated library cache"
     
-    # Set LD_LIBRARY_PATH for NVIDIA libraries
-    export LD_LIBRARY_PATH="/usr/nvidia/lib:/usr/nvidia/lib32:${LD_LIBRARY_PATH}"
-    gow_log "[nvidia] Set LD_LIBRARY_PATH"
-    
     gow_log "DONE"
 else
     gow_log "Nvidia driver volume not present, skipping"
