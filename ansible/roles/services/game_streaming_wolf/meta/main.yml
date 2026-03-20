@@ -1,0 +1,29 @@
+---
+# Wolf Game Streaming Role Metadata
+
+galaxy_info:
+  role_name: game_streaming_wolf
+  author: ansible
+  description: Wolf game streaming server with Tailscale and Lutris
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+        - noble
+    - name: Debian
+      versions:
+        - buster
+        - bullseye
+  galaxy_tags:
+    - gaming
+    - streaming
+    - wolf
+    - moonlight
+    - tailscale
+    - lutris
+    - nvidia
+
+dependencies: []

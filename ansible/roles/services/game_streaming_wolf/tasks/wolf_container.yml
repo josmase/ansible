@@ -1,0 +1,85 @@
+---
+# Wolf Container Setup
+# Based on official quickstart: https://games-on-whales.github.io/wolf/stable/user/quickstart.html
+
+- name: Create Wolf configuration directory
+  ansible.builtin.file:
+    path: "{{ wolf_config_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create Nvidia driver volume
+  community.docker.docker_volume:
+    name: "{{ wolf_nvidia_driver_volume }}"
+    state: present
+  when: wolf_nvidia_enabled | bool
+
+- name: Populate Nvidia driver volume
+  ansible.builtin.shell: |
+    docker create --rm --mount source={{ wolf_nvidia_driver_volume }},destination=/usr/nvidia {{ wolf_nvidia_driver_image }} sh
+  register: nvidia_volume_create
+  changed_when: nvidia_volume_create.rc == 0
+  when: wolf_nvidia_enabled | bool
+
+- name: Build Wolf container environment variables
+  ansible.builtin.set_fact:
+    wolf_env_vars:
+      NVIDIA_DRIVER_VOLUME_NAME: "{{ wolf_nvidia_driver_volume }}"
+
+- name: Build Wolf container volumes
+  ansible.builtin.set_fact:
+    wolf_container_volumes: "{{ wolf_volumes }}"
+
+- name: Build Wolf container devices
+  ansible.builtin.set_fact:
+    wolf_container_devices: "{{ wolf_devices + wolf_nvidia_devices }}"
+
+- name: Run Wolf container
+  community.docker.docker_container:
+    name: "{{ wolf_container_name }}"
+    image: "{{ wolf_image }}"
+    state: started
+    restart_policy: "{{ wolf_restart_policy }}"
+    network_mode: "{{ wolf_network_mode }}"
+    env: "{{ wolf_env_vars }}"
+    volumes: "{{ wolf_container_volumes }}"
+    devices: "{{ wolf_container_devices }}"
+    device_cgroup_rules: "{{ wolf_device_cgroup_rules }}"
+    comparisons:
+      env: strict
+      volumes: strict
+      devices: strict
+    pull: missing
+    recreate: yes
+  register: wolf_container_result
+
+- name: Show Wolf container status
+  ansible.builtin.debug:
+    msg: |
+      Wolf container has been {{ 'recreated' if wolf_container_result.changed else 'started' }}.
+      Container name: {{ wolf_container_name }}
+      Network mode: {{ wolf_network_mode }}
+      
+      To pair with Moonlight:
+      1. Open Moonlight on your client device
+      2. Add your server IP: {{ ansible_facts['host'] | default(ansible_facts['default_ipv4']['address']) }}
+      3. Enter the PIN shown in Moonlight at: http://{{ ansible_facts['host'] | default(ansible_facts['default_ipv4']['address']) }}:{{ wolf_http_port }}/pin/
+      
+      If you see a black screen with cursor, Wolf is downloading required images.
+      Check logs with: docker logs {{ wolf_container_name }}
+
+- name: Expose Wolf ports when not using host network
+  when: wolf_network_mode != "host"
+  block:
+    - name: Show port information
+      ansible.builtin.debug:
+        msg: |
+          Wolf is running with custom port mapping:
+          HTTP: {{ wolf_http_port }}
+          HTTPS: {{ wolf_https_port }}
+          Control: {{ wolf_control_port }}/udp
+          RTSP: {{ wolf_rtsp_setup_port }}
+          Video: {{ wolf_video_ping_port }}/udp
+          Audio: {{ wolf_audio_ping_port }}/udp
+          
+          Make sure these ports are accessible from your client devices.

@@ -1,0 +1,49 @@
+---
+# Wolf Configuration Management
+
+- name: Create Wolf configuration directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ wolf_config_dir }}"
+    - "{{ wolf_config_dir }}/cfg"
+
+- name: Check if config.toml exists and has correct version
+  ansible.builtin.shell: |
+    if [ -f "{{ wolf_config_dir }}/cfg/config.toml" ]; then
+      grep -q "config_version = 6" "{{ wolf_config_dir }}/cfg/config.toml" && echo "version_ok" || echo "version_mismatch"
+    else
+      echo "not_exists"
+    fi
+  register: config_check
+  changed_when: false
+  check_mode: no
+
+- name: Deploy Wolf config.toml
+  ansible.builtin.template:
+    src: config.toml.j2
+    dest: "{{ wolf_config_dir }}/cfg/config.toml"
+    mode: '0644'
+    backup: yes
+  register: wolf_config_result
+  when: config_check.stdout != "version_ok"
+
+- name: Update Lutris app compositor
+  ansible.builtin.shell: |
+    # Update compositor settings based on wolf_compositor variable
+    if [ "{{ wolf_compositor }}" = "gamescope" ]; then
+      sed -i "s/'RUN_SWAY=1'/'RUN_GAMESCOPE=1', 'GAMESCOPE_WIDTH={{ wolf_gamescope_width }}', 'GAMESCOPE_HEIGHT={{ wolf_gamescope_height }}', 'GAMESCOPE_REFRESH={{ wolf_gamescope_refresh }}'/" "{{ wolf_config_dir }}/cfg/config.toml"
+    fi
+  register: compositor_update
+  changed_when: compositor_update.rc == 0
+  when: config_check.stdout == "version_ok" and wolf_compositor == "gamescope"
+
+- name: Show config deployment status
+  ansible.builtin.debug:
+    msg: |
+      Wolf config.toml status: {{ config_check.stdout }}
+      Compositor: {{ wolf_compositor }}
+      Lutris app: {{ 'Enabled (' + wolf_lutris_image + ')' if wolf_lutris_app_enabled else 'Disabled' }}
+      Config file: {{ wolf_config_dir }}/cfg/config.toml

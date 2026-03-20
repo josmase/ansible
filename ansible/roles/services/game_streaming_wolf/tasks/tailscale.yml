@@ -1,0 +1,90 @@
+---
+# Tailscale Installation
+
+- name: Install Tailscale on Debian/Ubuntu
+  when: ansible_os_family == "Debian"
+  block:
+    - name: Check if Tailscale is installed
+      ansible.builtin.command: which tailscale
+      register: tailscale_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fix Tailscale repository configuration
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/tailscale.list
+        mode: '0644'
+        content: |
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/tailscale.gpg] https://pkgs.tailscale.com/stable/ubuntu {{ ansible_facts['distribution_release'] }} main
+      when: tailscale_check.rc == 0
+
+    - name: Install required packages for Tailscale
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - curl
+          - gnupg
+        state: present
+        update_cache: yes
+      when: tailscale_check.rc != 0
+
+    - name: Add Tailscale repository key
+      ansible.builtin.apt_key:
+        url: "https://pkgs.tailscale.com/stable/ubuntu/{{ ansible_facts['distribution_release'] }}.noarmor.gpg"
+        state: present
+      when: tailscale_check.rc != 0
+
+    - name: Add Tailscale repository
+      ansible.builtin.apt_repository:
+        repo: "deb https://pkgs.tailscale.com/stable/ubuntu {{ ansible_facts['distribution_release'] }} main"
+        state: present
+        filename: tailscale
+      when: tailscale_check.rc != 0
+
+    - name: Install Tailscale
+      ansible.builtin.apt:
+        name: tailscale
+        state: present
+        update_cache: yes
+      when: tailscale_check.rc != 0
+
+- name: Install Tailscale on Arch Linux
+  when: ansible_os_family == "Archlinux"
+  block:
+    - name: Install Tailscale (Arch)
+      community.general.pacman:
+        name: tailscale
+        state: present
+
+    - name: Enable Tailscale service (Arch)
+      ansible.builtin.command: systemctl enable --now tailscaled
+      changed_when: true
+
+- name: Enable and start Tailscale service
+  ansible.builtin.systemd:
+    name: tailscaled
+    enabled: yes
+    state: started
+
+- name: Check if Tailscale is already authenticated
+  ansible.builtin.command: tailscale status
+  register: tailscale_status
+  changed_when: false
+  failed_when: false
+
+- name: Authenticate Tailscale with auth key
+  ansible.builtin.command: "tailscale up --authkey={{ wolf_tailscale_auth_key }}"
+  when:
+    - wolf_tailscale_auth_key is defined
+    - wolf_tailscale_auth_key | length > 0
+    - tailscale_status.rc != 0
+
+- name: Show Tailscale authentication instructions
+  ansible.builtin.debug:
+    msg: |
+      Tailscale is installed but not authenticated.
+      Run 'tailscale up' to authenticate interactively.
+      Or set wolf_tailscale_auth_key for unattended installation.
+  when:
+    - tailscale_status.rc != 0
+    - (wolf_tailscale_auth_key is not defined or wolf_tailscale_auth_key | length == 0)

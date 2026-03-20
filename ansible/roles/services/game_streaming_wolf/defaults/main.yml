@@ -1,0 +1,89 @@
+---
+# Wolf Game Streaming Role Variables
+# Based on official quickstart: https://games-on-whales.github.io/wolf/stable/user/quickstart.html
+
+# General Configuration
+wolf_enabled: true
+wolf_hostname: "game-stream"
+wolf_container_name: "wolf"
+wolf_image: "ghcr.io/games-on-whales/wolf:stable"
+wolf_restart_policy: "unless-stopped"
+
+# Network Configuration
+wolf_network_mode: "host"
+# Custom ports (used if network_mode is not "host")
+wolf_http_port: 47989
+wolf_https_port: 47984
+wolf_control_port: 47999
+wolf_rtsp_setup_port: 48010
+wolf_video_ping_port: 48100
+wolf_audio_ping_port: 48200
+
+# Tailscale Configuration
+wolf_tailscale_enabled: true
+wolf_tailscale_auth_key: ""  # Optional: Set for unattended installation
+
+# Lutris Configuration
+wolf_lutris_enabled: true
+wolf_lutris_base_path: "{{ lutris_base_path | default('/home/' + ansible_user + '/Games/Lutris') }}"
+
+# Compositor Configuration (for Wolf apps)
+wolf_compositor: "sway"  # Options: sway, gamescope, none
+
+# Gamescope Settings
+wolf_gamescope_width: 1920
+wolf_gamescope_height: 1080
+wolf_gamescope_refresh: 60
+
+# Wolf Apps Configuration
+wolf_lutris_app_enabled: true
+wolf_lutris_image: "ghcr.io/games-on-whales/lutris:edge"
+
+# Nvidia Configuration (Manual Install)
+wolf_nvidia_enabled: true
+wolf_nvidia_driver_version: "{{ ansible_nvidia_driver_version | default('530.30.02') }}"
+wolf_nvidia_driver_volume: "nvidia-driver-vol"
+wolf_nvidia_driver_image: "gow/nvidia-driver:latest"
+
+# Docker Configuration
+wolf_docker_socket: "/var/run/docker.sock"
+wolf_docker_sock_mount: "/var/run/docker.sock:/var/run/docker.sock:rw"
+
+# Virtual Devices Configuration
+wolf_virtual_devices_enabled: true
+wolf_uinput_device: "/dev/uinput"
+wolf_uhid_device: "/dev/uhid"
+
+# Wolf Configuration Directory
+wolf_config_dir: "/etc/wolf"
+
+# Device Paths
+wolf_devices:
+  - "/dev/dri"
+  - "/dev/uinput"
+  - "/dev/uhid"
+
+# Nvidia-specific device paths (when nvidia_enabled is true)
+wolf_nvidia_devices:
+  - "/dev/nvidia-uvm"
+  - "/dev/nvidia-uvm-tools"
+  - "/dev/nvidia-caps/nvidia-cap1"
+  - "/dev/nvidia-caps/nvidia-cap2"
+  - "/dev/nvidiactl"
+  - "/dev/nvidia0"
+  - "/dev/nvidia-modeset"
+
+# Volume Mounts (matches official quickstart)
+wolf_volumes:
+  - "{{ wolf_config_dir }}:/etc/wolf:rw"
+  - "{{ wolf_docker_sock_mount }}"
+  - "/dev/:/dev/:rw"
+  - "/run/udev:/run/udev:rw"
+  - "{{ wolf_nvidia_driver_volume }}:/usr/nvidia:rw"
+
+# Device CGroup Rules
+wolf_device_cgroup_rules:
+  - "c 13:* rmw"
+
+# Udev Rules
+wolf_udev_rules_path: "/etc/udev/rules.d/85-wolf-virtual-inputs.rules"

@@ -1,0 +1,33 @@
+---
+# Wolf Game Streaming Role - Main Tasks
+
+- name: Check if Wolf is enabled
+  ansible.builtin.assert:
+    that:
+      - wolf_enabled | bool
+    fail_msg: "Wolf is not enabled. Set wolf_enabled: true to continue."
+    success_msg: "Wolf setup starting..."
+
+- name: Include Tailscale installation
+  ansible.builtin.include_tasks: tailscale.yml
+  when: wolf_tailscale_enabled | bool
+
+- name: Include Lutris installation
+  ansible.builtin.include_tasks: lutris.yml
+  when: wolf_lutris_enabled | bool
+
+- name: Include Nvidia driver volume setup
+  ansible.builtin.include_tasks: nvidia_volume.yml
+  when: wolf_nvidia_enabled | bool
+
+- name: Include virtual devices setup
+  ansible.builtin.include_tasks: virtual_devices.yml
+  when: wolf_virtual_devices_enabled | bool
+
+- name: Include Wolf configuration management
+  ansible.builtin.include_tasks: wolf_config.yml
+  when: wolf_enabled | bool
+
+- name: Include Wolf container setup
+  ansible.builtin.include_tasks: wolf_container.yml
+  when: wolf_enabled | bool

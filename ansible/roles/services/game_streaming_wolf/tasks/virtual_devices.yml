@@ -1,0 +1,68 @@
+---
+# Virtual Devices Setup for Wolf
+
+- name: Check if uinput device exists
+  ansible.builtin.stat:
+    path: "{{ wolf_uinput_device }}"
+  register: uinput_check
+
+- name: Check if uhid device exists
+  ansible.builtin.stat:
+    path: "{{ wolf_uhid_device }}"
+  register: uhid_check
+
+- name: Create udev rules for virtual input devices
+  ansible.builtin.copy:
+    dest: "{{ wolf_udev_rules_path }}"
+    mode: '0644'
+    content: |
+      # Allows Wolf to access /dev/uinput (only needed for joypad support)
+      KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput", TAG+="uaccess"
+
+      # Allows Wolf to access /dev/uhid (only needed for DualSense emulation)
+      KERNEL=="uhid", GROUP="input", MODE="0660", TAG+="uaccess"
+
+      # Joypads
+      KERNEL=="hidraw*", ATTRS{name}=="Wolf PS5 (virtual) pad", GROUP="input", MODE="0660", ENV{ID_SEAT}="seat9"
+      SUBSYSTEMS=="input", ATTRS{name}=="Wolf X-Box One (virtual) pad", MODE="0660", ENV{ID_SEAT}="seat9"
+      SUBSYSTEMS=="input", ATTRS{name}=="Wolf PS5 (virtual) pad", MODE="0660", ENV{ID_SEAT}="seat9"
+      SUBSYSTEMS=="input", ATTRS{name}=="Wolf gamepad (virtual) motion sensors", MODE="0660", ENV{ID_SEAT}="seat9"
+      SUBSYSTEMS=="input", ATTRS{name}=="Wolf Nintendo (virtual) pad", MODE="0660", ENV{ID_SEAT}="seat9"
+  notify: reload udev rules
+
+- name: Ensure input group exists
+  ansible.builtin.group:
+    name: input
+    state: present
+
+- name: Add user to input group
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: input
+    append: yes
+
+- name: Load uinput module
+  ansible.builtin.modprobe:
+    name: uinput
+    state: present
+  when: not uinput_check.stat.exists
+
+- name: Load uhid module
+  ansible.builtin.modprobe:
+    name: uhid
+    state: present
+  when: not uhid_check.stat.exists
+
+- name: Create systemd module loading configuration for uinput
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/uinput.conf
+    mode: '0644'
+    content: |
+      uinput
+
+- name: Create systemd module loading configuration for uhid
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/uhid.conf
+    mode: '0644'
+    content: |
+      uhid

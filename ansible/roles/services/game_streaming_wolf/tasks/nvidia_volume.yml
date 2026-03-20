@@ -1,0 +1,164 @@
+---
+# Nvidia Driver Volume Setup (Manual Install)
+
+- name: Check if Nvidia driver is installed
+  ansible.builtin.stat:
+    path: /sys/module/nvidia/version
+  register: nvidia_driver_file
+
+- name: Fail if Nvidia driver is not installed
+  ansible.builtin.fail:
+    msg: "Nvidia driver is not installed or not loaded. Please install Nvidia drivers first."
+  when: not nvidia_driver_file.stat.exists
+
+- name: Get Nvidia driver version
+  ansible.builtin.shell: |
+    if [ -f /sys/module/nvidia/version ]; then
+      cat /sys/module/nvidia/version
+    else
+      nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1
+    fi
+  register: nvidia_version_output
+  changed_when: false
+
+- name: Set Nvidia driver version fact
+  ansible.builtin.set_fact:
+    nvidia_driver_version: "{{ nvidia_version_output.stdout | trim }}"
+
+- name: Verify Nvidia driver version meets requirements
+  ansible.builtin.assert:
+    that:
+      - nvidia_driver_version | length > 0
+      - nvidia_driver_version is version('530.30.02', '>=')
+    fail_msg: "Nvidia driver version {{ nvidia_driver_version | default('NOT FOUND') }} does not meet minimum requirement 530.30.02"
+    success_msg: "Nvidia driver version {{ nvidia_driver_version }} meets requirements"
+
+- name: Check if nvidia-driver image already exists
+  ansible.builtin.command: docker images -q {{ wolf_nvidia_driver_image }}
+  register: nvidia_image_check
+  changed_when: false
+  failed_when: false
+
+- name: Build nvidia-driver image
+  ansible.builtin.shell: |
+    curl https://raw.githubusercontent.com/games-on-whales/gow/master/images/nvidia-driver/Dockerfile | \
+    docker build -t {{ wolf_nvidia_driver_image }} -f - --build-arg NV_VERSION={{ nvidia_driver_version }} .
+  args:
+    chdir: /tmp
+  when: nvidia_image_check.stdout | length == 0
+
+- name: Check if nvidia-driver volume exists
+  ansible.builtin.command: docker volume ls -q --filter name={{ wolf_nvidia_driver_volume }}
+  register: nvidia_volume_check
+  changed_when: false
+  failed_when: false
+
+- name: Create nvidia-driver volume if it doesn't exist
+  ansible.builtin.command: >
+    docker create --rm --mount source={{ wolf_nvidia_driver_volume }},destination=/usr/nvidia
+    {{ wolf_nvidia_driver_image }} sh
+  when: nvidia_volume_check.stdout | length == 0
+
+- name: Verify nvidia-driver volume is populated
+  ansible.builtin.command: docker volume inspect {{ wolf_nvidia_driver_volume }}
+  register: volume_inspect
+  changed_when: false
+
+- name: Check if nvidia-drm module is loaded with modeset=1
+  ansible.builtin.command: cat /sys/module/nvidia_drm/parameters/modeset
+  register: nvidia_drm_modeset
+  changed_when: false
+  failed_when: false
+
+- name: Set nvidia-drm modeset flag
+  ansible.builtin.shell: |
+    if [ -f /etc/default/grub ]; then
+      if ! grep -q "nvidia-drm.modeset=1" /etc/default/grub; then
+        sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="\([^"]*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 nvidia-drm.modeset=1"/' /etc/default/grub
+        update-grub
+        echo "REBOOT_REQUIRED"
+      fi
+    fi
+  register: modeset_result
+  when: nvidia_drm_modeset.stdout != "Y"
+
+- name: Warn about reboot requirement
+  ansible.builtin.debug:
+    msg: "nvidia-drm.modeset=1 has been set in GRUB. A reboot is required for changes to take effect."
+  when: modeset_result.stdout is defined and "REBOOT_REQUIRED" in modeset_result.stdout
+
+- name: Ensure nvidia-drm module is loaded
+  ansible.builtin.modprobe:
+    name: nvidia_drm
+    state: present
+    params: "modeset=1"
+  when: nvidia_drm_modeset.stdout != "Y"
+
+- name: Create nvidia device initialization script
+  ansible.builtin.copy:
+    dest: /tmp/init_nvidia_devices.sh
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      ## Script to initialize nvidia device nodes.
+      ## https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#runfile-verifications
+
+      /sbin/modprobe nvidia
+      if [ "$?" -eq 0 ]; then
+        # Count the number of NVIDIA controllers found.
+        NVDEVS=`lspci | grep -i NVIDIA`
+        N3D=`echo "$NVDEVS" | grep "3D controller" | wc -l`
+        NVGA=`echo "$NVDEVS" | grep "VGA compatible controller" | wc -l`
+        N=`expr $N3D + $NVGA - 1`
+        for i in `seq 0 $N`; do
+          mknod -m 666 /dev/nvidia$i c 195 $i
+        done
+        mknod -m 666 /dev/nvidiactl c 195 255
+      else
+        exit 1
+      fi
+
+      /sbin/modprobe nvidia-uvm
+      if [ "$?" -eq 0 ]; then
+        # Find out the major device number used by the nvidia-uvm driver
+        D=`grep nvidia-uvm /proc/devices | awk '{print $1}'`
+        mknod -m 666 /dev/nvidia-uvm c $D 0
+        mknod -m 666 /dev/nvidia-uvm-tools c $D 0
+      else
+        exit 1
+      fi
+
+- name: Check if nvidia devices exist
+  ansible.builtin.stat:
+    path: /dev/nvidia0
+  register: nvidia_device_check
+
+- name: Initialize nvidia devices if missing
+  ansible.builtin.command: /tmp/init_nvidia_devices.sh
+  when: not nvidia_device_check.stat.exists
+  changed_when: true
+
+- name: Create nvidia module loading configuration
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/nvidia.conf
+    mode: '0644'
+    content: |
+      nvidia
+      nvidia_uvm
+
+- name: Create nvidia udev rules
+  ansible.builtin.copy:
+    dest: /etc/udev/rules.d/70-nvidia.rules
+    mode: '0644'
+    content: |
+      # create necessary NVIDIA device files in /dev/*
+      KERNEL=="nvidia", RUN+="/bin/bash -c '/usr/bin/nvidia-smi -L && /bin/chmod 0666 /dev/nvidia*'"
+      KERNEL=="nvidia_uvm", RUN+="/bin/bash -c '/usr/bin/nvidia-modprobe -c0 -u && /bin/chmod 0666 /dev/nvidia-uvm*'"
+
+- name: Reload udev rules
+  ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
+  changed_when: true
+
+- name: Update initramfs
+  ansible.builtin.command: update-initramfs -u
+  changed_when: true

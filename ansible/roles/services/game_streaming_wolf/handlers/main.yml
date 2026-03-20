@@ -1,0 +1,13 @@
+---
+# Wolf Game Streaming Role Handlers
+
+- name: reload udev rules
+  ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
+  listen: reload udev rules
+
+- name: restart wolf container
+  community.docker.docker_container:
+    name: "{{ wolf_container_name }}"
+    state: started
+    restart: yes
+  listen: restart wolf container
