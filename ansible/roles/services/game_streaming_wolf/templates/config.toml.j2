@@ -230,9 +230,7 @@ name = "User"
         env = [
             'RUN_GAMESCOPE=1',
             'XKB_DEFAULT_LAYOUT={{ wolf_desktop_keymap }}',
-            'GOW_REQUIRED_DEVICES=/dev/input/* /dev/dri/* /dev/nvidia* /media/ubuntu/lutris/',
-            'LD_LIBRARY_PATH=/usr/nvidia/lib:/usr/nvidia/lib32:/usr/lib/x86_64-linux-gnu',
-            '__GLX_VENDOR_LIBRARY_NAME=nvidia',
+            'GOW_REQUIRED_DEVICES=/dev/input/* /dev/dri/* /dev/nvidia*',
         ]
         mounts = [
             "/media/ubuntu/lutris/data:/var/lutris:rw",
