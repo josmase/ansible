@@ -63,6 +63,15 @@
         path: "/tmp/lutris-desktop"
         state: absent
 
+    - name: Create WolfDesktop storage directory
+      ansible.builtin.file:
+        path: "{{ wolf_desktop_storage_path }}"
+        state: directory
+        owner: "{{ wolf_desktop_storage_owner }}"
+        group: "{{ wolf_desktop_storage_owner }}"
+        mode: '0755'
+      when: wolf_desktop_enabled | bool
+
 - name: Build Wolf container environment variables
   ansible.builtin.set_fact:
     wolf_env_vars:
