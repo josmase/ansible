@@ -77,3 +77,36 @@ name = 'User'
           }
         }'''
 {% endif %}
+
+{% if wolf_desktop_enabled | bool %}
+[[profiles]]
+id = 'user-desktop'
+name = 'User'
+
+    [[profiles.apps]]
+    title = 'Desktop'
+    start_virtual_compositor = true
+    icon_png_path = "https://raw.githubusercontent.com/PapirusDevelopmentTeam/papirus-icon-theme/master/Papirus/256x256/apps/preferences-desktop.png"
+
+        [profiles.apps.runner]
+        type = 'docker'
+        name = 'WolfDesktop'
+        image = '{{ wolf_desktop_image }}'
+        devices = []
+        env = [
+            'RUN_SWAY=1',
+            'GOW_REQUIRED_DEVICES=/dev/input/* /dev/dri/* /dev/nvidia*',
+        ]
+        mounts = [
+            '{{ wolf_lutris_base_path[ansible_os_family] | default(wolf_lutris_base_path) }}:/home/retro/Games:rw',
+        ]
+        ports = []
+        base_create_json = '''{
+          "HostConfig": {
+            "IpcMode": "host",
+            "CapAdd": ["SYS_ADMIN", "SYS_NICE", "NET_ADMIN"],
+            "Privileged": false,
+            "DeviceCgroupRules": ["c 13:* rmw", "c 244:* rmw"]
+          }
+        }'''
+{% endif %}

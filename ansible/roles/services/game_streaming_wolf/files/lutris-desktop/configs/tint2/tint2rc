@@ -1,0 +1,144 @@
+# Tint2 config file
+# Generated for Openbox + tint2 desktop
+
+# Backgrounds
+# Background 1: Taskbar
+rounded = 0
+border_width = 0
+background_color = #2d2d2d 100
+border_color = #2d2d2d 100
+
+# Background 2: Active task
+rounded = 1
+border_width = 0
+background_color = #5294e2 100
+border_color = #5294e2 100
+
+# Background 3: Inactive task
+rounded = 1
+border_width = 0
+background_color = #3d3d3d 80
+border_color = #3d3d3d 80
+
+# Panel
+panel_monitor = all
+panel_position = bottom center horizontal
+panel_size = 100% 30
+panel_margin = 0 0
+panel_padding = 2 2 2
+panel_dock = 0
+wm_menu = 1
+panel_layer = top
+panel_background_id = 1
+
+# Panel Autohide
+autohide = 0
+autohide_show_timeout = 0.3
+autohide_hide_timeout = 1.5
+autohide_height = 2
+strut_policy = follow_size
+
+# Taskbar
+taskbar_mode = single_desktop
+taskbar_padding = 2 2 2
+taskbar_background_id = 0
+taskbar_active_background_id = 0
+taskbar_name = 0
+taskbar_name_font = sans 8
+taskbar_name_font_color = #888888 100
+taskbar_name_active_font_color = #ffffff 100
+
+# Tasks
+task_icon = 1
+task_text = 1
+task_centered = 1
+task_maximum_size = 200 35
+task_padding = 4 2 4
+task_font = sans 8
+task_font_color = #ffffff 100
+task_active_font_color = #ffffff 100
+task_tooltip = 1
+task_thumbnail = 0
+task_thumbnail_size = 210
+urgent_nb_of_blink = 100000
+
+# Task Icons
+task_icon_asb = 80 0 0
+task_active_icon_asb = 100 0 0
+
+# System Tray (notification area)
+systray_padding = 0 4 2
+systray_background_id = 0
+systray_sort = ascending
+systray_icon_size = 24
+systray_icon_asb = 100 0 0
+systray_monitor = 1
+
+# Clock
+time1_format = %H:%M
+time2_format = %A %d %B
+time1_font = sans 8
+time1_timezone = 
+time2_timezone = 
+clock_font_color = #ffffff 100
+clock_padding = 4 2
+clock_background_id = 0
+clock_tooltip = 
+clock_tooltip_timezone = 
+clock_lclick_command = 
+clock_rclick_command = 
+clock_mclick_command = 
+clock_uwheel_command = 
+clock_dwheel_command = 
+
+# Battery
+battery_low_status = 10
+battery_low_cmd = xmessage -t 3000 "Low battery"
+battery_hide = 96
+bat1_font = sans 8
+bat2_font = sans 6
+battery_font_color = #ffffff 100
+bat1_format = 
+bat2_format = 
+battery_padding = 1 1
+battery_background_id = 0
+battery_tooltip = 1
+battery_lclick_command = 
+battery_rclick_command = 
+battery_mclick_command = 
+battery_uwheel_command = 
+battery_dwheel_command = 
+ac_connected_cmd = 
+ac_disconnected_cmd = 
+
+# Tooltip
+tooltip_show_timeout = 0.3
+tooltip_hide_timeout = 0.1
+tooltip_padding = 4 4
+tooltip_background_id = 2
+tooltip_font_color = #222222 100
+tooltip_font = sans 8
+
+# Mouse
+mouse_middle = none
+mouse_right = close
+mouse_scroll_up = toggle
+mouse_scroll_down = iconify
+
+# Launcher
+launcher_padding = 2 4 2
+launcher_background_id = 0
+launcher_icon_theme = Papirus
+launcher_icon_asb = 100 0 0
+launcher_item_app = /usr/share/applications/lutris.desktop
+launcher_item_app = /usr/share/applications/kitty.desktop
+launcher_item_app = /usr/share/applications/pcmanfm.desktop
+
+# Separator
+separator = 1
+separator_style = line
+separator_size = 1
+separator_background_id = 0
+separator_padding = 2 2
+
+# Executor

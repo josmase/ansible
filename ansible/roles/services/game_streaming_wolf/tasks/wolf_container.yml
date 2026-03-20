@@ -21,6 +21,48 @@
   changed_when: nvidia_volume_create.rc == 0
   when: wolf_nvidia_enabled | bool
 
+- name: Build Lutris Desktop image
+  when: wolf_desktop_enabled | bool
+  block:
+    - name: Create desktop image build directory
+      ansible.builtin.file:
+        path: "/tmp/lutris-desktop"
+        state: directory
+        mode: '0755'
+
+    - name: Copy Dockerfile
+      ansible.builtin.copy:
+        src: "lutris-desktop/Dockerfile"
+        dest: "/tmp/lutris-desktop/Dockerfile"
+        mode: '0644'
+
+    - name: Copy scripts
+      ansible.builtin.copy:
+        src: "lutris-desktop/scripts/"
+        dest: "/tmp/lutris-desktop/scripts/"
+        mode: '0755'
+
+    - name: Copy configs
+      ansible.builtin.copy:
+        src: "lutris-desktop/configs/"
+        dest: "/tmp/lutris-desktop/configs/"
+        mode: '0755'
+
+    - name: Build desktop image
+      community.docker.docker_image:
+        name: "{{ wolf_desktop_image }}"
+        source: build
+        build:
+          path: "/tmp/lutris-desktop"
+          pull: no
+        state: present
+        force_source: no
+
+    - name: Clean up build directory
+      ansible.builtin.file:
+        path: "/tmp/lutris-desktop"
+        state: absent
+
 - name: Build Wolf container environment variables
   ansible.builtin.set_fact:
     wolf_env_vars:

@@ -1,0 +1,5 @@
+# Openbox autostart script
+# This file is executed when Openbox starts
+
+# Set GTK theme
+export GTK_THEME=Arc-Dark:dark

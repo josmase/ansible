@@ -8,6 +8,7 @@ This role automates the installation and configuration of:
 - Wolf game streaming server (Moonlight compatible)
 - Tailscale VPN for secure remote access
 - Lutris game manager
+- Full desktop environment (Openbox + tint2) with Lutris in menu
 - Nvidia driver volume for containerized GPU access
 - Virtual input devices (uinput/uhid) for gamepad support
 
@@ -69,6 +70,10 @@ wolf_gamescope_refresh: 60
 # Wolf apps configuration
 wolf_lutris_app_enabled: true
 wolf_lutris_image: "ghcr.io/games-on-whales/lutris:edge"
+
+# Desktop configuration (Openbox + tint2)
+wolf_desktop_enabled: true
+wolf_desktop_image: "lutris-desktop:local"
 ```
 
 ## Usage
@@ -134,6 +139,41 @@ wolf_gamescope_refresh: 60
 wolf_lutris_app_enabled: true  # Enable/disable the Lutris app in Wolf
 wolf_lutris_image: "ghcr.io/games-on-whales/lutris:edge"  # Lutris Docker image
 wolf_lutris_base_path: "/home/user/Games/Lutris"  # Games directory on host
+```
+
+## Desktop App Configuration
+
+The role includes a full desktop environment option with Openbox + tint2, providing a non-tiling window manager experience with Lutris available in the application menu.
+
+### Desktop Variables
+
+```yaml
+wolf_desktop_enabled: true  # Enable/disable the Desktop app
+wolf_desktop_image: "lutris-desktop:local"  # Custom desktop image (built on target)
+```
+
+### Desktop Features
+
+- **Openbox**: Floating window manager
+- **tint2**: Taskbar with system tray and app launcher
+- **PCManFM**: File manager with desktop icons
+- **Lutris**: Available in the Openbox menu (not auto-started)
+
+### How It Works
+
+1. The role builds a custom Docker image based on `lutris:edge`
+2. Openbox + tint2 packages are installed on top
+3. Wolf runs the desktop using Sway as the Wayland compositor
+4. XWayland bridges X11 apps to the Wayland session
+5. Openbox + tint2 provides a familiar desktop experience
+
+### Resetting Desktop State
+
+If the desktop has issues, clear cached state:
+```bash
+docker volume rm -f lutris
+rm -rf /etc/wolf/profile-data/user/WolfDesktop
+docker restart wolf
 ```
 
 ## Port Information

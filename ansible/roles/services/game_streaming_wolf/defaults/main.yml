@@ -39,6 +39,10 @@ wolf_gamescope_refresh: 60
 wolf_lutris_app_enabled: true
 wolf_lutris_image: "ghcr.io/games-on-whales/lutris:edge"
 
+# Desktop Configuration (Openbox + tint2)
+wolf_desktop_enabled: true
+wolf_desktop_image: "lutris-desktop:local"
+
 # Nvidia Configuration (Manual Install)
 wolf_nvidia_enabled: true
 wolf_nvidia_driver_version: "{{ ansible_nvidia_driver_version | default('530.30.02') }}"
