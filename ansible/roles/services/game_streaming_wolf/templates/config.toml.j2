@@ -78,13 +78,12 @@ name = 'User'
         }'''
 {% endif %}
 
-{% if wolf_desktop_enabled | bool %}
 [[profiles]]
-id = 'user-desktop'
+id = 'user-desktop-openbox'
 name = 'User'
 
     [[profiles.apps]]
-    title = 'Desktop'
+    title = 'Desktop (Openbox)'
     start_virtual_compositor = true
     icon_png_path = "https://raw.githubusercontent.com/PapirusDevelopmentTeam/papirus-icon-theme/master/Papirus/256x256/apps/preferences-desktop.png"
 
@@ -109,4 +108,3 @@ name = 'User'
             "DeviceCgroupRules": ["c 13:* rmw", "c 244:* rmw"]
           }
         }'''
-{% endif %}
