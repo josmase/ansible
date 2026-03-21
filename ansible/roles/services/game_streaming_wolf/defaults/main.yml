@@ -4,7 +4,7 @@
 
 # General Configuration
 wolf_enabled: true
-wolf_hostname: "game-stream"
+
 wolf_container_name: "wolf"
 wolf_image: "ghcr.io/games-on-whales/wolf:stable"
 wolf_restart_policy: "unless-stopped"

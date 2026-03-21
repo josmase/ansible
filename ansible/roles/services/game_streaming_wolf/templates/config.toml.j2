@@ -1,8 +1,8 @@
 # A unique identifier for this host
-uuid = "{{ wolf_uuid | default('7a2e39c0-1738-4401-a226-ceec9f75057b') }}"
+uuid = "{{ wolf_uuid | default(inventory_hostname | hash('md5')) }}"
 
 # The name that will be displayed in Moonlight
-hostname = "{{ wolf_hostname }}"
+hostname = "{{ wolf_hostname | default(inventory_hostname) }}"
 # The version of this config file
 config_version = 6
 # A list of paired clients that will be allowed to stream

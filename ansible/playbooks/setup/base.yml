@@ -95,8 +95,6 @@
   tags:
     - wolf
     - game-streaming
-  vars:
-    wolf_hostname: "game-stream"
   roles:
     - role: services/game_streaming_wolf
       when: game_streaming_wolf_enabled | default(true) | bool
