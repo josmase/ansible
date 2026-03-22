@@ -70,7 +70,7 @@
   changed_when: false
   failed_when: false
 
-- name: Set nvidia-drm modeset flag
+- name: Set nvidia-drm modeset flag (Debian)
   ansible.builtin.shell: |
     if [ -f /etc/default/grub ]; then
       if ! grep -q "nvidia-drm.modeset=1" /etc/default/grub; then
@@ -79,13 +79,29 @@
         echo "REBOOT_REQUIRED"
       fi
     fi
-  register: modeset_result
-  when: nvidia_drm_modeset.stdout != "Y"
+  register: modeset_result_debian
+  when:
+    - nvidia_drm_modeset.stdout != "Y"
+    - ansible_os_family == "Debian"
+
+- name: Set nvidia-drm modeset flag (Arch)
+  ansible.builtin.shell: |
+    if [ -f /etc/default/grub ]; then
+      if ! grep -q "nvidia-drm.modeset=1" /etc/default/grub; then
+        sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="\([^"]*\)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 nvidia-drm.modeset=1"/' /etc/default/grub
+        grub-mkconfig -o /boot/grub/grub.cfg
+        echo "REBOOT_REQUIRED"
+      fi
+    fi
+  register: modeset_result_arch
+  when:
+    - nvidia_drm_modeset.stdout != "Y"
+    - ansible_os_family == "Archlinux"
 
 - name: Warn about reboot requirement
   ansible.builtin.debug:
     msg: "nvidia-drm.modeset=1 has been set in GRUB. A reboot is required for changes to take effect."
-  when: modeset_result.stdout is defined and "REBOOT_REQUIRED" in modeset_result.stdout
+  when: (modeset_result_debian.stdout is defined and "REBOOT_REQUIRED" in modeset_result_debian.stdout) or (modeset_result_arch.stdout is defined and "REBOOT_REQUIRED" in modeset_result_arch.stdout)
 
 - name: Ensure nvidia-drm module is loaded
   ansible.builtin.modprobe:
@@ -159,7 +175,12 @@
   ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
   changed_when: true
 
-- name: Update initramfs
+- name: Update initramfs (Debian)
   ansible.builtin.command: update-initramfs -u
   changed_when: true
   when: ansible_os_family == "Debian"
+
+- name: Update initramfs (Arch)
+  ansible.builtin.command: mkinitcpio -P
+  changed_when: true
+  when: ansible_os_family == "Archlinux"

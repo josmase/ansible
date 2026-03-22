@@ -6,8 +6,11 @@
   listen: reload udev rules
 
 - name: restart wolf container
-  community.docker.docker_container:
-    name: "{{ wolf_container_name }}"
-    state: started
-    restart: yes
+  ansible.builtin.command:
+    cmd: docker compose up -d --force-recreate
+    chdir: "{{ wolf_compose_dir }}"
   listen: restart wolf container
+
+- name: reload systemd daemon
+  ansible.builtin.command: systemctl daemon-reload
+  listen: reload systemd daemon

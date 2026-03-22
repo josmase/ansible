@@ -24,7 +24,7 @@ wolf_tailscale_enabled: true
 wolf_tailscale_auth_key: ""  # Optional: Set for unattended installation
 
 # Lutris Configuration
-wolf_lutris_enabled: true
+wolf_lutris_enabled: false
 wolf_lutris_base_path: "{{ lutris_base_path | default('/home/' + ansible_user + '/Games/Lutris') }}"
 
 # Compositor Configuration (for Wolf apps)
@@ -64,6 +64,9 @@ wolf_uhid_device: "/dev/uhid"
 # Wolf Configuration Directory
 wolf_config_dir: "/etc/wolf"
 
+# Docker Compose Configuration
+wolf_compose_dir: "/etc/wolf"
+
 # Device Paths
 wolf_devices:
   - "/dev/dri"
@@ -94,3 +97,7 @@ wolf_device_cgroup_rules:
 
 # Udev Rules
 wolf_udev_rules_path: "/etc/udev/rules.d/85-wolf-virtual-inputs.rules"
+
+# Systemd Configuration
+wolf_systemd_service_path: "/etc/systemd/system"
+wolf_systemd_enabled: true

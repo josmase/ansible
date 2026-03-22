@@ -1,5 +1,5 @@
 ---
-# Wolf Container Setup
+# Wolf Container Setup via Docker Compose
 # Based on official quickstart: https://games-on-whales.github.io/wolf/stable/user/quickstart.html
 
 - name: Create Wolf configuration directory
@@ -75,37 +75,28 @@
         - "games"
       when: wolf_desktop_enabled | bool
 
-- name: Build Wolf container environment variables
-  ansible.builtin.set_fact:
-    wolf_env_vars:
-      NVIDIA_DRIVER_VOLUME_NAME: "{{ wolf_nvidia_driver_volume }}"
+- name: Deploy Wolf docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ wolf_compose_dir }}/docker-compose.yml"
+    mode: '0644'
+  register: wolf_compose_result
 
-- name: Build Wolf container volumes
-  ansible.builtin.set_fact:
-    wolf_container_volumes: "{{ wolf_volumes }}"
+- name: Start Wolf container via docker compose
+  ansible.builtin.command:
+    cmd: docker compose up -d
+    chdir: "{{ wolf_compose_dir }}"
+  register: wolf_compose_up
+  changed_when: "'Started' in wolf_compose_up.stdout or 'Created' in wolf_compose_up.stdout"
 
-- name: Build Wolf container devices
-  ansible.builtin.set_fact:
-    wolf_container_devices: "{{ wolf_devices + wolf_nvidia_devices }}"
-
-- name: Run Wolf container
-  community.docker.docker_container:
-    name: "{{ wolf_container_name }}"
-    image: "{{ wolf_image }}"
-    state: started
-    restart_policy: "{{ wolf_restart_policy }}"
-    network_mode: "{{ wolf_network_mode }}"
-    env: "{{ wolf_env_vars }}"
-    volumes: "{{ wolf_container_volumes }}"
-    devices: "{{ wolf_container_devices }}"
-    device_cgroup_rules: "{{ wolf_device_cgroup_rules }}"
-    comparisons:
-      env: strict
-      volumes: strict
-      devices: strict
-    pull: missing
-    recreate: yes
-  register: wolf_container_result
+- name: Wait for Wolf container to be running
+  ansible.builtin.command: docker inspect --format={% raw %}'{{.State.Running}}'{% endraw %} {{ wolf_container_name }}
+  register: wolf_container_running
+  until: wolf_container_running.stdout == "true"
+  retries: 10
+  delay: 2
+  changed_when: false
+  when: wolf_nvidia_enabled | bool
 
 - name: Run ldconfig in Wolf container
   ansible.builtin.shell: |
@@ -116,30 +107,30 @@
 - name: Show Wolf container status
   ansible.builtin.debug:
     msg: |
-      Wolf container has been {{ 'recreated' if wolf_container_result.changed else 'started' }}.
+      Wolf container has been started via docker compose.
       Container name: {{ wolf_container_name }}
       Network mode: {{ wolf_network_mode }}
-      
+      Compose file: {{ wolf_compose_dir }}/docker-compose.yml
+
       To pair with Moonlight:
       1. Open Moonlight on your client device
       2. Add your server IP: {{ ansible_facts['host'] | default(ansible_facts['default_ipv4']['address']) }}
       3. Enter the PIN shown in Moonlight at: http://{{ ansible_facts['host'] | default(ansible_facts['default_ipv4']['address']) }}:{{ wolf_http_port }}/pin/
-      
+
       If you see a black screen with cursor, Wolf is downloading required images.
       Check logs with: docker logs {{ wolf_container_name }}
 
-- name: Expose Wolf ports when not using host network
-  when: wolf_network_mode != "host"
-  block:
-    - name: Show port information
-      ansible.builtin.debug:
-        msg: |
-          Wolf is running with custom port mapping:
-          HTTP: {{ wolf_http_port }}
-          HTTPS: {{ wolf_https_port }}
-          Control: {{ wolf_control_port }}/udp
-          RTSP: {{ wolf_rtsp_setup_port }}
-          Video: {{ wolf_video_ping_port }}/udp
-          Audio: {{ wolf_audio_ping_port }}/udp
-          
-          Make sure these ports are accessible from your client devices.
+- name: Deploy Wolf systemd service
+  ansible.builtin.template:
+    src: wolf.service.j2
+    dest: "{{ wolf_systemd_service_path }}/wolf.service"
+    mode: '0644'
+  notify: reload systemd daemon
+  when: wolf_systemd_enabled | bool
+
+- name: Enable Wolf systemd service
+  ansible.builtin.systemd:
+    name: wolf
+    enabled: "{{ wolf_systemd_enabled }}"
+    daemon_reload: yes
+  when: wolf_systemd_enabled | bool

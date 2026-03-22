@@ -71,22 +71,6 @@
     orcaslicer_operation: install
   roles:
     - role: workstation/3d_printing_setup
-
-- name: Game streaming host setup (VNC/Sunshine)
-  hosts: game_streaming_hosts
-  become: true
-  tags:
-    - game-streaming
-    - game-streaming-vnc
-    - x11vnc
-    - tailscale
-  vars:
-    game_streaming_vnc_enabled: false
-    game_streaming_tailscale_enabled: true
-    sunshine_user: "{{ ansible_user }}"
-  roles:
-    - role: services/game_streaming
-    - role: services/game_streaming_sunshine
       when: sunshine_enabled | default(false) | bool
 
 - name: Wolf game streaming setup

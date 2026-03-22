@@ -3,7 +3,7 @@ wyoming_whisper_language: sv_SE
 wyoming_piper_voice: sv_SE-lisa-medium
 
 # Wolf Game Streaming - Lutris/Diablo 2 Configuration
-lutris_base_path: "/media/ubuntu/lutris/games"
+lutris_base_path: "/media/ubuntu/Diablo/lutris/games"
 diablo2_main_instance: "battlenet"
 diablo2_destination_instances:
   - "battlenet2"

@@ -1,0 +1,41 @@
+---
+# Wolf Game Streaming Server - Docker Compose
+# Managed by Ansible - do not edit manually
+
+services:
+  wolf:
+    image: {{ wolf_image }}
+    container_name: {{ wolf_container_name }}
+    restart: {{ wolf_restart_policy }}
+{% if wolf_network_mode == "host" %}
+    network_mode: host
+{% endif %}
+    environment:
+      NVIDIA_DRIVER_VOLUME_NAME: {{ wolf_nvidia_driver_volume }}
+    volumes:
+{% for volume in wolf_volumes %}
+      - {{ volume }}
+{% endfor %}
+{% if wolf_devices | length > 0 or (wolf_nvidia_enabled | bool and wolf_nvidia_devices | length > 0) %}
+    devices:
+{% for device in wolf_devices %}
+      - {{ device }}
+{% endfor %}
+{% if wolf_nvidia_enabled | bool %}
+{% for device in wolf_nvidia_devices %}
+      - {{ device }}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if wolf_device_cgroup_rules | length > 0 %}
+    device_cgroup_rules:
+{% for rule in wolf_device_cgroup_rules %}
+      - "{{ rule }}"
+{% endfor %}
+{% endif %}
+{% if wolf_nvidia_enabled | bool %}
+
+volumes:
+  {{ wolf_nvidia_driver_volume }}:
+    external: true
+{% endif %}
