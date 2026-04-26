@@ -34,6 +34,10 @@
     - templates
     - deploy
 
+- name: Set fact for supporting files to deploy
+  set_fact:
+    support_files_to_deploy: "{{ ['unifi-init-mongo.sh'] if 'unifi' in services.templates else [] }}"
+
 - name: Deploy supporting files
   template:
     src: "extra-files/{{ item }}"
@@ -41,8 +45,7 @@
     owner: "{{ user.name }}"
     group: "{{ user.group }}"
     mode: "0644"
-  loop:
-    - unifi-init-mongo.sh
+  loop: "{{ support_files_to_deploy }}"
   tags:
     - docker
     - templates

@@ -5,5 +5,4 @@ docker_containers_enabled: true
 # Service Templates for Media Servers
 services:
   templates:
-    - unifi
     - transmission

@@ -1,0 +1,137 @@
+---
+- name: Ensure OS is supported
+  assert:
+    that:
+      - ansible_facts['os_family'] in ["Debian", "Archlinux"]
+      - ansible_facts['distribution'] in ["Ubuntu", "Debian", "Archlinux"] or ansible_facts['os_family'] == "Archlinux"
+    fail_msg: "unifi_os_server role supports Debian/Ubuntu and Archlinux only."
+
+- name: Fail if download URL is not set
+  fail:
+    msg: "unifi_os_server_download_url must be set. Get it from https://community.ui.com/releases or https://ui.com/download"
+  when: unifi_os_server_download_url | length == 0
+
+- name: Check for existing UniFi Docker containers
+  docker_container_info:
+    name: "{{ item }}"
+  register: unifi_docker_containers
+  loop:
+    - unifi-network-application
+    - unifi-db
+  failed_when: false
+  changed_when: false
+  when: unifi_os_server_stop_docker_containers | bool
+
+- name: Stop existing UniFi Docker containers
+  docker_container:
+    name: "{{ item }}"
+    state: stopped
+  loop:
+    - unifi-network-application
+    - unifi-db
+  when:
+    - unifi_os_server_stop_docker_containers | bool
+    - unifi_docker_containers.results | selectattr('exists', 'defined') | selectattr('exists', 'truthy') | list | length > 0
+  ignore_errors: true
+
+- name: Check for existing UniFi OS Server installation
+  stat:
+    path: "/usr/bin/{{ unifi_os_server_service_name }}"
+  register: unifi_os_existing_binary
+
+- name: Check for existing UniFi Network Application backup
+  stat:
+    path: "{{ docker_data_dir }}/unifi-network-application/config"
+  register: unifi_docker_config
+  when: unifi_os_server_backup_before_migration | bool
+
+- name: Create backup of existing UniFi Docker configuration
+  archive:
+    path: "{{ docker_data_dir }}/unifi-network-application"
+    dest: "{{ docker_data_dir }}/unifi-network-application-backup-{{ ansible_date_time.epoch }}.tar.gz"
+    format: gz
+    remove: false
+  when:
+    - unifi_os_server_backup_before_migration | bool
+    - unifi_docker_config.stat.exists | default(false)
+  become: true
+
+- name: Install required packages
+  package:
+    name: "{{ unifi_os_server_required_packages }}"
+    state: present
+
+- name: Check if slirp4netns is available
+  stat:
+    path: /usr/bin/slirp4netns
+  register: slirp4netns_check
+
+- name: Fail if slirp4netns is not available
+  fail:
+    msg: "slirp4netns is required but not installed. Please install it manually or ensure it's available in your distribution's repositories."
+  when: not slirp4netns_check.stat.exists
+
+- name: Download UniFi OS Server installer
+  get_url:
+    url: "{{ unifi_os_server_download_url }}"
+    dest: "/tmp/unifi-os-server-installer"
+    mode: "0755"
+  when: not unifi_os_existing_binary.stat.exists
+
+- name: Run UniFi OS Server installer
+  expect:
+    command: "sudo /tmp/unifi-os-server-installer"
+    responses:
+      "Proceed\\? \\(y/N\\):": "y"
+    timeout: 300
+  register: unifi_installer
+  failed_when: "'Failed to install' in unifi_installer.stdout"
+  changed_when: "'Failed to install' not in unifi_installer.stdout"
+  when: not unifi_os_existing_binary.stat.exists
+
+- name: Fail on installation error
+  fail:
+    msg: "UniFi OS Server installation failed: {{ unifi_installer.stdout }}"
+  when:
+    - not unifi_os_existing_binary.stat.exists
+    - "'Failed to install' in unifi_installer.stdout"
+
+- name: Ensure data directory exists
+  file:
+    path: "{{ unifi_os_server_data_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Check if service file exists
+  stat:
+    path: "/etc/systemd/system/{{ unifi_os_server_service_name }}.service"
+  register: unifi_os_service_file
+
+- name: Enable UniFi OS Server service
+  systemd:
+    name: "{{ unifi_os_server_service_name }}"
+    enabled: "{{ unifi_os_server_autostart }}"
+    daemon_reload: true
+  when: unifi_os_service_file.stat.exists
+
+- name: Start UniFi OS Server service
+  systemd:
+    name: "{{ unifi_os_server_service_name }}"
+    state: started
+  when: unifi_os_service_file.stat.exists
+
+- name: Wait for UniFi OS Server to be ready
+  wait_for:
+    port: 8080
+    delay: 5
+    timeout: 60
+  when: unifi_os_service_file.stat.exists
+  ignore_errors: true
+
+- name: Cleanup installer
+  file:
+    path: "/tmp/unifi-os-server-installer"
+    state: absent
+  when: not unifi_os_existing_binary.stat.exists

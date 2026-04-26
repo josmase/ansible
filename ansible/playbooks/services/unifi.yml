@@ -1,0 +1,8 @@
+---
+- name: Deploy UniFi OS Server
+  hosts: media_services
+  roles:
+    - services/unifi_os_server
+  tags:
+    - unifi
+    - services

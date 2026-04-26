@@ -1,0 +1,28 @@
+---
+# Default settings for the UniFi OS Server role.
+
+# UniFi OS Server configuration
+unifi_os_server_download_url: ""  # REQUIRED: Get from https://community.ui.com/releases or https://ui.com/download
+unifi_os_server_install_dir: /opt/unifi-os-server
+unifi_os_server_service_name: uosserver
+
+# Directories
+unifi_os_server_data_dir: "{{ docker_data_dir | default('/opt/appdata') }}/unifi-os-server"
+unifi_os_server_config_dir: "{{ unifi_os_server_data_dir }}/config"
+
+# Installation
+unifi_os_server_install_user: root
+unifi_os_server_install_group: root
+
+# OS Requirement flags
+unifi_os_server_required_packages:
+  - podman
+  - slirp4netns
+  - expect
+
+# Migration options
+unifi_os_server_stop_docker_containers: true
+unifi_os_server_backup_before_migration: true
+
+# Service options
+unifi_os_server_autostart: true
