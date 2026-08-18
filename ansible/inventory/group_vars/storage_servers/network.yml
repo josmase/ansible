@@ -9,11 +9,10 @@ services:
     # - nfs
 
 # NFS Configuration
-nfs:
-  share_root: /srv/storage
-  exports:
-    - share: "{{ docker.dirs.storage }}"
-      options: "*(rw,sync,fsid=0,crossmnt,no_subtree_check,no_root_squash,anonuid={{ user.uid }},anongid={{ user.gid }})"
+# geerlingguy.nfs expects complete export lines in nfs_exports.
+# Keep root squashing for this shared export; media services use UID/GID 1000.
+nfs_exports:
+  - "{{ paths.storage }} *(rw,sync,fsid=0,crossmnt,no_subtree_check,root_squash,anonuid={{ user.uid }},anongid={{ user.gid }})"
 
 # Samba Configuration
 samba:

@@ -14,9 +14,20 @@
 - name: Deploy network file sharing services
   hosts: storage_servers
   become: true
+  pre_tasks:
+    - name: Validate NFS export configuration
+      ansible.builtin.assert:
+        that:
+          - nfs_exports is defined
+          - nfs_exports | length > 0
+        fail_msg: "nfs_exports must contain at least one complete export line"
+      tags:
+        - nfs
   roles:
     - geerlingguy.samba
-    - geerlingguy.nfs
+    - role: geerlingguy.nfs
+      tags:
+        - nfs
     - storage/network_share_setup
 
 - name: Configure NFS client mounts
