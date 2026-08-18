@@ -11,8 +11,10 @@ services:
 # NFS Configuration
 # geerlingguy.nfs expects complete export lines in nfs_exports.
 # Keep root squashing for this shared export; media services use UID/GID 1000.
+nfs_shared_uid: 1000
+nfs_shared_gid: 1000
 nfs_exports:
-  - "{{ paths.storage }} *(rw,sync,fsid=0,crossmnt,no_subtree_check,root_squash,anonuid={{ user.uid }},anongid={{ user.gid }})"
+  - "{{ paths.storage }} *(rw,sync,fsid=0,crossmnt,no_subtree_check,root_squash,anonuid={{ nfs_shared_uid }},anongid={{ nfs_shared_gid }})"
 
 # Samba Configuration
 samba:
