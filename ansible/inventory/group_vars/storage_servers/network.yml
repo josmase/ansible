@@ -13,7 +13,7 @@ nfs:
   share_root: /srv/storage
   exports:
     - share: "{{ docker.dirs.storage }}"
-      options: "*(rw,sync,fsid=0,crossmnt,no_subtree_check,anonuid={{ user.uid }},anongid={{ user.gid }})"
+      options: "*(rw,sync,fsid=0,crossmnt,no_subtree_check,no_root_squash,anonuid={{ user.uid }},anongid={{ user.gid }})"
 
 # Samba Configuration
 samba:
