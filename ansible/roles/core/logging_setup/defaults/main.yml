@@ -1,0 +1,52 @@
+---
+# Logging Setup Role - Default Variables
+# All variables have sensible defaults. Override via group_vars or host_vars.
+
+# ============================================
+# Journald Configuration
+# ============================================
+logging_journald_system_max_use: "500M"    # Maximum journald disk usage
+logging_journald_max_file_sec: "1week"     # Maximum journal file age
+logging_journald_forward_to_syslog: false   # Disable syslog forwarding
+logging_journald_runtime_max_use: "128M"   # Maximum runtime journal disk usage
+
+# ============================================
+# Docker Logging Configuration
+# ============================================
+logging_docker_enabled: true                # Apply Docker-specific logging config
+logging_docker_log_driver: "json-file"       # Docker log driver
+logging_docker_max_size: "10m"              # Max log file size per container
+logging_docker_max_file: 3                  # Max log files per container
+
+# ============================================
+# Logrotate Configuration
+# ============================================
+logging_logrotate_enabled: true
+
+# Docker container logs logrotate
+logging_docker_logrotate_rotate: 3
+logging_docker_logrotate_interval: "daily"
+logging_docker_logrotate_maxsize: "10M"
+logging_docker_logrotate_compress: true
+logging_docker_logrotate_delaycompress: true
+
+# UniFi logs logrotate
+logging_unifi_logrotate_enabled: true
+logging_unifi_log_path: "/opt/appdata/unifi-network-application/logs"
+logging_unifi_logrotate_rotate: 4
+logging_unifi_logrotate_interval: "weekly"
+logging_unifi_logrotate_compress: true
+
+# ============================================
+# Application Log Paths (for logrotate)
+# ============================================
+logging_additional_log_paths: []
+# - path: "/var/log/myapp/*.log"
+#   rotate: 4
+#   interval: "weekly"
+#   compress: true
+
+# ============================================
+# Cleanup Tasks (first-run only)
+# ============================================
+logging_initial_cleanup: true               # Run journal vacuum and docker prune on first apply

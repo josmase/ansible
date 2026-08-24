@@ -1,0 +1,24 @@
+---
+- name: Configure journald
+  become: true
+  ansible.builtin.template:
+    src: journald.conf.j2
+    dest: /etc/systemd/journald.conf
+    mode: "0644"
+    owner: root
+    group: root
+  notify: Restart journald
+  tags:
+    - logging
+    - journald
+
+- name: Apply journal vacuum on first run
+  become: true
+  ansible.builtin.command:
+    cmd: journalctl --vacuum-size={{ logging_journald_system_max_use }}
+  changed_when: true
+  when: logging_initial_cleanup | bool
+  tags:
+    - logging
+    - journald
+    - cleanup

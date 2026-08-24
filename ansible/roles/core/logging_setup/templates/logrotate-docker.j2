@@ -1,0 +1,13 @@
+/var/lib/docker/containers/*/*.log {
+  rotate {{ logging_docker_logrotate_rotate }}
+  {{ logging_docker_logrotate_interval }}
+  maxsize {{ logging_docker_logrotate_maxsize }}
+{% if logging_docker_logrotate_compress %}
+  compress
+{% endif %}
+{% if logging_docker_logrotate_delaycompress %}
+  delaycompress
+{% endif %}
+  missingok
+  copytruncate
+}

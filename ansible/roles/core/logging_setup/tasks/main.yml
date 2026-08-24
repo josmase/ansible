@@ -1,0 +1,20 @@
+---
+- name: Configure journald
+  ansible.builtin.import_tasks: journald.yml
+  tags:
+    - logging
+    - journald
+
+- name: Configure logrotate rules
+  ansible.builtin.import_tasks: logrotate.yml
+  when: logging_logrotate_enabled | bool
+  tags:
+    - logging
+    - logrotate
+
+- name: Configure Docker logging
+  ansible.builtin.import_tasks: docker.yml
+  when: logging_docker_enabled | bool
+  tags:
+    - logging
+    - docker

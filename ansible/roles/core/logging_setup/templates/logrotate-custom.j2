@@ -1,0 +1,12 @@
+{{ item.path }} {
+  rotate {{ item.rotate | default(4) }}
+  {{ item.interval | default('weekly') }}
+  maxsize {{ item.maxsize | default('100M') }}
+{% if item.compress | default(true) %}
+  compress
+{% endif %}
+  delaycompress
+  missingok
+  notifempty
+  copytruncate
+}

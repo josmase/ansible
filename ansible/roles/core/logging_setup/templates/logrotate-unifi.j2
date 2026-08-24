@@ -1,0 +1,11 @@
+{{ logging_unifi_log_path }}/*.log {
+  rotate {{ logging_unifi_logrotate_rotate }}
+  {{ logging_unifi_logrotate_interval }}
+{% if logging_unifi_logrotate_compress %}
+  compress
+{% endif %}
+  delaycompress
+  missingok
+  notifempty
+  copytruncate
+}

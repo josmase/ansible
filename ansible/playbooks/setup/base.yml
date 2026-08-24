@@ -16,6 +16,7 @@
             - name: zsh-syntax-highlighting
               url: zsh-users/zsh-syntax-highlighting
     - role: core/base_setup
+    - role: core/logging_setup
 
 - name: Docker environment and container configuration
   hosts: docker_hosts

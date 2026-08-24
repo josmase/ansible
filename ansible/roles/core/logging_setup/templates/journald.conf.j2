@@ -1,0 +1,7 @@
+[Journal]
+SystemMaxUse={{ logging_journald_system_max_use }}
+MaxFileSec={{ logging_journald_max_file_sec }}
+RuntimeMaxUse={{ logging_journald_runtime_max_use }}
+{% if not logging_journald_forward_to_syslog %}
+ForwardToSyslog=no
+{% endif %}

@@ -1,0 +1,27 @@
+---
+- name: Configure Docker daemon logging
+  become: true
+  ansible.builtin.template:
+    src: docker-daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+    owner: root
+    group: root
+  notify: Restart docker
+  when: logging_docker_enabled | bool
+  tags:
+    - logging
+    - docker
+
+- name: Prune unused Docker data on first run
+  become: true
+  ansible.builtin.command:
+    cmd: docker system prune -a -f
+  changed_when: true
+  when:
+    - logging_initial_cleanup | bool
+    - logging_docker_enabled | bool
+  tags:
+    - logging
+    - docker
+    - cleanup

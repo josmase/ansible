@@ -1,0 +1,26 @@
+---
+dependencies: []
+galaxy_info:
+  role_name: logging_setup
+  namespace: core
+  description: Configure system logging with journald limits, logrotate rules, and Docker log rotation
+  author: josmase
+  company: self
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: EL
+      versions:
+        - all
+  galaxy_tags:
+    - logging
+    - journald
+    - logrotate
+    - docker
+    - system

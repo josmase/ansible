@@ -1,0 +1,44 @@
+---
+- name: Create logrotate configuration for Docker containers
+  become: true
+  ansible.builtin.template:
+    src: logrotate-docker.j2
+    dest: /etc/logrotate.d/docker-containers
+    mode: "0644"
+    owner: root
+    group: root
+  when: logging_docker_enabled | bool
+  tags:
+    - logging
+    - logrotate
+    - docker
+
+- name: Create logrotate configuration for UniFi
+  become: true
+  ansible.builtin.template:
+    src: logrotate-unifi.j2
+    dest: /etc/logrotate.d/unifi
+    mode: "0644"
+    owner: root
+    group: root
+  when: logging_unifi_logrotate_enabled | bool
+  tags:
+    - logging
+    - logrotate
+    - unifi
+
+- name: Create logrotate configuration for additional services
+  become: true
+  ansible.builtin.template:
+    src: logrotate-custom.j2
+    dest: "/etc/logrotate.d/{{ item.name | default('custom-' + (item.path | basename)) }}"
+    mode: "0644"
+    owner: root
+    group: root
+  loop: "{{ logging_additional_log_paths }}"
+  when:
+    - logging_logrotate_enabled | bool
+    - logging_additional_log_paths | length > 0
+  tags:
+    - logging
+    - logrotate
