@@ -14,7 +14,7 @@ Related docs (flux repo): `docs/INCIDENT_2026-08-23_GPU_NODE_STORAGE.md`,
 
 | Config | File(s) | Hosts | Already codified here? |
 |---|---|---|---|
-| Journald caps (500M/128M) | `/etc/systemd/journald.conf.d/size.conf` | all Ubuntu servers (9) | ⚠️ Yes — `core/logging_setup` writes `/etc/systemd/journald.conf` with identical values, but the role has never executed against k3s hosts (see §4) |
+| Journald caps (500M/128M) | `/etc/systemd/journald.conf.d/size.conf` | all Ubuntu servers (9) | ✅ **Committed 2026-08-24** — `core/logging_setup` (+ its `base.yml` wiring) had existed only as untracked WIP on the desktop and was absent from the jumphost checkout; now in Git. First real execution against k3s hosts still pending (§4) |
 | Kubelet args (eviction-hard, image-GC 80/70) | `/etc/rancher/k3s/config.yaml` | all 7 k8s nodes | ❌ No |
 | Inotify sysctls (watches 524288, queued 65536) | `/etc/sysctl.d/99-inotify.conf` | all 7 k8s nodes | ❌ No |
 | apt autoclean / snap retain / docker prune | not yet applied anywhere | — | ❌ No (prevention plan Phase 3 leftovers) |
@@ -170,10 +170,11 @@ plain lint/apply never bounces the control plane accidentally.)
 
 ### 3.5 Journald reconciliation
 
-Leave the manual drop-ins in place: values are identical to what `core/logging_setup`
-manages, and drop-ins override the main conf harmlessly. Once §4 is resolved and
-`logging_setup` actually executes on k3s hosts, optionally remove the hand-made
-`size.conf` drop-ins to avoid dual management (one-line cleanup task).
+`core/logging_setup` is now committed (2026-08-24) and writes `/etc/systemd/journald.conf`
+directly; the manual drop-ins (`/etc/systemd/journald.conf.d/size.conf`) applied during the
+incident carry identical values and override nothing. Once §4 is resolved and the role has
+actually executed on k3s hosts, remove the hand-made drop-ins to avoid dual management
+(one-line cleanup task in this role).
 
 ---
 
