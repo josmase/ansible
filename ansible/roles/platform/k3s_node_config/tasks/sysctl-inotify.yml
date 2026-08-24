@@ -1,0 +1,7 @@
+---
+- name: Install inotify tuning
+  ansible.builtin.template:
+    src: sysctl-inotify.conf.j2
+    dest: /etc/sysctl.d/99-inotify.conf
+    mode: "0644"
+  notify: Reload sysctl

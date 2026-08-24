@@ -1,0 +1,16 @@
+---
+# Defaults for k3s node runtime tuning.
+# Values mirror the manual hardening applied 2026-08-24 after INC-2026-08-23.
+k8s_image_gc_high_threshold: 80
+k8s_image_gc_low_threshold: 70
+k8s_eviction_hard: "nodefs.available<15%,imagefs.available<15%,nodefs.inodesFree<10%"
+
+inotify_max_user_watches: 524288
+inotify_max_queued_events: 65536
+
+# k3s.service on masters, k3s-node.service on workers/gpu (set via inventory group vars).
+k3s_service_name: k3s-node
+
+# Safety guard: restarts only happen when explicitly requested for a run.
+# Nodes already run the desired values; flips to true only when changing them.
+k3s_restart_enabled: false

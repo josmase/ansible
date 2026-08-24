@@ -1,0 +1,14 @@
+---
+- name: Ensure k3s config directory exists
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: "0755"
+
+- name: Manage k3s runtime configuration (kubelet args)
+  ansible.builtin.template:
+    src: k3s-config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0644"
+    backup: true
+  notify: Restart k3s

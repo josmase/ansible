@@ -15,9 +15,9 @@ Related docs (flux repo): `docs/INCIDENT_2026-08-23_GPU_NODE_STORAGE.md`,
 | Config | File(s) | Hosts | Already codified here? |
 |---|---|---|---|
 | Journald caps (500M/128M) | `/etc/systemd/journald.conf.d/size.conf` | all Ubuntu servers (9) | ✅ **Committed 2026-08-24** — `core/logging_setup` (+ its `base.yml` wiring) had existed only as untracked WIP on the desktop and was absent from the jumphost checkout; now in Git. First real execution against k3s hosts still pending (§4) |
-| Kubelet args (eviction-hard, image-GC 80/70) | `/etc/rancher/k3s/config.yaml` | all 7 k8s nodes | ❌ No |
-| Inotify sysctls (watches 524288, queued 65536) | `/etc/sysctl.d/99-inotify.conf` | all 7 k8s nodes | ❌ No |
-| apt autoclean / snap retain / docker prune | not yet applied anywhere | — | ❌ No (prevention plan Phase 3 leftovers) |
+| Kubelet args (eviction-hard, image-GC 80/70) | `/etc/rancher/k3s/config.yaml` | all 7 k8s nodes | ✅ **Committed 2026-08-24** — `platform/k3s_node_config` role (§3.1); first enforcement run pending (§5) |
+| Inotify sysctls (watches 524288, queued 65536) | `/etc/sysctl.d/99-inotify.conf` | all 7 k8s nodes | ✅ **Committed 2026-08-24** — same role; first enforcement run pending (§5) |
+| apt autoclean / snap retain / docker prune | not yet applied anywhere | — | ✅ **Committed 2026-08-24** — `core/node_hygiene` role; execution pending (§5) |
 
 ## 2. Current repo coverage map
 
@@ -30,9 +30,15 @@ Related docs (flux repo): `docs/INCIDENT_2026-08-23_GPU_NODE_STORAGE.md`,
 
 ## 3. Target design
 
-### 3.1 Extend `platform/kubernetes` role (k8s-node runtime config)
+### 3.1 New role `platform/k3s_node_config` (k8s-node runtime config)
 
-New task files, included from `tasks/main.yaml`:
+> **Review correction (2026-08-24):** the original draft extended `platform/kubernetes`.
+> That role's `nvme.yaml` contains a conditional **`reboot:`** task and `multipath.yaml`
+> restarts multipathd — pulling it into hygiene runs would have exposed masters (which
+> never ran this role) to surprise reboots. Concerns are therefore separated: this new
+> role owns runtime tuning; `platform/kubernetes` keeps its storage-specific behavior.
+
+New task files, included from `tasks/main.yml`:
 
 **`tasks/kubelet-config.yaml`**
 ```yaml
@@ -58,10 +64,10 @@ New task files, included from `tasks/main.yaml`:
 
 **`templates/k3s-config.yaml.j2`**
 ```yaml
-# Managed by ansible (platform/kubernetes). Local edits will be overwritten.
-# Node-local runtime tuning decided after INC-2026-08-23 storage incident.
+# Managed by ansible (platform/k3s_node_config). Local edits will be overwritten.
+# Runtime tuning decided after INC-2026-08-23 storage incident.
 kubelet-arg:
-  - "eviction-hard=nodefs.available<15%,imagefs.available<15%,nodefs.inodesFree<10%"
+  - "eviction-hard={{ k8s_eviction_hard }}"
   - "image-gc-high-threshold={{ k8s_image_gc_high_threshold }}"
   - "image-gc-low-threshold={{ k8s_image_gc_low_threshold }}"
 ```
@@ -108,12 +114,10 @@ fs.inotify.max_queued_events = {{ inotify_max_queued_events }}
 ```
 roles/core/node_hygiene/
 ├── defaults/main.yml
-├── handlers/main.yml
 ├── tasks/
-│   ├── main.yml
-│   ├── apt.yml          # APT::Periodic AutocleanInterval=7 (drop-in)
-│   ├── snap.yml         # snap set system refresh.retain=2  (when snap present)
-│   └── docker-prune.yml # cron: docker system prune -f --filter "until=168h" (when docker)
+│   └── main.yml         # apt autoclean drop-in; snap refresh.retain (idempotent,
+│                        #   guarded on snap presence); docker-prune cron
+│                        #   (flag-gated, absent-file cleanup when disabled)
 ```
 
 Defaults:
@@ -122,12 +126,8 @@ hygiene_apt_autoclean_interval: 7
 hygiene_snap_refresh_retain: 2
 hygiene_docker_prune_enabled: false   # enable per-group (docker_hosts)
 hygiene_docker_prune_age: 168h
-inotify_max_user_watches: 524288
-inotify_max_queued_events: 65536
-k8s_image_gc_high_threshold: 80
-k8s_image_gc_low_threshold: 70
-k8s_eviction_hard: "nodefs.available<15%,imagefs.available<15%,nodefs.inodesFree<10%"
 ```
+(Inotify/GC thresholds live in `platform/k3s_node_config/defaults` — see §3.1.)
 
 ### 3.3 Service-name handling (masters vs workers)
 
@@ -153,20 +153,21 @@ plain lint/apply never bounces the control plane accidentally.)
 ```yaml
 ---
 - name: Kubernetes node runtime hygiene (kubelet args, sysctls, OS housekeeping)
-  hosts: k3s_cluster:k3s_gpu_node
+  hosts: k3s_cluster
   serial: 1              # REVIEWED: one node at a time -- a handler-driven k3s restart
   become: true           # must never hit several masters in parallel (etcd/API quorum)
   roles:
-    - role: platform/kubernetes
-      tags: [kubernetes]
+    - role: platform/k3s_node_config
+      tags: [k3s_config, kubelet, sysctl]
     - role: core/node_hygiene
       tags: [hygiene]
 ```
 
-⚠️ **Review correction:** `hosts: k3s_cluster` alone would **silently skip the GPU node** —
-`k3s_gpu_node` is a sibling group, not a child of `k3s_cluster` (verified against
-`inventory/production.ini`). The union pattern `k3s_cluster:k3s_gpu_node` covers all seven.
-`serial: 1` additionally prevents parallel k3s restarts across masters.
+**Review history:** the first draft used `hosts: k3s_cluster:k3s_gpu_node` because the GPU
+node was a stray sibling group. The §6.1 normalization folded `k3s_gpu_node` into
+`k3s_cluster`, so plain `hosts: k3s_cluster` now covers all seven nodes. It also swapped
+`platform/kubernetes` for `platform/k3s_node_config` — see the correction note in §3.1
+(reboot/multipath tasks must not run on masters during hygiene passes).
 
 ### 3.5 Journald reconciliation
 
@@ -212,13 +213,19 @@ Diagnostics to run before relying on any new playbook:
 | 3 | Run §4 diagnostics; record findings in this doc | quirk understood/worked around |
 | 4 | Execute hygiene playbook on **workers first**: `--limit k3s_nodes` | changed=expected; nodes Ready |
 | 5 | GPU node: `--limit k3s_gpu_node` | Ready; jellyfin unaffected |
-| 6 | Masters **one at a time** — ⚠️ inventory names are bare IPs: use `--limit 192.168.1.201`, then `.202`, then `.203` (`kubernetes-master-20x` are Kubernetes node names, **not** ansible inventory names — a wrong pattern matches zero hosts silently) | all Ready after each |
+| 6 | Masters **one at a time** — inventory names are now the DNS aliases: `--limit kubernetes-201.local.hejsan.xyz`, then `-202`, `-203` | all Ready after each |
 | 7 | Per-node functional gate after any handler-driven restart: `kubectl get --raw "/api/v1/nodes/<node>/proxy/configz"` shows GC 80/70 + eviction-hard; `kubectl get node <node>` Ready | verified per node |
 | 8 | Idempotency: re-run same command | second run changed=0 |
 | 9 | Drift probe: delete `/etc/sysctl.d/99-inotify.conf` on kn206, re-run, confirm restored | converged |
 
-Note: since the live nodes already carry the desired state (applied manually), the first
-run should report mostly `ok` — its purpose is enforcement + codification, not change.
+**First-run expectations (review correction):** the managed templates add a header comment
+that the hand-applied files lack, so step 4–6 **will** report the config task as `changed`
+on every node — that is correct and does not mean drift. With `k3s_restart_enabled=false`
+(the default) no restart follows: safe, because the running kubelet already uses these
+exact values. Enable restarts (`-e k3s_restart_enabled=true`) only on runs that actually
+change thresholds. The "mostly ok" claim in earlier drafts was wrong for exactly this
+reason.
+
 Force one real change (step 9 drift probe) to prove the chain works.
 
 ## 6. Relationship to `k3s-ansible` (cluster installation)
@@ -252,16 +259,35 @@ Operational scripts in that checkout: `deploy.sh` (site.yml), `reset.yml` (full 
  3. Upgrading the toolkit = `cd vendor/k3s-ansible && git fetch && git checkout <new-tag>`
     in a commit of its own; never let it float to master automatically.
  4. Because `my-cluster/hosts.ini` uses bare IPs while this repo's inventory names hosts by
-    hostname/IP, the two inventories are related but not identical. Name mapping:
+    hostname/IP, the two inventories are related but not identical. Name mapping (after the
+    2026-08-24 normalization):
 
     | This repo's inventory | ansible_host | Kubernetes node name | k3s service |
     |---|---|---|---|
-    | `192.168.1.201`–`203` | same IP | `kubernetes-master-201`–`203` | `k3s` |
-    | `192.168.1.204`–`206` | same IP | `kubernetes-node-204`–`206` | `k3s-node` |
+    | `kubernetes-201.local.hejsan.xyz`–`203` | .201–.203 | `kubernetes-master-201`–`203` | `k3s` |
+    | `kubernetes-204.local.hejsan.xyz`–`206` | .204–.206 | `kubernetes-node-204`–`206` | `k3s-node` |
     | `gpu.local.hejsan.xyz` | 192.168.1.119 | `ubuntu-ms-7977` | `k3s-node` |
 
-    Recommended follow-up: alias inventory entries to the Kubernetes node names so both
-    systems share one vocabulary, and fold `k3s_gpu_node` into `k3s_cluster`.
+    The `k8s_node_name` hostvar carries the Kubernetes node name for drain/cordon/configz
+    operations; `k3s_service_name` group vars distinguish server vs agent units.
+
+### 6.1 Naming normalization + DNS + secrets (executed 2026-08-24)
+
+1. **Inventory aliases** renamed from bare IPs to `kubernetes-<octet>.local.hejsan.xyz`
+   (`ansible_host` still carries the IP, so nothing breaks before DNS is applied).
+2. **Group topology fixed:** `k3s_gpu_node` is now a child of `k3s_cluster`, so
+   `hosts: k3s_cluster` covers all seven nodes.
+3. **Duplicate identity removed:** the GPU node was listed twice (`gpu.local.hejsan.xyz`
+   and `ubuntu-ms-7977.localdomain`) — a double-execution hazard for any broad play.
+   `[printer_monitors]` now references `gpu.local.hejsan.xyz`; the Ollama/Wyoming plays in
+   `base.yml` target `k3s_gpu_node`.
+4. **DNS records** added to `terraform/dns/main.tf`: `kubernetes-201..206.local` →
+   .201–.206 (optional `kubernetes-119.local` left commented). ⚠️ Records are *code only*
+   until `terraform apply` runs with the Cloudflare token/state.
+5. **Secrets:** `k3s_token` from the gitignored k3s-ansible inventory is now vaulted at
+   `ansible/inventory/group_vars/k3s_cluster/vault.yml` (encrypted with the repo's
+   `.vault_pass` on the jumphost); non-secret install parameters are in `vars.yml`.
+   Decryption requires the jumphost's `.vault_pass`.
 
 ## 7. Out of scope / follow-ups
 

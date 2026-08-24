@@ -1,0 +1,7 @@
+---
+# OS-level housekeeping. Storage-incident follow-up: apt cache grew to 1.9G,
+# snap revisions to ~16G across /snap + /var/lib/snapd.
+hygiene_apt_autoclean_interval: 7
+hygiene_snap_refresh_retain: 2
+hygiene_docker_prune_enabled: false   # enable per-group (docker_hosts)
+hygiene_docker_prune_age: "168h"

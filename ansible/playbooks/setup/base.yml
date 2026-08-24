@@ -74,7 +74,7 @@
     - role: workstation/3d_printing_setup
 
 - name: Ollama server setup
-  hosts: ubuntu-ms-7977.localdomain
+  hosts: k3s_gpu_node
   become: true
   tags:
     - ollama
@@ -84,7 +84,7 @@
     - role: services/ollama_server
 
 - name: Wyoming voice services setup
-  hosts: ubuntu-ms-7977.localdomain
+  hosts: k3s_gpu_node
   become: true
   tags:
     - wyoming

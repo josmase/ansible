@@ -1,0 +1,49 @@
+---
+- name: Configure apt autoclean interval
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/99-hygiene-autoclean
+    content: |
+      APT::Periodic::AutocleanInterval "{{ hygiene_apt_autoclean_interval }}";
+    mode: "0644"
+  tags:
+    - apt
+
+- name: Check for snap binary
+  ansible.builtin.command: command -v snap
+  register: hygiene_snap_bin
+  changed_when: false
+  failed_when: false
+
+- name: Read current snap refresh.retain
+  ansible.builtin.command: snap get system refresh.retain
+  register: hygiene_snap_retain_current
+  changed_when: false
+  failed_when: false
+  when: hygiene_snap_bin.rc == 0
+
+- name: Limit retained snap revisions
+  ansible.builtin.command: "snap set system refresh.retain={{ hygiene_snap_refresh_retain }}"
+  changed_when: true
+  when:
+    - hygiene_snap_bin.rc == 0
+    - (hygiene_snap_retain_current.stdout | default('') | trim) != (hygiene_snap_refresh_retain | string)
+
+- name: Install docker prune cron
+  ansible.builtin.copy:
+    dest: /etc/cron.d/docker-prune
+    content: |
+      # Managed by ansible (core/node_hygiene).
+      # Prunes unused docker data older than {{ hygiene_docker_prune_age }}.
+      0 4 * * * root docker system prune -f --filter "until={{ hygiene_docker_prune_age }}" >/dev/null 2>&1
+    mode: "0644"
+  when: hygiene_docker_prune_enabled | bool
+  tags:
+    - docker
+
+- name: Remove docker prune cron when disabled
+  ansible.builtin.file:
+    path: /etc/cron.d/docker-prune
+    state: absent
+  when: not (hygiene_docker_prune_enabled | bool)
+  tags:
+    - docker

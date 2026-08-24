@@ -21,6 +21,16 @@ resource "cloudflare_record" "local" {
     "ansible.local"   = "192.168.1.101"
     "gpu.local"       = "192.168.1.119"
     "*.staging.local" = "192.168.1.182"
+
+    # Kubernetes nodes (k3s cluster members)
+    "kubernetes-201.local" = "192.168.1.201"
+    "kubernetes-202.local" = "192.168.1.202"
+    "kubernetes-203.local" = "192.168.1.203"
+    "kubernetes-204.local" = "192.168.1.204"
+    "kubernetes-205.local" = "192.168.1.205"
+    "kubernetes-206.local" = "192.168.1.206"
+    # Optional: uniform name for the GPU node (also reachable as gpu.local)
+    # "kubernetes-119.local" = "192.168.1.119"
   }
   zone_id = var.zone_id
   name    = each.key

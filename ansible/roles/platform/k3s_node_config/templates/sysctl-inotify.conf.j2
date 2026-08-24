@@ -1,0 +1,4 @@
+# Managed by ansible (platform/k3s_node_config).
+# Required for large media libraries (Jellyfin NFS directory watchers).
+fs.inotify.max_user_watches = {{ inotify_max_user_watches }}
+fs.inotify.max_queued_events = {{ inotify_max_queued_events }}

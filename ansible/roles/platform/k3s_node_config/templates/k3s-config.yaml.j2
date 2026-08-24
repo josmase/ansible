@@ -1,0 +1,6 @@
+# Managed by ansible (platform/k3s_node_config). Local edits will be overwritten.
+# Runtime tuning decided after the 2026-08-23 storage incident.
+kubelet-arg:
+  - "eviction-hard={{ k8s_eviction_hard }}"
+  - "image-gc-high-threshold={{ k8s_image_gc_high_threshold }}"
+  - "image-gc-low-threshold={{ k8s_image_gc_low_threshold }}"

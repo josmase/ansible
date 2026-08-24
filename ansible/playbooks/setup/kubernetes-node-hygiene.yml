@@ -1,0 +1,31 @@
+---
+# Kubernetes node runtime hygiene: kubelet args, inotify sysctls, OS housekeeping.
+#
+# Covers ALL cluster members (masters + workers + gpu) -- k3s_gpu_node is a child
+# of k3s_cluster in inventory/production.ini as of the 2026-08-24 normalization.
+#
+# serial: 1 -- a handler-driven k3s restart must never hit several masters in
+# parallel (etcd/API quorum).
+#
+# First codification run note: nodes already carry the desired values (applied
+# manually); the config template adds a managed-header comment, so expect the
+# file task to report changed once. With k3s_restart_enabled=false (default)
+# no restart follows -- correct, since the running kubelet already uses these
+# exact values.
+#
+# Scope safety: deliberately does NOT include platform/kubernetes -- that role's
+# nvme.yaml can trigger a reboot and multipath.yaml restarts multipathd.
+
+- name: Kubernetes node runtime hygiene
+  hosts: k3s_cluster
+  become: true
+  serial: 1
+  roles:
+    - role: platform/k3s_node_config
+      tags:
+        - k3s_config
+        - kubelet
+        - sysctl
+    - role: core/node_hygiene
+      tags:
+        - hygiene

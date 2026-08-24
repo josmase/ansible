@@ -1,0 +1,12 @@
+---
+# Guarded by k3s_restart_enabled (default false): nodes already run the desired
+# values; enable restarts only when actually changing thresholds.
+- name: Restart k3s
+  ansible.builtin.systemd:
+    name: "{{ k3s_service_name }}"
+    state: restarted
+  when: k3s_restart_enabled | bool
+
+- name: Reload sysctl
+  ansible.builtin.command: sysctl --system
+  changed_when: true
