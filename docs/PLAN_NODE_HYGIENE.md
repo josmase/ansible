@@ -179,30 +179,44 @@ actually executed on k3s hosts, remove the hand-made drop-ins to avoid dual mana
 
 ---
 
-## 4. Blocking issue: base.yml runtime quirk on k3s hosts (diagnose first)
+## 4. ~~Blocking issue~~ RESOLVED: the "base.yml runtime quirk" was a misdiagnosis
 
-Observed 2026-08-24 from the jumphost (`~/repo/ansible`, commit 71411bc):
-`ansible-playbook playbooks/setup/base.yml --tags logging --limit <k3s host>` printed the
-PLAY header, executed **zero tasks**, produced an **empty recap**, exit 0 — while
-`--list-hosts` showed the host matched and `ansible <host> -m ping` succeeded. Storage/media
-hosts ran fine in the same invocation.
+**Post-mortem (2026-08-25).** The original symptom — k3s hosts matching `--list-hosts`
+but vanishing from playbook output/recap under `--tags logging` — does **not reproduce**
+on current code. Controlled experiments:
 
-Diagnostics to run before relying on any new playbook:
-1. `ansible-playbook --version` — confirm ansible-core version (old cores have subtle
-   limit/group bugs).
-2. Single host, max verbosity: `ansible-playbook playbooks/setup/base.yml --limit 192.168.1.201 -vvvv`
-   and inspect whether tasks evaluate as skipped vs. hosts vanishing.
-3. Check for inventory-level oddities affecting IP-named hosts (the three groups that DID
-   work use DNS names; every failing host is a bare IP — test renaming one host in a scratch
-   inventory to confirm).
-4. Verify become credentials actually resolve for k3s hosts: the gpu node's sudo requires a
-   password, `ansible.cfg` sets `become_ask_pass=False`, so a vaulted
-   `ansible_become_pass` must exist for these groups — confirm with
-   `ansible 192.168.1.201 -m ping -b` (a become failure would surface as failed tasks,
-   though it does not alone explain the empty recap).
-5. Workaround if unresolvable quickly: always execute the new hygiene playbook directly
-   (`playbooks/setup/kubernetes-node-hygiene.yml`) instead of via base.yml tags — it targets
-   the k8s nodes explicitly and was exercised end-to-end at rollout time.
+1. **Full-output single-host run** (`base.yml --tags journald --limit
+   kubernetes-204.local.hejsan.xyz`, complete log captured): both journald tasks +
+   handler executed, recap `ok=3 changed=3 failed=0`, exit 0.
+2. **Minimal IP-vs-DNS reproduction** (scratch inventory with one bare-IP host and one
+   DNS-named host, identical tagged tasks): byte-for-byte identical behavior —
+   ansible-core 2.16.3 has **no naming bias**.
+
+**Root causes of the original observation** (three compounding factors):
+
+1. **Truncated output review.** The diagnostics piped through `tail -30` / inspected with
+   `head -30`. Ansible prints recap lines for *every* matched host; the k3s hosts' lines
+   were above/below the cut. "Hosts vanished" = lines I never looked at.
+2. **Control-node/VCS drift.** At diagnosis time the jumphost checkout (`71411bc`) had no
+   `logging_setup` role and no reference to it in `base.yml` — those existed only as
+   uncommitted WIP on the desktop. `--tags logging` therefore legitimately executed almost
+   nothing (tag-excluded tasks print *no output at all*, unlike condition-skips), producing
+   sparse logs that looked like silent failure.
+3. **Confounded expectations.** Sparse output + truncation were read together as "hosts are
+   being skipped by some mechanism", when each was independently mundane.
+
+**Guardrails adopted:**
+- Always capture full playbook output to a file and inspect the complete recap — never
+  diagnose from `tail`-truncated pipelines.
+- Before diagnosing runtime behavior, confirm control node and VCS are at the same commit
+  (`git status --short && git log -1` on both sides) — untracked roles/manifests silently
+  change what a playbook means.
+- Tag-excluded tasks emit no output; empty-looking runs under `--tags` usually mean the
+  tag selected nothing, not that hosts failed.
+
+No code change required. The dedicated hygiene playbook (§3.4) remains the preferred
+entry point regardless, since it targets `k3s_cluster` explicitly and carries its own
+serial/restart semantics.
 
 ## 5. Rollout sequence
 
