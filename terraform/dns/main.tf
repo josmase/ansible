@@ -3,7 +3,9 @@ terraform {
   required_providers {
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 5.0"
+      # v4 syntax (cloudflare_record) -- matches existing state (tf 1.13.1).
+      # v5 renamed resources to cloudflare_dns_record; migrate deliberately.
+      version = "~> 4.0"
     }
   }
 }
