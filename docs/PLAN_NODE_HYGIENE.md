@@ -206,6 +206,23 @@ Diagnostics to run before relying on any new playbook:
 
 ## 5. Rollout sequence
 
+> ## ✅ EXECUTED 2026-08-25 — all gates passed
+>
+> - Jumphost synced to `7c5da01`; become verified working (pre-existing
+>   `group_vars/all/vault.yml` on the jumphost supplies the sudo password).
+> - Terraform: provider pinned to v4, executed with terraform **1.13.1**
+>   (side-by-side at `~/bin/terraform131`; system default remains 1.5.2 — too old for
+>   `required_version >= 1.6`). All records applied/imported; final plan = "No changes".
+>   New `kubernetes-201..206.local.hejsan.xyz` records resolve via public DNS.
+> - Playbook: workers → gpu → masters one-at-a-time. Every node `ok=8 changed=4 failed=0`
+>   (config template + sysctl template + apt drop-in + snap retain), **no restarts**
+>   (`k3s_restart_enabled=false`), all nodes Ready after each stage.
+> - Idempotency: second run on workers = **changed=0**.
+> - Drift probe: deleted `/etc/sysctl.d/99-inotify.conf` on kn204 → re-run restored it
+>   (`changed=2`) → enforcement chain proven.
+>
+> Remaining: none for this plan. Follow-ups live in §7.
+
 | Step | Action | Gate |
 |---|---|---|
 | 1 | Implement §3 locally; `ansible-playbook --syntax-check`; yamllint | clean |
