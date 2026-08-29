@@ -14,6 +14,7 @@ services:
       - "{{ docker_data_dir }}/transmission:/config"
       - "{{ docker_storage_dir }}/downloads/:{{ docker_storage_dir }}/downloads/"
       - "{{ docker_storage_dir }}/downloads/:/downloads/"
+      - "{{ docker_storage_dir }}/downloads/watch:/watch"
 
     restart: always
 
