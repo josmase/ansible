@@ -118,7 +118,15 @@
         - "{{ docker_compose_dir }}"
         - "{{ docker_script_dir }}"
         - "{{ docker_data_dir }}"
-        - "{{ docker_storage_dir }}"
+
+    # docker_storage_dir is often an NFS mount point (e.g. /mnt/storage on
+    # media hosts) that must NOT be chgrp'd/chmod'd by this role -- it is owned
+    # and managed by nfs_client_setup. Create it if absent, but never force
+    # ownership/mode on it.
+    - name: Ensure docker storage directory exists
+      file:
+        path: "{{ docker_storage_dir }}"
+        state: directory
 
     - name: Add script templates
       template:
