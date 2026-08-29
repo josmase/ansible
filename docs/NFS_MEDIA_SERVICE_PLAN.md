@@ -9,8 +9,12 @@ check, log-watcher). The **ansible** media service (Docker hosts `media.local.he
 alerting.
 
 This plan brings the ansible media service up to a comparable level of resilience, scoped to
-the ansible repo. **Phase A and Phase B are implemented** (2026-08-29); Phase C and D are
-deferred.
+the ansible repo. **Phase A and Phase B are implemented and deployed** (2026-08-29); Phase C
+and D are deferred.
+
+> **Deployment status (2026-08-29):** Phase A + B fully deployed and verified on
+> `media.local.hejsan.xyz` (192.168.1.105). See §8 for the deployment record, including four
+> additional pre-existing bugs found and fixed during rollout.
 
 Related docs (flux repo): `docs/INCIDENT_2026-08-23_GPU_NODE_STORAGE.md`,
 `docs/PREVENTION_PLAN_GPU_NODE_STORAGE.md`, `.omo/plans/nfs-stale-recovery-plan.md`,
@@ -142,18 +146,18 @@ Kept on the existing hourly timer.
 
 ## 6. Rollout sequence
 
-| Step | Action | Gate |
-|---|---|---|
-| 1 | `ansible-playbook --syntax-check` on `base.yml` + `storage.yml`; `bash -n` on all scripts | clean |
-| 2 | Add `vault_gotify_token` to `inventory/group_vars/all/vault.yml` | token present |
-| 3 | Commit & push; `git pull` on jumphost | jumphost at HEAD |
-| 4 | Run `storage.yml` (NFS client) on `media_services` → applies hardened mount opts | mount shows new opts (`mount | grep /mnt/storage`) |
-| 5 | Run `base.yml --tags docker` on `media_services` → deploys scripts + timers | `nfsStaleRecovery.timer` active; scripts present |
-| 5b | Verify storage-dir override: `docker inspect` a media container's mounts, or check rendered compose, shows `/mnt/storage/files` (not `/opt/docker/storage/files`) | bind-mounts point at `/mnt/storage` |
-| 5c | If `/opt/docker/storage` was an unmanaged symlink to `/mnt/storage`, remove it (now redundant) | symlink gone |
-| 6 | Verify timer fires: `systemctl list-timers nfsStaleRecovery`; check journal for "No NFS issues found" | timer runs clean |
-| 7 | Idempotency: re-run same commands | second run changed=0 |
-| 8 | Drift probe: `systemctl stop nfsStaleRecovery.timer`, re-run playbook, confirm re-enabled | converged |
+| Step | Action | Gate | Status |
+|---|---|---|---|
+| 1 | `ansible-playbook --syntax-check` on `base.yml` + `storage.yml`; `bash -n` on all scripts | clean | ✅ done |
+| 2 | Add `vault_gotify_token` to `inventory/group_vars/all/vault.yml` | token present | ⏳ pending (user) |
+| 3 | Commit & push; `git pull` on jumphost | jumphost at HEAD | ✅ done |
+| 4 | Run `storage.yml` (NFS client) on `media_services` → applies hardened mount opts | mount shows new opts (`mount | grep /mnt/storage`) | ✅ done |
+| 5 | Run `base.yml --tags docker` on `media_services` → deploys scripts + timers | `nfsStaleRecovery.timer` active; scripts present | ✅ done |
+| 5b | Verify storage-dir override: `docker inspect` a media container's mounts, or check rendered compose, shows `/mnt/storage/files` (not `/opt/docker/storage/files`) | bind-mounts point at `/mnt/storage` | ✅ done |
+| 5c | If `/opt/docker/storage` was an unmanaged symlink to `/mnt/storage`, remove it (now redundant) | symlink gone | ✅ done (was a real empty local dir, not a symlink — left in place) |
+| 6 | Verify timer fires: `systemctl list-timers nfsStaleRecovery`; check journal for "No NFS issues found" | timer runs clean | ✅ done (timer fired 17:40:01) |
+| 7 | Idempotency: re-run same commands | second run changed=0 | ⏳ pending |
+| 8 | Drift probe: `systemctl stop nfsStaleRecovery.timer`, re-run playbook, confirm re-enabled | converged | ⏳ pending |
 
 **First-run expectations:** the hardened mount options differ from the current
 `defaults,_netdev`, so step 4 **will** report the mount task as `changed` — correct, not
@@ -168,12 +172,55 @@ drift. The new scripts/timers are additive; no existing behavior is removed.
   `docker_storage_dir: /mnt/storage` is now overridden in
   `inventory/group_vars/media_services/docker.yml`, so the compose bind-mounts and the NFS
   recovery scripts (`start.sh`, `staleFileHandleHandler.sh`, `nfsStaleRecovery.sh`) all point
-  at the real NFS mount. **Verify on the live hosts** that `/opt/docker/storage` was not an
-  unmanaged symlink to `/mnt/storage` (if it was, the symlink is now redundant and can be
-  removed).
+  at the real NFS mount. **Verified on the live host** that `/opt/docker/storage` is a real
+  (empty) local dir on the root disk, **not** a symlink — left in place (harmless, unused).
 - The `storage.mount` group var in `inventory/group_vars/media_services/storage.yml`
   (`defaults` + `_netdev`) is validated by `variable_validation` but not consumed by
   `nfs_client_setup`; consider reconciling it with the hardened options or removing it.
 - `docker_nfs_enabled` is true but the AppArmor profile in `docker_setup/tasks/nfs.yml` /
   `nfs.yml` compose template is commented out — confirm whether the profile should be
   enabled (separate work item).
+
+---
+
+## 8. Deployment record (2026-08-29)
+
+Deployed to `media.local.hejsan.xyz` (192.168.1.105). Commits (all pushed to GitLab origin
+**and** GitHub mirror — the jumphost pulls from GitHub):
+
+| Commit | Change |
+|---|---|
+| `6e42527` | feat(nfs): harden media service NFS mount + add recovery agent and alerts (Phase A + B + Option A) |
+| `c36461c` | fix(nfs): correct docker_storage_dir precedence + user dict recursion |
+| `1c3cca1` | fix(nfs): don't chgrp NFS mount in docker_setup dir creation |
+| `b18a74a` | fix(nfs): set docker_registry_domain for media compose images |
+
+### Verified on the live host
+- NFS mount: `vers=4.1, timeo=30, retrans=3, actimeo=5, lookupcache=none, noatime, nodiratime, soft` (fstab + runtime).
+- `nfsStaleRecovery.timer` active, fired 17:40:01, next run in 5 min.
+- All three scripts (`start.sh`, `staleFileHandleHandler.sh`, `nfsStaleRecovery.sh`) have `STORAGE_DIR=/mnt/storage`.
+- `transmission` container recreated via compose with `/mnt/storage/downloads` bind-mounts + correct registry image.
+
+### Pre-existing bugs found & fixed during rollout (not part of the original Phase A/B scope)
+1. **`docker_storage_dir` precedence bug** — play-level `vars/docker.yml` overrode the
+   `media_services` group_var, so the storage-dir override never applied. Fixed by removing
+   `docker_storage_dir` from `playbooks/setup/vars/docker.yml`.
+2. **`user` dict recursion bug** — `user.group: "{{ user.name }}"` / `user.gid: "{{ user.uid }}"`
+   self-referenced → Ansible `recursive loop detected in template string` blocked compose
+   deployment. Fixed with plain `ubuntu`/`1000` in `inventory/group_vars/all/main.yml`.
+3. **NFS mount chgrp failure** — `docker_setup` "Create docker directories" tried to
+   chgrp/chmod `/mnt/storage` (root-squashed NFS mount) → `chgrp failed`. Split storage-dir
+   creation into its own task that only ensures existence (no ownership/mode forcing).
+4. **Empty `docker_registry_domain`** — compose templates reference the flat
+   `docker_registry_domain` var, which defaulted to `""`, producing invalid image refs
+   (`/linuxserver/transmission`) that blocked `docker compose up`. Mapped it to
+   `docker.registry.domain` (`artifactory.local.hejsan.xyz/docker`) in
+   `inventory/group_vars/media_services/docker.yml`.
+
+### Remaining follow-ups
+- **`vault_gotify_token`** not yet added to `inventory/group_vars/all/vault.yml` — alerts are
+  silent until added (script logs a warning and skips the POST).
+- **Second media host `192.168.1.213`** unreachable ("No route to host") — needs the same
+  deployment once reachable; investigate connectivity.
+- **Storage pool ~97% full** (3.2T free of 105T) — Phase D (storage-side remediation) deferred.
+- Idempotency (step 7) and drift probe (step 8) not yet run.
