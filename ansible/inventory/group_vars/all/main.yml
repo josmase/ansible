@@ -7,11 +7,15 @@ ansible_sudo_pass: "{{ vault_default_sudo_pass }}"
 x_ansible_download_dir: /tmp
 
 # User and Group Settings
+# NOTE: group/gid are plain values, NOT self-references ({{ user.name }} /
+# {{ user.uid }}). Self-referencing keys in the same dict cause an Ansible
+# "recursive loop detected in template string" error when the dict is templated
+# (e.g. docker_template_setup owner/group).
 user:
   name: ubuntu
-  group: "{{ user.name }}"
+  group: ubuntu
   uid: 1000
-  gid: "{{ user.uid }}"
+  gid: 1000
 
 # SSH Key Settings
 private_key_dest_dir: ~/.ssh/id_rsa.initramfs_{{ inventory_hostname }}/

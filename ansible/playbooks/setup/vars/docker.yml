@@ -3,7 +3,10 @@ docker_user: "{{ ansible_user }}"
 docker_compose_dir: "/opt/docker/compose"
 docker_script_dir: "/opt/docker/scripts"
 docker_data_dir: "/opt/docker/data"
-docker_storage_dir: "/opt/docker/storage"
+# NOTE: docker_storage_dir is intentionally NOT set here. Setting it at play
+# level (vars_files) would override group_vars (higher precedence), defeating
+# the media_services override (docker_storage_dir=/mnt/storage). Non-media
+# docker hosts fall back to the role default (/opt/docker/storage).
 docker_script_templates:
   - "common"
   - "maintenance"
