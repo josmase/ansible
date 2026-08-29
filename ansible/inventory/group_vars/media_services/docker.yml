@@ -1,5 +1,9 @@
 ---
 docker_data_dir: /opt/docker/data
+# Registry domain for container images. The compose templates reference the
+# flat docker_registry_domain var; map it to the nested docker.registry.domain
+# (artifactory.local.hejsan.xyz/docker) so images pull from the local registry.
+docker_registry_domain: "{{ docker.registry.domain }}"
 # Storage dir for media containers. Must match the NFS mount applied by
 # nfs_client_setup (system.storage_dir = /mnt/storage). Overrides the
 # /opt/docker/storage default so compose bind-mounts and the NFS recovery
