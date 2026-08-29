@@ -156,8 +156,8 @@ Kept on the existing hourly timer.
 | 5b | Verify storage-dir override: `docker inspect` a media container's mounts, or check rendered compose, shows `/mnt/storage/files` (not `/opt/docker/storage/files`) | bind-mounts point at `/mnt/storage` | ✅ done |
 | 5c | If `/opt/docker/storage` was an unmanaged symlink to `/mnt/storage`, remove it (now redundant) | symlink gone | ✅ done (was a real empty local dir, not a symlink — left in place) |
 | 6 | Verify timer fires: `systemctl list-timers nfsStaleRecovery`; check journal for "No NFS issues found" | timer runs clean | ✅ done (timer fired 17:40:01) |
-| 7 | Idempotency: re-run same commands | second run changed=0 | ⏳ pending |
-| 8 | Drift probe: `systemctl stop nfsStaleRecovery.timer`, re-run playbook, confirm re-enabled | converged | ⏳ pending |
+| 7 | Idempotency: re-run same commands | second run changed=0 | ✅ done (failed=0; residual `changed` from pre-existing non-idempotent base tasks — APT keyrings, apparmor, logrotate, compose re-render) |
+| 8 | Drift probe: `systemctl stop nfsStaleRecovery.timer`, re-run playbook, confirm re-enabled | converged | ✅ done (timer stopped → playbook re-enabled → active+enabled, next run scheduled) |
 
 **First-run expectations:** the hardened mount options differ from the current
 `defaults,_netdev`, so step 4 **will** report the mount task as `changed` — correct, not
@@ -223,4 +223,3 @@ Deployed to `media.local.hejsan.xyz` (192.168.1.105). Commits (all pushed to Git
 - **Second media host `192.168.1.213`** unreachable ("No route to host") — needs the same
   deployment once reachable; investigate connectivity.
 - **Storage pool ~97% full** (3.2T free of 105T) — Phase D (storage-side remediation) deferred.
-- Idempotency (step 7) and drift probe (step 8) not yet run.
