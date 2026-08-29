@@ -35,6 +35,7 @@ docker_script_templates:
   - start
   - update
   - staleFileHandleHandler
+  - nfsStaleRecovery
 
 # Timer Configuration
 docker_timer_dir: /etc/systemd/system
@@ -44,3 +45,9 @@ docker_timers:
     schedule: "*-*-* 04:00:00"  # Daily at 4 AM
   - name: staleFileHandleHandler
     schedule: "*-*-* *:00:00"   # Every hour
+  - name: nfsStaleRecovery
+    schedule: "*-*-* *:00/5:00" # Every 5 minutes
+
+# NFS Alert Configuration (Gotify)
+nfs_alert_gotify_url: "https://gotify.local.hejsan.xyz/message"
+nfs_alert_gotify_priority: 5

@@ -1,0 +1,12 @@
+---
+# NFS client mount options
+# =========================
+# Hardened options tuned for a shared, root-squashed NFS export with many
+# concurrent clients (media services). Mirrors the proven Jellyfin media PV
+# mount options in the flux repo:
+#   - soft + bg + intr : fail fast instead of hanging on server blips
+#   - timeo=30         : 3s timeout (fail faster)
+#   - actimeo=5        : short attribute cache to avoid stale handles
+#   - lookupcache=none : no positive dentry cache -> re-fetch from server
+# Override per-host/group by setting nfs_client_mount_opts.
+nfs_client_mount_opts: "soft,bg,intr,nfsvers=4.1,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none,noatime,nodiratime"

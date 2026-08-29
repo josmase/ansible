@@ -1,0 +1,6 @@
+[Unit]
+Description=Runs the NFS stale mount recovery agent
+
+[Service]
+Type=oneshot
+ExecStart={{ docker_script_dir }}/nfsStaleRecovery.sh

@@ -1,0 +1,9 @@
+[Unit]
+Description=Schedule to run the NFS stale mount recovery agent
+
+[Timer]
+Persistent=true
+OnCalendar={{ item.schedule }}
+
+[Install]
+WantedBy=timers.target

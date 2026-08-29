@@ -8,6 +8,7 @@ docker_script_templates:
   - "common"
   - "maintenance"
   - "staleFileHandleHandler"
+  - "nfsStaleRecovery"
   - "start"
   - "stop"
   - "update"

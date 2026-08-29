@@ -54,6 +54,7 @@ scripts:
     - start
     - update
     - staleFileHandleHandler
+    - nfsStaleRecovery
 
 # System Timer Configuration
 timers:
@@ -61,6 +62,7 @@ timers:
   jobs:
     - maintenance
     - staleFileHandleHandler
+    - nfsStaleRecovery
 
 services:
   templates: []

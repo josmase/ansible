@@ -1,5 +1,10 @@
 ---
 docker_data_dir: /opt/docker/data
+# Storage dir for media containers. Must match the NFS mount applied by
+# nfs_client_setup (system.storage_dir = /mnt/storage). Overrides the
+# /opt/docker/storage default so compose bind-mounts and the NFS recovery
+# scripts all point at the real NFS mount.
+docker_storage_dir: /mnt/storage
 docker_puid: 1000
 docker_pgid: 1000
 timezone: "Europe/Stockholm"

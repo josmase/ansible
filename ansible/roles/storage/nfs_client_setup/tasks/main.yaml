@@ -35,5 +35,5 @@
     path: "{{ nfs_mount_point }}"
     src: "{{ nfs_mount_src }}"
     fstype: nfs
-    opts: soft,lock,vers=4
+    opts: "{{ nfs_client_mount_opts }}"
   when: nfs_mount_point is defined and nfs_mounts is not defined

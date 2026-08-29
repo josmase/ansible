@@ -7,13 +7,15 @@ ffmpeg_hw_accel_type: nvidia
 nvidia_driver_version: "535"
 
 # NFS Configuration
+# Hardened mount options (mirrors flux Jellyfin media PV):
+# soft,bg,intr,nfsvers=4.1,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none
 nfs_mounts:
   - mount_point: /mnt/jellyfin-cache
     nfs_src: "storage.local.hejsan.xyz:/kubernetes/jellyfin-cache"
-    opts: "soft,lock,vers=4"
+    opts: "soft,bg,intr,nfsvers=4.1,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none,noatime,nodiratime"
   - mount_point: /mnt/storage/files
     nfs_src: "storage.local.hejsan.xyz:/files"
-    opts: "soft,lock,vers=4"
+    opts: "soft,bg,intr,nfsvers=4.1,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none,noatime,nodiratime"
 
 # Jellyfin User Configuration
 jellyfin_user: jellyfin
