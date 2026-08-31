@@ -50,7 +50,38 @@
     - docker
     - templates
     - support
+- name: Ensure Transmission config directory exists
+  file:
+    path: "{{ docker_data_dir }}/transmission"
+    state: directory
+    owner: "{{ docker_puid }}"
+    group: "{{ docker_pgid }}"
+    mode: "0755"
+  when: "'transmission' in services.templates"
 
+- name: Ensure Transmission download directories exist
+  file:
+    path: "{{ docker_storage_dir }}/downloads/{{ item }}"
+    state: directory
+    owner: "{{ docker_puid }}"
+    group: "{{ docker_pgid }}"
+    mode: "0755"
+  loop:
+    - complete
+    - incomplete
+    - watch
+  when: "'transmission' in services.templates"
+
+- templates'"
+
+- name: Deploy Transmission settings.json
+  template:
+    src: "transmission-settings.json.j2"
+    dest: "{{ docker_data_dir }}/transmission/settings.json"
+    owner: "{{ docker_puid }}"
+    group: "{{ docker_pgid }}"
+    mode: "0644"
+  when: "'transmission' in services.templates"
 - name: Start container services
   command: "{{ docker_script_dir }}/start.sh"
   when: compose_templates.changed
