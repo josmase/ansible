@@ -5,6 +5,9 @@
     state: present
   loop: "{{ packages }}"
 
+- name: Collect service state before changing mergerfs
+  ansible.builtin.service_facts:
+
 - name: Download mergerfs package
   become: true
   ansible.builtin.get_url:
@@ -17,6 +20,7 @@
   apt:
     deb: "/tmp/mergerfs_{{ merger_fs_version }}.deb"
     state: present
+  notify: Restart NFS server after mergerfs change
 
 #- name: Create the `aur_builder` user
 #  become: true
@@ -52,3 +56,4 @@
     src: "{{ merger_fs_mnt_src }}"
     fstype: fuse.mergerfs
     opts: "{{ merger_fs_mnt_opt }}"
+  notify: Restart NFS server after mergerfs change

@@ -1,0 +1,9 @@
+---
+- name: Restart NFS server after mergerfs change
+  become: true
+  ansible.builtin.service:
+    name: nfs-server
+    state: restarted
+  when:
+    - "'nfs-server.service' in ansible_facts.services"
+    - "ansible_facts.services['nfs-server.service'].state == 'running'"
