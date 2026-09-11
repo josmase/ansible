@@ -2,8 +2,9 @@ packages:
   - fuse
   - libfuse2
 
-merger_fs_version: 2.34.1
-merger_fs_src: "https://github.com/trapexit/mergerfs/releases/download/{{ merger_fs_version }}/mergerfs_{{ merger_fs_version }}.ubuntu-focal_amd64.deb"
+merger_fs_version: 2.42.0
+merger_fs_ubuntu_release: "{{ ansible_distribution_release | default('noble') }}"
+merger_fs_src: "https://github.com/trapexit/mergerfs/releases/download/{{ merger_fs_version }}/mergerfs_{{ merger_fs_version }}.ubuntu-{{ merger_fs_ubuntu_release }}_amd64.deb"
 
 
 #merger_fs_mnt_opt: defaults,nonempty,allow_other,use_ino,cache.files=off,moveonenospc=true,dropcacheonclose=true,minfreespace=200G,fsname=mergerfs
@@ -43,4 +44,3 @@ snapraid_compile_dir: /opt/snapraid
 snapraid_conf_dir: /opt/snapraid_conf
 
 crypttab_name_prefix: automapped
-

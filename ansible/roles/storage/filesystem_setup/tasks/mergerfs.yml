@@ -5,10 +5,17 @@
     state: present
   loop: "{{ packages }}"
 
-- name: Get merger fs
+- name: Download mergerfs package
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ merger_fs_src }}"
+    dest: "/tmp/mergerfs_{{ merger_fs_version }}.deb"
+    mode: '0644'
+
+- name: Install mergerfs package
   become: true
   apt:
-    deb: "{{ merger_fs_src }}"
+    deb: "/tmp/mergerfs_{{ merger_fs_version }}.deb"
     state: present
 
 #- name: Create the `aur_builder` user
