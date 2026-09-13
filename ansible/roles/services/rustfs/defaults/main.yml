@@ -1,0 +1,22 @@
+---
+rustfs_image: "rustfs/rustfs@sha256:8d8bfa61f3a20cdcf644562bb8c3a314ca03c66a9827f6056f741e787bf0c804"
+rustfs_cli_image: "rustfs/rc@sha256:9f4e5cd6e43576f2daaa5f6338827ef8296f5eb781175950b0bf62c92e983686"
+rustfs_compose_dir: /opt/rustfs
+rustfs_secret_dir: /etc/rustfs
+rustfs_data_dir: /mnt/storage/kubernetes/rustfs
+rustfs_bind_address: 127.0.0.1
+rustfs_api_port: 9000
+rustfs_console_port: 9001
+rustfs_uid: 10001
+rustfs_gid: 10001
+rustfs_required_mount: /mnt/storage
+rustfs_required_fstype: fuse.mergerfs
+rustfs_minimum_free_bytes: 2199023255552
+rustfs_region: us-east-1
+rustfs_backup_bucket: linstor-backups
+rustfs_backup_bucket_quota: 1T
+rustfs_backup_policy: linstor-backups
+rustfs_root_access_key: ""
+rustfs_root_secret_key: ""
+rustfs_backup_access_key: ""
+rustfs_backup_secret_key: ""

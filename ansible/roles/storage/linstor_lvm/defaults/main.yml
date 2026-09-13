@@ -1,0 +1,11 @@
+---
+linstor_lvm_initialize: false
+linstor_lvm_confirmation: ""
+linstor_lvm_expected_serial: ""
+linstor_lvm_expected_size_bytes: 68719476736
+linstor_lvm_size_tolerance_bytes: 16777216
+linstor_lvm_vg_name: linstor_pilot_vg
+linstor_lvm_thinpool_name: linstor_pilot_thin
+linstor_lvm_thinpool_size: 56g
+linstor_lvm_thinpool_metadata_size: 1g
+

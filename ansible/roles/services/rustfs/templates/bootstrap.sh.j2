@@ -1,0 +1,36 @@
+#!/bin/sh
+set -eu
+
+root_access="$(tr -d '\r\n' < /bootstrap/root-access-key)"
+root_secret="$(tr -d '\r\n' < /bootstrap/root-secret-key)"
+backup_access="$(tr -d '\r\n' < /bootstrap/backup-access-key)"
+backup_secret="$(tr -d '\r\n' < /bootstrap/backup-secret-key)"
+endpoint="http://{{ rustfs_bind_address }}:{{ rustfs_api_port }}"
+
+rc alias set root "$endpoint" "$root_access" "$root_secret" \
+  --region "{{ rustfs_region }}" --bucket-lookup path >/dev/null
+
+if [ "${1:-reconcile}" = "verify" ]; then
+  rc admin user info root "$backup_access" >/dev/null
+  rc admin policy info root "{{ rustfs_backup_policy }}" >/dev/null
+  rc bucket quota info "root/{{ rustfs_backup_bucket }}" >/dev/null
+  rc alias set scoped "$endpoint" "$backup_access" "$backup_secret" \
+    --region "{{ rustfs_region }}" --bucket-lookup path >/dev/null
+  rc bucket list "scoped/{{ rustfs_backup_bucket }}" >/dev/null
+  exit 0
+fi
+
+rc bucket create "root/{{ rustfs_backup_bucket }}" --ignore-existing >/dev/null
+rc bucket quota set "root/{{ rustfs_backup_bucket }}" "{{ rustfs_backup_bucket_quota }}" >/dev/null
+
+if ! rc admin user info root "$backup_access" >/dev/null 2>&1; then
+  rc admin user add root "$backup_access" "$backup_secret" >/dev/null
+  echo "CREATED:user"
+fi
+
+if ! rc admin policy info root "{{ rustfs_backup_policy }}" >/dev/null 2>&1; then
+  rc admin policy create root "{{ rustfs_backup_policy }}" /bootstrap/linstor-backups-policy.json >/dev/null
+  echo "CREATED:policy"
+fi
+
+rc admin policy attach root "{{ rustfs_backup_policy }}" --user "$backup_access" >/dev/null

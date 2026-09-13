@@ -1,0 +1,180 @@
+---
+- name: Validate required RustFS configuration
+  ansible.builtin.assert:
+    that:
+      - rustfs_bind_address != "127.0.0.1"
+      - rustfs_root_access_key | length >= 16
+      - rustfs_root_secret_key | length >= 32
+      - rustfs_backup_access_key | length >= 16
+      - rustfs_backup_secret_key | length >= 32
+      - rustfs_root_access_key != rustfs_backup_access_key
+    fail_msg: "Set a non-loopback bind address and encrypted RustFS credentials."
+  no_log: true
+
+- name: Read the required storage mount
+  ansible.builtin.command:
+    argv: [findmnt, --json, --target, "{{ rustfs_required_mount }}", --output, "TARGET,FSTYPE,SOURCE,AVAIL", --bytes]
+  register: rustfs_mount
+  changed_when: false
+  check_mode: false
+
+- name: Validate the live mergerfs mount and capacity floor
+  ansible.builtin.assert:
+    that:
+      - (rustfs_mount.stdout | from_json).filesystems | length == 1
+      - (rustfs_mount.stdout | from_json).filesystems[0].target == rustfs_required_mount
+      - (rustfs_mount.stdout | from_json).filesystems[0].fstype == rustfs_required_fstype
+      - ((rustfs_mount.stdout | from_json).filesystems[0].avail | int) >= (rustfs_minimum_free_bytes | int)
+    fail_msg: "RustFS requires the live mergerfs mount and the configured free-space floor."
+
+- name: Create RustFS directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ rustfs_compose_dir }}", owner: root, group: root, mode: "0755"}
+    - {path: "{{ rustfs_secret_dir }}", owner: root, group: "{{ rustfs_gid }}", mode: "0710"}
+    - {path: "{{ rustfs_data_dir }}", owner: "{{ rustfs_uid }}", group: "{{ rustfs_gid }}", mode: "0750"}
+
+- name: Install RustFS root credential files
+  ansible.builtin.copy:
+    content: "{{ item.value }}\n"
+    dest: "{{ rustfs_secret_dir }}/{{ item.name }}"
+    owner: "{{ rustfs_uid }}"
+    group: "{{ rustfs_gid }}"
+    mode: "0400"
+  loop:
+    - {name: root-access-key, value: "{{ rustfs_root_access_key }}"}
+    - {name: root-secret-key, value: "{{ rustfs_root_secret_key }}"}
+  no_log: true
+  notify: Restart RustFS
+
+- name: Install RustFS scoped backup credential files
+  ansible.builtin.copy:
+    content: "{{ item.value }}\n"
+    dest: "{{ rustfs_secret_dir }}/{{ item.name }}"
+    owner: "{{ rustfs_uid }}"
+    group: "{{ rustfs_gid }}"
+    mode: "0400"
+  loop:
+    - {name: backup-access-key, value: "{{ rustfs_backup_access_key }}"}
+    - {name: backup-secret-key, value: "{{ rustfs_backup_secret_key }}"}
+  no_log: true
+
+- name: Install the RustFS compose definition
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ rustfs_compose_dir }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart RustFS
+
+- name: Install the mergerfs-guarded RustFS service
+  ansible.builtin.template:
+    src: rustfs.service.j2
+    dest: /etc/systemd/system/rustfs.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart RustFS
+
+- name: Apply RustFS configuration handlers before readiness checks
+  ansible.builtin.meta: flush_handlers
+
+- name: Validate the RustFS compose definition
+  ansible.builtin.command:
+    argv: [docker, compose, --file, "{{ rustfs_compose_dir }}/compose.yml", config, --quiet]
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Enable and start RustFS
+  ansible.builtin.systemd_service:
+    name: rustfs
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: not ansible_check_mode
+
+- name: Wait for the RustFS API readiness endpoint
+  ansible.builtin.uri:
+    url: "http://{{ rustfs_bind_address }}:{{ rustfs_api_port }}/health/ready"
+    status_code: 200
+  register: rustfs_ready
+  retries: 30
+  delay: 2
+  until: rustfs_ready.status == 200
+  when: not ansible_check_mode
+
+- name: Wait for the RustFS console health endpoint
+  ansible.builtin.uri:
+    url: "http://{{ rustfs_bind_address }}:{{ rustfs_console_port }}/rustfs/console/health"
+    status_code: 200
+  register: rustfs_console_ready
+  retries: 30
+  delay: 2
+  until: rustfs_console_ready.status == 200
+  when: not ansible_check_mode
+
+- name: Install the LINSTOR backup bucket policy
+  ansible.builtin.template:
+    src: linstor-backups-policy.json.j2
+    dest: "{{ rustfs_secret_dir }}/linstor-backups-policy.json"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install the RustFS bootstrap script
+  ansible.builtin.template:
+    src: bootstrap.sh.j2
+    dest: "{{ rustfs_secret_dir }}/bootstrap.sh"
+    owner: "{{ rustfs_uid }}"
+    group: "{{ rustfs_gid }}"
+    mode: "0500"
+
+- name: Reconcile the backup bucket, quota, user, and policy
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - --rm
+      - --user
+      - "0:0"
+      - --network
+      - host
+      - --entrypoint
+      - /bin/sh
+      - --volume
+      - "{{ rustfs_secret_dir }}:/bootstrap:ro"
+      - "{{ rustfs_cli_image }}"
+      - /bootstrap/bootstrap.sh
+  register: rustfs_bootstrap
+  changed_when: "'CREATED:' in rustfs_bootstrap.stdout"
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Verify the scoped backup identity
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - --rm
+      - --user
+      - "0:0"
+      - --network
+      - host
+      - --entrypoint
+      - /bin/sh
+      - --volume
+      - "{{ rustfs_secret_dir }}:/bootstrap:ro"
+      - "{{ rustfs_cli_image }}"
+      - /bootstrap/bootstrap.sh
+      - verify
+  changed_when: false
+  no_log: true
+  when: not ansible_check_mode

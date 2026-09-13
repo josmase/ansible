@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: not ansible_check_mode
+
+- name: Restart RustFS
+  ansible.builtin.systemd_service:
+    name: rustfs
+    state: restarted
+  when: not ansible_check_mode

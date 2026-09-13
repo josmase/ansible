@@ -1,0 +1,8 @@
+---
+- name: Deploy RustFS backup storage
+  hosts: storage_servers
+  become: true
+  serial: 1
+  roles:
+    - role: services/rustfs
+

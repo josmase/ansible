@@ -1,0 +1,111 @@
+---
+- name: Require explicit destructive-operation inputs
+  ansible.builtin.assert:
+    that:
+      - linstor_lvm_expected_serial | length > 0
+      - linstor_lvm_initialize | bool
+      - linstor_lvm_confirmation == 'ERASE:' ~ inventory_hostname ~ ':' ~ linstor_lvm_expected_serial
+    fail_msg: "Pass initialize=true and the exact ERASE:<host>:<serial> confirmation."
+
+- name: Read block-device inventory
+  ansible.builtin.command:
+    argv: [lsblk, --json, --bytes, --output, "PATH,SERIAL,SIZE,TYPE,FSTYPE,MOUNTPOINTS,PKNAME"]
+  register: linstor_lvm_lsblk
+  changed_when: false
+  check_mode: false
+
+- name: Select the disk by exact serial
+  ansible.builtin.set_fact:
+    linstor_lvm_candidates: >-
+      {{
+        (linstor_lvm_lsblk.stdout | from_json).blockdevices
+        | selectattr('type', 'equalto', 'disk')
+        | selectattr('serial', 'defined')
+        | selectattr('serial', 'equalto', linstor_lvm_expected_serial)
+        | list
+      }}
+
+- name: Require exactly one correctly sized disk
+  ansible.builtin.assert:
+    that:
+      - linstor_lvm_candidates | length == 1
+      - ((linstor_lvm_candidates[0].size | int) - (linstor_lvm_expected_size_bytes | int)) | abs <= (linstor_lvm_size_tolerance_bytes | int)
+    fail_msg: "The exact serial/size disk guard did not match one device."
+
+- name: Record the guarded LINSTOR disk path
+  ansible.builtin.set_fact:
+    linstor_lvm_device: "{{ linstor_lvm_candidates[0].path }}"
+
+- name: Read root filesystem source
+  ansible.builtin.command:
+    argv: [findmnt, --noheadings, --output, SOURCE, /]
+  register: linstor_lvm_root_source
+  changed_when: false
+  check_mode: false
+
+- name: Read root filesystem parent disk
+  ansible.builtin.command:
+    argv: [lsblk, --noheadings, --output, PKNAME, "{{ linstor_lvm_root_source.stdout | trim }}"]
+  register: linstor_lvm_root_parent
+  changed_when: false
+  check_mode: false
+
+- name: Refuse the root disk and mounted devices
+  ansible.builtin.assert:
+    that:
+      - linstor_lvm_device != '/dev/' ~ (linstor_lvm_root_parent.stdout | trim)
+      - linstor_lvm_candidates[0].mountpoints | select | list | length == 0
+    fail_msg: "The guarded disk is the root disk or has a mounted filesystem."
+
+- name: Read existing volume groups
+  ansible.builtin.command:
+    argv: [vgs, --noheadings, --options, vg_name]
+  register: linstor_lvm_existing_vgs
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Inspect signatures before first initialization
+  ansible.builtin.command:
+    argv: [wipefs, --no-act, "{{ linstor_lvm_device }}"]
+  register: linstor_lvm_signatures
+  changed_when: false
+  when: linstor_lvm_vg_name not in (linstor_lvm_existing_vgs.stdout_lines | map('trim') | list)
+
+- name: Require an empty disk before first initialization
+  ansible.builtin.assert:
+    that:
+      - linstor_lvm_signatures.stdout | trim | length == 0
+    fail_msg: "The selected disk contains signatures; investigate instead of wiping automatically."
+  when: linstor_lvm_signatures is not skipped
+
+- name: Install LVM thin-provisioning tools
+  ansible.builtin.apt:
+    name: [lvm2, thin-provisioning-tools]
+    state: present
+    update_cache: true
+
+- name: Create the guarded LINSTOR volume group
+  community.general.lvg:
+    vg: "{{ linstor_lvm_vg_name }}"
+    pvs: "{{ linstor_lvm_device }}"
+    pvresize: true
+    state: present
+
+- name: Create the LINSTOR thin pool
+  community.general.lvol:
+    vg: "{{ linstor_lvm_vg_name }}"
+    thinpool: "{{ linstor_lvm_thinpool_name }}"
+    size: "{{ linstor_lvm_thinpool_size }}"
+    opts: "--poolmetadatasize {{ linstor_lvm_thinpool_metadata_size }}"
+    state: present
+
+- name: Report the resulting LINSTOR LVM layout
+  ansible.builtin.command:
+    argv: [lvs, --units, g, --all, --options, "vg_name,lv_name,lv_size,data_percent,metadata_percent"]
+  register: linstor_lvm_report
+  changed_when: false
+
+- name: Show the resulting LINSTOR LVM layout
+  ansible.builtin.debug:
+    var: linstor_lvm_report.stdout_lines

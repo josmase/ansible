@@ -15,3 +15,14 @@ mount:
   options:
     default: "defaults,noatime"
     encrypted: "defaults,noatime,discard"
+
+# RustFS S3 backup target. Secrets remain in the encrypted all-group vault.
+rustfs_bind_address: 192.168.1.102
+rustfs_data_dir: /mnt/storage/kubernetes/rustfs
+rustfs_backup_bucket: linstor-backups
+rustfs_backup_bucket_quota: 1T
+rustfs_region: us-east-1
+rustfs_root_access_key: "{{ vault_rustfs_root_access_key | default('') }}"
+rustfs_root_secret_key: "{{ vault_rustfs_root_secret_key | default('') }}"
+rustfs_backup_access_key: "{{ vault_rustfs_backup_access_key | default('') }}"
+rustfs_backup_secret_key: "{{ vault_rustfs_backup_secret_key | default('') }}"

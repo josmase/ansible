@@ -1,0 +1,8 @@
+---
+- name: Initialize guarded LINSTOR pilot disks
+  hosts: linstor_pilot_nodes
+  become: true
+  serial: 1
+  roles:
+    - role: storage/linstor_lvm
+
