@@ -1,0 +1,12 @@
+---
+linstor_storage_expected_serial: ""
+linstor_storage_expected_size_bytes: 805306368000
+linstor_storage_size_tolerance_bytes: 16777216
+linstor_storage_vg_name: linstor_vg
+linstor_storage_thinpool_name: linstor_thin
+linstor_storage_min_thinpool_bytes: 730144440320
+linstor_storage_min_metadata_bytes: 4294967296
+linstor_storage_min_vg_free_bytes: 64424509440
+linstor_storage_autoextend_profile: linstor_thin_autoextend
+linstor_storage_root_disk_min_bytes: 267361714176
+linstor_storage_root_disk_max_bytes: 269509197824

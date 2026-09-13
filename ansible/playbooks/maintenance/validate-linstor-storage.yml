@@ -1,0 +1,14 @@
+---
+- name: Validate converted permanent LINSTOR workers
+  hosts: linstor_final_nodes
+  become: true
+  serial: 1
+  vars:
+    linstor_storage_expected_serial: "linstor-data-{{ k8s_node_name | regex_replace('^kubernetes-node-', '') }}"
+  pre_tasks:
+    - name: Wait for the converted worker to accept SSH
+      ansible.builtin.wait_for_connection:
+        delay: 5
+        timeout: 300
+  roles:
+    - role: validation/linstor_storage

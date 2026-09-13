@@ -1,0 +1,14 @@
+---
+- name: Initialize guarded permanent LINSTOR disks
+  hosts: linstor_final_nodes
+  become: true
+  serial: 1
+  vars:
+    linstor_lvm_expected_serial: "linstor-data-{{ k8s_node_name | regex_replace('^kubernetes-node-', '') }}"
+    linstor_lvm_expected_size_bytes: 805306368000
+    linstor_lvm_vg_name: linstor_vg
+    linstor_lvm_thinpool_name: linstor_thin
+    linstor_lvm_thinpool_size: 680g
+    linstor_lvm_thinpool_metadata_size: 4g
+  roles:
+    - role: storage/linstor_lvm

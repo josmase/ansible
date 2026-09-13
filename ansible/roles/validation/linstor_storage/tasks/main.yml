@@ -1,0 +1,78 @@
+---
+- name: Require the expected permanent-disk serial
+  ansible.builtin.assert:
+    that:
+      - linstor_storage_expected_serial | length > 0
+    fail_msg: "Set the exact expected permanent LINSTOR disk serial."
+
+- name: Read block-device inventory
+  ansible.builtin.command:
+    argv: [lsblk, --json, --bytes, --output, "PATH,SERIAL,SIZE,TYPE,PKNAME,MOUNTPOINTS"]
+  register: linstor_storage_lsblk
+  changed_when: false
+  check_mode: false
+
+- name: Select the permanent data disk by exact serial
+  ansible.builtin.set_fact:
+    linstor_storage_candidates: >-
+      {{
+        (linstor_storage_lsblk.stdout | from_json).blockdevices
+        | selectattr('type', 'equalto', 'disk')
+        | selectattr('serial', 'defined')
+        | selectattr('serial', 'equalto', linstor_storage_expected_serial)
+        | list
+      }}
+
+- name: Read root filesystem source
+  ansible.builtin.command:
+    argv: [findmnt, --noheadings, --output, SOURCE, /]
+  register: linstor_storage_root_source
+  changed_when: false
+  check_mode: false
+
+- name: Read root filesystem parent disk
+  ansible.builtin.command:
+    argv: [lsblk, --noheadings, --output, PKNAME, "{{ linstor_storage_root_source.stdout | trim }}"]
+  register: linstor_storage_root_parent
+  changed_when: false
+  check_mode: false
+
+- name: Read root parent-disk size
+  ansible.builtin.command:
+    argv: [lsblk, --bytes, --noheadings, --output, SIZE, "/dev/{{ linstor_storage_root_parent.stdout | trim }}"]
+  register: linstor_storage_root_size
+  changed_when: false
+  check_mode: false
+
+- name: Read permanent volume-group capacity
+  ansible.builtin.command:
+    argv: [vgs, --units, b, --nosuffix, --noheadings, --separator, ",", --options, "vg_size,vg_free", "{{ linstor_storage_vg_name }}"]
+  register: linstor_storage_vg_report
+  changed_when: false
+  check_mode: false
+
+- name: Read permanent thin-pool capacity and profile
+  ansible.builtin.command:
+    argv: [lvs, --units, b, --nosuffix, --noheadings, --separator, ",", --options, "lv_size,metadata_size,metadata_profile", "{{ linstor_storage_vg_name }}/{{ linstor_storage_thinpool_name }}"]
+  register: linstor_storage_lv_report
+  changed_when: false
+  check_mode: false
+
+- name: Parse permanent LINSTOR storage reports
+  ansible.builtin.set_fact:
+    linstor_storage_vg_fields: "{{ linstor_storage_vg_report.stdout | trim | split(',') }}"
+    linstor_storage_lv_fields: "{{ linstor_storage_lv_report.stdout | trim | split(',') }}"
+
+- name: Validate the permanent boot and data layout
+  ansible.builtin.assert:
+    that:
+      - linstor_storage_candidates | length == 1
+      - ((linstor_storage_candidates[0].size | int) - (linstor_storage_expected_size_bytes | int)) | abs <= (linstor_storage_size_tolerance_bytes | int)
+      - linstor_storage_candidates[0].mountpoints | select | list | length == 0
+      - linstor_storage_root_size.stdout | trim | int >= linstor_storage_root_disk_min_bytes | int
+      - linstor_storage_root_size.stdout | trim | int <= linstor_storage_root_disk_max_bytes | int
+      - linstor_storage_vg_fields[1] | trim | float >= linstor_storage_min_vg_free_bytes | int
+      - linstor_storage_lv_fields[0] | trim | float >= linstor_storage_min_thinpool_bytes | int
+      - linstor_storage_lv_fields[1] | trim | float >= linstor_storage_min_metadata_bytes | int
+      - linstor_storage_lv_fields[2] | trim == linstor_storage_autoextend_profile
+    fail_msg: "The permanent LINSTOR boot/data layout failed validation."

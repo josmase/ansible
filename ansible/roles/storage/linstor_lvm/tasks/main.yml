@@ -100,6 +100,48 @@
     opts: "--poolmetadatasize {{ linstor_lvm_thinpool_metadata_size }}"
     state: present
 
+- name: Create the LVM profile directory
+  ansible.builtin.file:
+    path: /etc/lvm/profile
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: linstor_lvm_autoextend_enabled | bool
+
+- name: Configure LINSTOR thin-pool auto-extension
+  ansible.builtin.template:
+    src: thin_autoextend.profile.j2
+    dest: "/etc/lvm/profile/{{ linstor_lvm_autoextend_profile }}.profile"
+    owner: root
+    group: root
+    mode: "0644"
+  when: linstor_lvm_autoextend_enabled | bool
+
+- name: Read the thin-pool metadata profile
+  ansible.builtin.command:
+    argv:
+      - lvs
+      - --noheadings
+      - --options
+      - metadata_profile
+      - "{{ linstor_lvm_vg_name }}/{{ linstor_lvm_thinpool_name }}"
+  register: linstor_lvm_current_profile
+  changed_when: false
+  when: linstor_lvm_autoextend_enabled | bool
+
+- name: Attach the auto-extension profile to the thin pool
+  ansible.builtin.command:
+    argv:
+      - lvchange
+      - --metadataprofile
+      - "{{ linstor_lvm_autoextend_profile }}"
+      - "{{ linstor_lvm_vg_name }}/{{ linstor_lvm_thinpool_name }}"
+  when:
+    - linstor_lvm_autoextend_enabled | bool
+    - linstor_lvm_current_profile.stdout | trim != linstor_lvm_autoextend_profile
+  changed_when: true
+
 - name: Report the resulting LINSTOR LVM layout
   ansible.builtin.command:
     argv: [lvs, --units, g, --all, --options, "vg_name,lv_name,lv_size,data_percent,metadata_percent"]
