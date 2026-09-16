@@ -53,7 +53,7 @@
 
 - name: Read permanent thin-pool capacity and profile
   ansible.builtin.command:
-    argv: [lvs, --units, b, --nosuffix, --noheadings, --separator, ",", --options, "lv_size,metadata_size,metadata_profile", "{{ linstor_storage_vg_name }}/{{ linstor_storage_thinpool_name }}"]
+    argv: [lvs, --units, b, --nosuffix, --noheadings, --separator, ",", --options, "lv_size,metadata_size,lv_profile", "{{ linstor_storage_vg_name }}/{{ linstor_storage_thinpool_name }}"]
   register: linstor_storage_lv_report
   changed_when: false
   check_mode: false
