@@ -50,6 +50,18 @@
     - docker
     - templates
     - support
+
+- name: Remove disabled standalone Transmission container
+  community.docker.docker_container:
+    name: transmission
+    state: absent
+  when:
+    - "'transmission' not in services.templates"
+    - "'vpn' not in services.templates"
+  tags:
+    - docker
+    - cleanup
+
 - name: Ensure Transmission config directory exists
   file:
     path: "{{ docker_data_dir }}/transmission"
@@ -71,8 +83,6 @@
     - incomplete
     - watch
   when: "'transmission' in services.templates"
-
-- templates'"
 
 - name: Deploy Transmission settings.json
   template:
