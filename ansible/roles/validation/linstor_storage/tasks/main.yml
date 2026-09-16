@@ -39,7 +39,7 @@
 
 - name: Read root parent-disk size
   ansible.builtin.command:
-    argv: [lsblk, --bytes, --noheadings, --output, SIZE, "/dev/{{ linstor_storage_root_parent.stdout | trim }}"]
+    argv: [lsblk, --bytes, --nodeps, --noheadings, --output, SIZE, "/dev/{{ linstor_storage_root_parent.stdout | trim }}"]
   register: linstor_storage_root_size
   changed_when: false
   check_mode: false
