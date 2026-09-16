@@ -124,7 +124,7 @@
       - lvs
       - --noheadings
       - --options
-      - metadata_profile
+      - lv_profile
       - "{{ linstor_lvm_vg_name }}/{{ linstor_lvm_thinpool_name }}"
   register: linstor_lvm_current_profile
   changed_when: false
