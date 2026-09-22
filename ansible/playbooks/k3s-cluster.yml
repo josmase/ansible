@@ -1,0 +1,5 @@
+---
+# Cluster installation and reconciliation are implemented by the pinned
+# k3s-ansible submodule. Run this wrapper from the ansible/ directory so its
+# ansible.cfg, production inventory, Vault password, and upstream roles apply.
+- import_playbook: ../../vendor/k3s-ansible/site.yml

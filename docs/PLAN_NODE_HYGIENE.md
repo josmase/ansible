@@ -266,32 +266,32 @@ included here as a git submodule at `vendor/k3s-ansible`, pinned to
 `2fad0a8db698b320a5440d4506f1ffb543402182` — the exact commit used to build the current
 cluster (k3s v1.30.2+k3s2).
 
-**Where things actually live:** the working checkout is on the jumphost at
-`~/repo/k3s-ansible` (ubuntu@ansible.local.hejsan.xyz). Its site-specific inventory,
-`inventory/my-cluster/`, is **gitignored upstream** and therefore exists *only on the
-jumphost*:
+**Authoritative configuration:** the parent repository now owns the site-specific
+inventory and variables. The upstream installer remains pinned as a submodule; it does
+not contain local configuration:
 
 | File | Contents of note |
 |---|---|
-| `inventory/my-cluster/hosts.ini` | masters 192.168.1.201–203, nodes .204–206 + `gpu.local.hejsan.xyz` |
-| `inventory/my-cluster/group_vars/all.yml` | k3s version, kube-vip endpoint `192.168.1.200`, **`k3s_token` (plaintext secret)**, flannel iface, master taint `node-role.kubernetes.io/master=true:NoSchedule`, `--disable traefik servicelb` (both come from Flux instead) |
-| `kubeconfig` | cluster-admin kubeconfig (gitignored) |
+| `ansible/inventory/production.ini` | masters 192.168.1.201–203, nodes .204–206, GPU node, and upstream-compatible `master`/`node` aliases |
+| `ansible/inventory/group_vars/k3s_cluster/vars.yml` | k3s version, kube-vip endpoint `192.168.1.200`, Flannel, MetalLB, taint, and disabled built-in Traefik/ServiceLB settings |
+| `ansible/inventory/group_vars/k3s_cluster/vault.yml` | vault-encrypted `k3s_token` and cluster secrets |
+| `ansible/playbooks/k3s-cluster.yml` | wrapper importing the pinned submodule's `site.yml` |
+| `ansible/kubeconfig` | generated cluster-admin kubeconfig (gitignored) |
 
-Operational scripts in that checkout: `deploy.sh` (site.yml), `reset.yml` (full teardown),
-`reboot.yml`.
+Run the installer from the parent repository with
+`cd ansible && ansible-playbook playbooks/k3s-cluster.yml`. The legacy
+`~/repo/k3s-ansible/inventory/my-cluster/` checkout on the jump host is no longer the
+authoritative source and can be retired after a successful check-mode comparison.
 
 **Consequences / rules:**
-1. This repo manages the cluster *after* install (Flux for workloads, this repo for node
-   config). Node rebuild/reinstall = run k3s-ansible from the jumphost, not anything here.
-2. The jumphost's `my-cluster/` inventory is the **only copy** of the k3s token and install
-   parameters. Recommended follow-up: keep a vault-encrypted copy under
-   `ansible/inventory/group_vars/` (or a backup) so the cluster is recoverable if the
-   jumphost dies.
- 3. Upgrading the toolkit = `cd vendor/k3s-ansible && git fetch && git checkout <new-tag>`
-    in a commit of its own; never let it float to master automatically.
- 4. Because `my-cluster/hosts.ini` uses bare IPs while this repo's inventory names hosts by
-    hostname/IP, the two inventories are related but not identical. Name mapping (after the
-    2026-08-24 normalization):
+1. Flux manages workloads; the parent Ansible repository manages both cluster installation
+   and ongoing node configuration.
+2. Node rebuild/reinstall uses `ansible/playbooks/k3s-cluster.yml`; do not create another
+   gitignored site inventory inside the submodule.
+3. Upgrading the toolkit = `cd vendor/k3s-ansible && git fetch && git checkout <new-tag>`
+   in a commit of its own; never let it float to master automatically.
+4. The parent inventory uses stable DNS names with explicit `ansible_host` addresses. Name
+   mapping (after the 2026-08-24 normalization):
 
     | This repo's inventory | ansible_host | Kubernetes node name | k3s service |
     |---|---|---|---|
@@ -315,15 +315,13 @@ Operational scripts in that checkout: `deploy.sh` (site.yml), `reset.yml` (full 
 4. **DNS records** added to `terraform/dns/main.tf`: `kubernetes-201..206.local` →
    .201–.206 (optional `kubernetes-119.local` left commented). ⚠️ Records are *code only*
    until `terraform apply` runs with the Cloudflare token/state.
-5. **Secrets:** `k3s_token` from the gitignored k3s-ansible inventory is now vaulted at
+5. **Secrets:** `k3s_token` is vaulted at
    `ansible/inventory/group_vars/k3s_cluster/vault.yml` (encrypted with the repo's
    `.vault_pass` on the jumphost); non-secret install parameters are in `vars.yml`.
    Decryption requires the jumphost's `.vault_pass`.
 
 ## 7. Out of scope / follow-ups
 
-- Vault-encrypted backup of `k3s-ansible/inventory/my-cluster/` (see §6.2) — the cluster's
-  install parameters and token currently have a single point of failure (the jumphost).
 - Longhorn settings remain Flux-managed (do not duplicate here).
 - Recurring Artifactory crash-loops (2× in 2 days) — separate investigation.
 - GPU-node inotify/journald/kubelet-arg values were applied manually on 2026-08-24; §3
