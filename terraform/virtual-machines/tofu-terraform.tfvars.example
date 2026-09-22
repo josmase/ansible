@@ -1,0 +1,6 @@
+proxmox_endpoint = "https://192.168.1.100:8006/"
+proxmox_username = "root@pam"
+proxmox_password = "REPLACE_ME"
+ubuntu_image_sha256 = "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354"
+image_storage = "local"
+ssh_public_key = "ssh-rsa REPLACE_ME"

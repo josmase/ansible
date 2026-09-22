@@ -90,6 +90,9 @@ class MyStack extends TerraformStack {
       ip_address: `${subnet}.${id}`,
       memory: 15000,
       template: ubuntuTemplateLarge.value,
+      boot_disk_size: "250G",
+      data_disk_size: "750G",
+      disk_storage: "Kubernetes",
     } as VirtualMachine;
   }
 
