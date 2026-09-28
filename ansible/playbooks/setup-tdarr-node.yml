@@ -1,0 +1,16 @@
+---
+- name: Deploy the external Tdarr Node
+  hosts: tdarr_external_nodes
+  become: true
+  roles:
+    - role: container/docker_setup
+      vars:
+        docker_setup_enabled: true
+        docker_nfs_enabled: false
+    - role: services/tdarr_node
+  post_tasks:
+    - name: Print deployment command
+      ansible.builtin.debug:
+        msg: >-
+          Tdarr Node deployed. Verify it appears as '{{ tdarr_node_name }}'
+          in the Tdarr Server UI at {{ tdarr_server_url | regex_replace(':8266$', ':8265') }}.

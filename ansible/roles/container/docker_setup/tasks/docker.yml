@@ -1,5 +1,20 @@
 - name: Update package repositories
   block:
+    - name: Remove duplicate Docker APT source entries
+      ansible.builtin.lineinfile:
+        path: /etc/apt/sources.list.d/docker.list
+        regexp: '^deb .*download\.docker\.com/linux/ubuntu.*$'
+        state: absent
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Add the canonical Docker APT source entry
+      ansible.builtin.lineinfile:
+        path: /etc/apt/sources.list.d/docker.list
+        line: "deb [arch={{ 'amd64' if ansible_facts['architecture'] == 'x86_64' else ansible_facts['architecture'] }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        create: true
+        mode: '0644'
+      when: ansible_facts['os_family'] == "Debian"
+
     - name: Update package repositories (Debian)
       apt:
         update_cache: yes

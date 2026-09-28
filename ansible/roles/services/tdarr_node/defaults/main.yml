@@ -1,0 +1,22 @@
+---
+tdarr_node_image: "{{ docker_registry_domain | default('docker.io', true) }}/haveagitgat/tdarr_node:2.81.01"
+tdarr_node_name: "{{ inventory_hostname }}-tdarr-node"
+tdarr_server_url: "https://tdarr-server.local.hejsan.xyz"
+tdarr_api_key: ""
+tdarr_timezone: "{{ system.timezone | default('Europe/Stockholm') }}"
+tdarr_puid: "{{ user.uid | default(1000) }}"
+tdarr_pgid: "{{ user.gid | default(1000) }}"
+tdarr_data_dir: "{{ docker_data_dir | default('/opt/docker/data') }}/tdarr-node"
+tdarr_cache_dir: "{{ docker_storage_dir | default('/opt/docker/storage') }}/tdarr-transcode"
+tdarr_compose_dir: "{{ docker_compose_dir | default('/opt/docker/compose') }}"
+tdarr_compose_file: "{{ tdarr_compose_dir }}/tdarr-node.yml"
+tdarr_media_mount_point: /mnt/storage/files
+tdarr_nfs_source: "storage.local.hejsan.xyz:/files"
+tdarr_nfs_mount_options: "soft,bg,intr,nfsvers=4.1,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none,noatime,nodiratime"
+tdarr_transcode_cpu_workers: 2
+tdarr_transcode_gpu_workers: 0
+tdarr_healthcheck_cpu_workers: 1
+tdarr_healthcheck_gpu_workers: 0
+tdarr_docker_gpus: all
+tdarr_log_max_size: 10m
+tdarr_log_max_files: "5"

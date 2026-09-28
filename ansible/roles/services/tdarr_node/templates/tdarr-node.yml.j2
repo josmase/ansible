@@ -1,0 +1,31 @@
+services:
+  tdarr_node:
+    image: {{ tdarr_node_image }}
+    container_name: tdarr_node
+    restart: unless-stopped
+{% if tdarr_docker_gpus | length > 0 %}
+    gpus: {{ tdarr_docker_gpus }}
+{% endif %}
+    environment:
+      TZ: {{ tdarr_timezone }}
+      PUID: "{{ tdarr_puid }}"
+      PGID: "{{ tdarr_pgid }}"
+      nodeName: {{ tdarr_node_name }}
+      serverURL: {{ tdarr_server_url }}
+      apiKey: {{ tdarr_api_key | to_json }}
+      inContainer: "true"
+      ffmpegVersion: "7"
+      transcodecpuWorkers: "{{ tdarr_transcode_cpu_workers }}"
+      transcodegpuWorkers: "{{ tdarr_transcode_gpu_workers }}"
+      healthcheckcpuWorkers: "{{ tdarr_healthcheck_cpu_workers }}"
+      healthcheckgpuWorkers: "{{ tdarr_healthcheck_gpu_workers }}"
+    volumes:
+      - "{{ tdarr_data_dir }}/configs:/app/configs"
+      - "{{ tdarr_data_dir }}/logs:/app/logs"
+      - "{{ tdarr_media_mount_point }}:/media"
+      - "{{ tdarr_cache_dir }}:/temp"
+    logging:
+      driver: json-file
+      options:
+        max-size: "{{ tdarr_log_max_size }}"
+        max-file: "{{ tdarr_log_max_files }}"

@@ -1,0 +1,76 @@
+---
+- name: Validate Tdarr Node inputs
+  ansible.builtin.assert:
+    that:
+      - tdarr_server_url | length > 0
+      - tdarr_node_name | length > 0
+      - tdarr_api_key | length > 0
+      - tdarr_media_mount_point == '/mnt/storage/files'
+    fail_msg: "Tdarr Node variables are incomplete; provide tdarr_api_key via Ansible Vault and keep the media mount path unchanged."
+
+- name: Install NFS client prerequisite
+  ansible.builtin.package:
+    name: "{{ 'nfs-common' if ansible_os_family == 'Debian' else 'nfs-utils' }}"
+    state: present
+
+- name: Ensure Tdarr directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ tdarr_puid }}"
+    group: "{{ tdarr_pgid }}"
+    mode: '0755'
+  loop:
+    - "{{ tdarr_data_dir }}"
+    - "{{ tdarr_data_dir }}/configs"
+    - "{{ tdarr_data_dir }}/logs"
+    - "{{ tdarr_cache_dir }}"
+    - "{{ tdarr_compose_dir }}"
+
+- name: Mount the shared media NFS export
+  ansible.posix.mount:
+    path: "{{ tdarr_media_mount_point }}"
+    src: "{{ tdarr_nfs_source }}"
+    fstype: nfs
+    opts: "{{ tdarr_nfs_mount_options }}"
+    state: mounted
+
+- name: Verify the media mount is NFS
+  ansible.builtin.command:
+    cmd: "findmnt -rn -o FSTYPE,SOURCE,TARGET --target {{ tdarr_media_mount_point }}"
+  register: tdarr_mount_check
+  changed_when: false
+  failed_when: tdarr_mount_check.rc != 0 or 'nfs' not in tdarr_mount_check.stdout
+
+- name: Install the Tdarr Node compose definition
+  ansible.builtin.template:
+    src: tdarr-node.yml.j2
+    dest: "{{ tdarr_compose_file }}"
+    owner: "{{ tdarr_puid }}"
+    group: "{{ tdarr_pgid }}"
+    mode: '0640'
+  register: tdarr_compose
+
+- name: Start the Tdarr Node container
+  community.docker.docker_compose_v2:
+    project_src: "{{ tdarr_compose_dir }}"
+    files:
+      - "{{ tdarr_compose_file | basename }}"
+    state: present
+    pull: missing
+
+- name: Verify the Tdarr Node container is running
+  community.docker.docker_container_info:
+    name: tdarr_node
+  register: tdarr_container_info
+  retries: 5
+  delay: 5
+  until: tdarr_container_info.exists and tdarr_container_info.container.State.Running
+  changed_when: false
+
+- name: Report Tdarr Node deployment
+  ansible.builtin.debug:
+    msg:
+      - "Tdarr Node: {{ tdarr_node_name }}"
+      - "Server: {{ tdarr_server_url }}"
+      - "Media mount: {{ tdarr_media_mount_point }}"
