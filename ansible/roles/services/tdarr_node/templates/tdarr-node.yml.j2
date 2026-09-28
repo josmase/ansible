@@ -22,7 +22,7 @@ services:
     volumes:
       - "{{ tdarr_data_dir }}/configs:/app/configs"
       - "{{ tdarr_data_dir }}/logs:/app/logs"
-      - "{{ tdarr_media_mount_point }}:/media"
+      - "{{ tdarr_media_mount_point }}:{{ tdarr_media_container_mount_point }}"
       - "{{ tdarr_cache_dir }}:/temp"
     logging:
       driver: json-file
