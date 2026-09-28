@@ -2,7 +2,7 @@ terraform {
   required_version = ">= 1.6.0"
   required_providers {
     cloudflare = {
-      source  = "cloudflare/cloudflare"
+      source = "cloudflare/cloudflare"
       # v4 syntax (cloudflare_record) -- matches existing state (tf 1.13.1).
       # v5 renamed resources to cloudflare_dns_record; migrate deliberately.
       version = "~> 4.0"
@@ -23,6 +23,7 @@ resource "cloudflare_record" "local" {
     "ansible.local"   = "192.168.1.101"
     "gpu.local"       = "192.168.1.119"
     "*.staging.local" = "192.168.1.182"
+    "rustdesk.local"  = "192.168.1.181"
 
     # Kubernetes nodes (k3s cluster members)
     "kubernetes-201.local" = "192.168.1.201"
@@ -57,5 +58,16 @@ resource "cloudflare_record" "non_proxied_cname" {
   name    = "wireguard"
   type    = "CNAME"
   content = "hejsan.xyz"
+  proxied = false
+}
+
+# RustDesk native clients require direct TCP and UDP connectivity. Cloudflare
+# DNS remains authoritative, but the record must stay DNS-only; normal
+# orange-cloud proxying does not support the RustDesk native ports.
+resource "cloudflare_record" "rustdesk_native" {
+  zone_id = var.zone_id
+  name    = "rustdesk"
+  type    = "A"
+  content = var.external_ip
   proxied = false
 }

@@ -13,3 +13,7 @@ variable "account_id" {
 variable "domain" {
   description = "Domain name"
 }
+
+variable "external_ip" {
+  description = "Public IPv4 address used for DNS-only services"
+}
