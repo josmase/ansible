@@ -246,6 +246,11 @@ def main():
     configure_pipeline = os.environ.get("HOME_ASSISTANT_CONFIGURE_PIPELINE", "true").lower() == "true"
     progress("checking Home Assistant API")
     http_json(args.url, token, "GET", "/api/", verify=verify)
+    progress("configuring Home Assistant internal URL")
+    WebSocket(args.url, token, verify).command({
+        "type": "config/core/update",
+        "internal_url": args.url,
+    })
     progress("checking Ollama model")
     ollama_models = http_json(args.ollama_url, "", "GET", "/api/tags", verify=verify)
     if not any(model.get("name") == args.ollama_model for model in ollama_models.get("models", [])):
