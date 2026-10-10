@@ -266,6 +266,11 @@ def main():
         progress("configuring Piper integration")
         _, tts_changed = config_flow(args.url, token, "wyoming", {"host": args.tts_host, "port": args.tts_port, "_title": "piper"}, verify)
         changed |= tts_changed
+        # Clear stale generated media after changing TTS backends. HA can
+        # otherwise reuse an invalid cached MP3 and fail while adding ID3
+        # metadata, leaving Voice satellites stuck in the response phase.
+        progress("clearing Home Assistant TTS cache")
+        http_json(args.url, token, "POST", "/api/services/tts/clear_cache", {}, verify=verify)
     if configure_pipeline:
         progress("configuring Assist pipeline")
         ws = WebSocket(args.url, token, verify)
