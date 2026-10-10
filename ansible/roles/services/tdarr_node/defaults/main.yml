@@ -1,5 +1,5 @@
 ---
-tdarr_node_image: "{{ docker_registry_domain | default('docker.io', true) }}/haveagitgat/tdarr_node:2.81.01"
+tdarr_node_image: "{{ docker_registry_domain | default('docker.io', true) }}/haveagitgat/tdarr_node:2.96.01"
 tdarr_node_name: "{{ inventory_hostname }}-tdarr-node"
 tdarr_server_url: "https://tdarr-server.local.hejsan.xyz"
 tdarr_api_key: ""
