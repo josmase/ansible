@@ -1,0 +1,10 @@
+---
+- name: Configure Home Assistant local voice
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tags:
+    - homeassistant
+    - voice
+  roles:
+    - role: services/home_assistant_voice

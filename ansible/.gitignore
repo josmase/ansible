@@ -1,3 +1,5 @@
 .vault_pass
+__pycache__/
+*.py[cod]
 galaxy_*
 kubeconfig

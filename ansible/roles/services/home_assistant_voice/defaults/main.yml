@@ -1,0 +1,22 @@
+---
+# Home Assistant local voice configuration.
+
+home_assistant_url: "http://homeassistant.local:8123"
+home_assistant_token: "{{ vault_homeassistant_token }}"
+home_assistant_verify_ssl: true
+
+home_assistant_voice_language: sv
+home_assistant_voice_pipeline_name: Local Swedish
+home_assistant_voice_conversation_name: Local Qwen3
+home_assistant_voice_stt_host: wyoming-whisper.local.hejsan.xyz
+home_assistant_voice_stt_port: 10300
+home_assistant_voice_stt_language: sv
+home_assistant_voice_tts_host: wyoming-piper.local.hejsan.xyz
+home_assistant_voice_tts_port: 10200
+home_assistant_voice_tts_language: sv_SE
+home_assistant_voice_tts_voice: sv_SE-lisa-medium
+
+home_assistant_ollama_url: "https://ollama.local.hejsan.xyz"
+home_assistant_ollama_model: qwen3:8b
+home_assistant_voice_configure_integrations: true
+home_assistant_voice_configure_pipeline: true
