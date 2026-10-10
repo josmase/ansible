@@ -5,6 +5,7 @@ Configures Home Assistant to use the local Swedish voice stack:
 - Ollama at `ollama.local.hejsan.xyz`
 - Wyoming Whisper at `wyoming-whisper.local.hejsan.xyz:10300`
 - Wyoming Piper at `wyoming-piper.local.hejsan.xyz:10200`
+- Swedish Alma TTS voice `sv_SE-alma-medium`
 - An Ollama conversation subentry named `Local Qwen3 4B`
 - An Assist pipeline named `Local Swedish`
 
@@ -30,3 +31,7 @@ not require SSH access to HassOS.
 
 The active conversation model is `qwen3:4b`, matching the model preloaded by
 the Flux Ollama deployment.
+
+The Piper image embeds the Alma voice model and runs it CPU-only. The role
+updates the existing `Local Swedish` pipeline when its TTS voice changes and
+clears Home Assistant's TTS cache after the change.

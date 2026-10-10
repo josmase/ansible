@@ -14,7 +14,7 @@ home_assistant_voice_stt_language: sv
 home_assistant_voice_tts_host: wyoming-piper.local.hejsan.xyz
 home_assistant_voice_tts_port: 10200
 home_assistant_voice_tts_language: sv_SE
-home_assistant_voice_tts_voice: sv_SE-lisa-medium
+home_assistant_voice_tts_voice: sv_SE-alma-medium
 
 home_assistant_ollama_url: "https://ollama.local.hejsan.xyz"
 home_assistant_ollama_model: qwen3:4b

@@ -224,6 +224,35 @@ def configure_ollama_subentry(base_url, token, entry, name, model, verify):
     return True
 
 
+def tts_voice_available(providers, voice_id):
+    """Return whether a Wyoming TTS provider advertises the requested voice."""
+    for provider in providers:
+        for voice in provider.get("voices", []):
+            if isinstance(voice, dict) and voice.get("voice_id") == voice_id:
+                return True
+            if isinstance(voice, str) and voice == voice_id:
+                return True
+    return False
+
+
+def pipeline_configuration(pipeline, agent, stt_engine, tts_engine, args):
+    return {
+        "pipeline_id": pipeline.get("id"),
+        "name": args.pipeline_name,
+        "language": args.language,
+        "conversation_engine": agent,
+        "conversation_language": args.language,
+        "stt_engine": stt_engine,
+        "stt_language": args.stt_language,
+        "tts_engine": tts_engine,
+        "tts_language": args.tts_language,
+        "tts_voice": args.tts_voice,
+        "wake_word_entity": pipeline.get("wake_word_entity"),
+        "wake_word_id": pipeline.get("wake_word_id"),
+        "prefer_local_intents": pipeline.get("prefer_local_intents", True),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", required=True)
@@ -300,7 +329,12 @@ def main():
         tts_engine = tts_engine or (local_pipeline or {}).get("tts_engine")
         if not agent or not stt_engine or not tts_engine:
             raise RuntimeError(f"Could not identify local voice engines: agent={agent}, agents={agents}, stt={stt}, tts={tts}")
-        if not any(item["name"] == args.pipeline_name for item in pipelines):
+        if not tts_voice_available(tts, args.tts_voice):
+            raise RuntimeError(
+                f"TTS voice {args.tts_voice} is not advertised by Home Assistant: {tts}"
+            )
+        local_pipeline = next((item for item in pipelines if item.get("name") == args.pipeline_name), None)
+        if local_pipeline is None:
             ws.command({
                 "type": "assist_pipeline/pipeline/create",
                 "name": args.pipeline_name,
@@ -315,6 +349,12 @@ def main():
                 "wake_word_entity": None,
                 "wake_word_id": None,
                 "prefer_local_intents": True,
+            })
+            changed = True
+        elif local_pipeline.get("tts_voice") != args.tts_voice:
+            ws.command({
+                "type": "assist_pipeline/pipeline/update",
+                **pipeline_configuration(local_pipeline, agent, stt_engine, tts_engine, args),
             })
             changed = True
     print("changed" if changed else "ok")
