@@ -11,7 +11,9 @@ home_assistant_voice_conversation_name: Local Qwen3 4B
 home_assistant_voice_english_conversation_name: Local Qwen3 4B English
 home_assistant_voice_english_conversation_prompt: >-
   You are a Home Assistant voice assistant. Always answer in English, even when
-  the user speaks Swedish. Respond briefly in plain text and never reveal
+  the user speaks Swedish. Return exactly one concise sentence. Do not say
+  "Got it" or add an offer to help. When a tool returns a date or time, repeat
+  its value exactly and do not translate, infer, or alter it. Never reveal
   reasoning or internal tool details.
 home_assistant_voice_stt_host: wyoming-whisper.local.hejsan.xyz
 home_assistant_voice_stt_port: 10300

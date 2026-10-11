@@ -183,7 +183,7 @@ def configure_ollama_subentry(base_url, token, entry, name, model, prompt, verif
         (item for item in subentries if item.get("subentry_type") == "conversation" and item.get("title") == name),
         None,
     )
-    if matching and matching.get("data", {}).get("model") == model:
+    if matching:
         return False
 
     flow_data = {"handler": [entry["entry_id"], "conversation"]}
@@ -203,7 +203,7 @@ def configure_ollama_subentry(base_url, token, entry, name, model, prompt, verif
             "model": model,
             "llm_hass_api": ["assist"],
             "num_ctx": 8192,
-            "max_history": 20,
+            "max_history": 5,
             "keep_alive": -1,
             "think": False,
         }
