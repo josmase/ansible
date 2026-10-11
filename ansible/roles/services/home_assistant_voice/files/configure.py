@@ -172,7 +172,7 @@ def config_flow(base_url, token, handler, data, verify):
     return flow["result"], True
 
 
-def configure_ollama_subentry(base_url, token, entry, name, model, verify):
+def configure_ollama_subentry(base_url, token, entry, name, model, prompt, verify):
     """Create or update the Ollama conversation subentry."""
     ws = WebSocket(base_url, token, verify)
     subentries = ws.command({
@@ -207,6 +207,8 @@ def configure_ollama_subentry(base_url, token, entry, name, model, verify):
             "keep_alive": -1,
             "think": False,
         }
+        if prompt:
+            values["prompt"] = prompt
         submitted = {key: values[key] for key in schema if key in values}
         required = {"model"} if matching else {"name", "model"}
         missing = required - submitted.keys()
@@ -273,6 +275,7 @@ def main():
     parser.add_argument("--url", required=True)
     parser.add_argument("--ollama-url", required=True)
     parser.add_argument("--ollama-model", required=True)
+    parser.add_argument("--conversation-prompt")
     parser.add_argument("--pipeline-name", required=True)
     parser.add_argument("--conversation-name", required=True)
     parser.add_argument("--language", required=True)
@@ -313,7 +316,7 @@ def main():
             ollama_entry, ollama_created = config_flow(args.url, token, "ollama", {"url": args.ollama_url, "api_key": ""}, verify)
             changed |= ollama_created
         progress("configuring Ollama conversation subentry")
-        changed |= configure_ollama_subentry(args.url, token, ollama_entry, args.conversation_name, args.ollama_model, verify)
+        changed |= configure_ollama_subentry(args.url, token, ollama_entry, args.conversation_name, args.ollama_model, args.conversation_prompt, verify)
         progress("configuring Whisper integration")
         _, stt_changed = config_flow(args.url, token, "wyoming", {"host": args.stt_host, "port": args.stt_port, "_title": "faster-whisper"}, verify)
         changed |= stt_changed

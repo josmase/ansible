@@ -8,6 +8,11 @@ home_assistant_verify_ssl: true
 home_assistant_voice_language: sv
 home_assistant_voice_pipeline_name: Local Swedish
 home_assistant_voice_conversation_name: Local Qwen3 4B
+home_assistant_voice_english_conversation_name: Local Qwen3 4B English
+home_assistant_voice_english_conversation_prompt: >-
+  You are a Home Assistant voice assistant. Always answer in English, even when
+  the user speaks Swedish. Respond briefly in plain text and never reveal
+  reasoning or internal tool details.
 home_assistant_voice_stt_host: wyoming-whisper.local.hejsan.xyz
 home_assistant_voice_stt_port: 10300
 home_assistant_voice_stt_language: sv

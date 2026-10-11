@@ -98,7 +98,9 @@
       - --pipeline-name
       - "{{ home_assistant_voice_english_pipeline_name }}"
       - --conversation-name
-      - "{{ home_assistant_voice_conversation_name }}"
+      - "{{ home_assistant_voice_english_conversation_name }}"
+      - --conversation-prompt
+      - "{{ home_assistant_voice_english_conversation_prompt }}"
       - --language
       - "{{ home_assistant_voice_english_language }}"
       - --conversation-language
