@@ -73,29 +73,6 @@
   roles:
     - role: workstation/3d_printing_setup
 
-- name: Ollama server setup
-  hosts: k3s_gpu_node
-  become: true
-  tags:
-    - ollama
-    - ai
-    - homeassistant
-  roles:
-    - role: services/ollama_server
-
-- name: Wyoming voice services setup
-  hosts: k3s_gpu_node
-  become: true
-  tags:
-    - wyoming
-    - whisper
-    - piper
-    - stt
-    - tts
-    - homeassistant
-  roles:
-    - role: services/wyoming_whisper
-
 - name: Network storage configuration
   hosts: nfs_clients
   become: true

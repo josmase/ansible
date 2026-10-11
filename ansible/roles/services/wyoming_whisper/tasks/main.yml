@@ -13,6 +13,18 @@
     group: "{{ docker_group | default('docker') }}"
     mode: "0750"
 
+- name: Create persistent Wyoming model directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ docker_user | default(ansible_user) }}"
+    group: "{{ docker_group | default('docker') }}"
+    mode: "0750"
+  loop:
+    - "{{ wyoming_voice_data_dir }}"
+    - "{{ wyoming_voice_data_dir }}/whisper"
+    - "{{ wyoming_voice_data_dir }}/piper"
+
 - name: Deploy docker compose file
   template:
     src: docker-compose.yml.j2

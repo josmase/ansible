@@ -20,3 +20,4 @@ wyoming_piper_bind_address: 0.0.0.0
 wyoming_piper_voice: en_US-lessac-medium
 
 wyoming_voice_compose_dir: "{{ docker_compose_dir }}/wyoming-voice"
+wyoming_voice_data_dir: "{{ docker_data_dir }}/wyoming-voice"
