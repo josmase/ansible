@@ -264,7 +264,7 @@ def pipeline_configuration(pipeline, agent, stt_engine, tts_engine, args):
         "tts_voice": args.tts_voice,
         "wake_word_entity": pipeline.get("wake_word_entity"),
         "wake_word_id": pipeline.get("wake_word_id"),
-        "prefer_local_intents": pipeline.get("prefer_local_intents", True),
+        "prefer_local_intents": args.prefer_local_intents,
     }
 
 
@@ -285,6 +285,7 @@ def main():
     parser.add_argument("--tts-language", required=True)
     parser.add_argument("--tts-voice", required=True)
     parser.add_argument("--tts-provider", default="piper")
+    parser.add_argument("--prefer-local-intents", type=lambda value: value.lower() == "true", default=True)
     args = parser.parse_args()
     if not args.conversation_language:
         args.conversation_language = args.language
@@ -386,7 +387,7 @@ def main():
                 "tts_voice": args.tts_voice,
                 "wake_word_entity": None,
                 "wake_word_id": None,
-                "prefer_local_intents": True,
+                "prefer_local_intents": args.prefer_local_intents,
             })
             changed = True
         elif any(
@@ -401,6 +402,7 @@ def main():
                 "tts_engine": tts_engine,
                 "tts_language": args.tts_language,
                 "tts_voice": args.tts_voice,
+                "prefer_local_intents": args.prefer_local_intents,
             }.items()
         ):
             ws.command({

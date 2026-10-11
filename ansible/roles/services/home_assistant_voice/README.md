@@ -38,3 +38,7 @@ sent to voice TTS.
 The Piper image embeds the Alma voice model and runs it CPU-only. The role
 updates the existing `Local Swedish` pipeline when its TTS voice changes and
 clears Home Assistant's TTS cache after the change.
+
+The `Local Swedish to English` pipeline disables local intents so Swedish
+queries such as the time query are answered by the English conversation agent
+before being sent to Kokoro's English voice.
