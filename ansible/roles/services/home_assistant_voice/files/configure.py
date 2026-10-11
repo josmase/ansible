@@ -208,7 +208,8 @@ def configure_ollama_subentry(base_url, token, entry, name, model, verify):
             "think": False,
         }
         submitted = {key: values[key] for key in schema if key in values}
-        missing = {"name", "model"} - submitted.keys()
+        required = {"model"} if matching else {"name", "model"}
+        missing = required - submitted.keys()
         if missing:
             raise RuntimeError(f"Ollama subentry flow needs unsupported fields: {sorted(missing)}")
         flow = http_json(
