@@ -70,6 +70,8 @@
       - "{{ home_assistant_voice_tts_voice }}"
       - --tts-provider
       - piper
+      - --max-history
+      - "{{ home_assistant_voice_max_history }}"
   environment:
     HOME_ASSISTANT_TOKEN: "{{ home_assistant_token }}"
     HOME_ASSISTANT_VERIFY_SSL: "{{ home_assistant_verify_ssl | string }}"
@@ -123,6 +125,8 @@
       - kokoro
       - --prefer-local-intents
       - "{{ home_assistant_voice_english_prefer_local_intents | string }}"
+      - --max-history
+      - "{{ home_assistant_voice_english_max_history }}"
   environment:
     HOME_ASSISTANT_TOKEN: "{{ home_assistant_token }}"
     HOME_ASSISTANT_VERIFY_SSL: "{{ home_assistant_verify_ssl | string }}"

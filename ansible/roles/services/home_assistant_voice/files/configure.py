@@ -172,7 +172,7 @@ def config_flow(base_url, token, handler, data, verify):
     return flow["result"], True
 
 
-def configure_ollama_subentry(base_url, token, entry, name, model, prompt, verify):
+def configure_ollama_subentry(base_url, token, entry, name, model, prompt, max_history, verify):
     """Create or update the Ollama conversation subentry."""
     ws = WebSocket(base_url, token, verify)
     subentries = ws.command({
@@ -183,12 +183,13 @@ def configure_ollama_subentry(base_url, token, entry, name, model, prompt, verif
         (item for item in subentries if item.get("subentry_type") == "conversation" and item.get("title") == name),
         None,
     )
+    # Home Assistant does not expose subentry data through the public list API.
+    # Treat an existing named subentry as managed and leave it untouched so
+    # repeated role runs remain idempotent. A deliberate model/prompt change
+    # uses a new managed name and switches the pipeline to it.
     if matching:
         return False
-
     flow_data = {"handler": [entry["entry_id"], "conversation"]}
-    if matching:
-        flow_data["subentry_id"] = matching["subentry_id"]
     flow = http_json(base_url, token, "POST", "/api/config/config_entries/subentries/flow", flow_data, verify)
     for _ in range(5):
         if flow.get("type") != "form":
@@ -203,7 +204,7 @@ def configure_ollama_subentry(base_url, token, entry, name, model, prompt, verif
             "model": model,
             "llm_hass_api": ["assist"],
             "num_ctx": 8192,
-            "max_history": 5,
+            "max_history": max_history,
             "keep_alive": -1,
             "think": False,
         }
@@ -289,6 +290,7 @@ def main():
     parser.add_argument("--tts-voice", required=True)
     parser.add_argument("--tts-provider", default="piper")
     parser.add_argument("--prefer-local-intents", type=lambda value: value.lower() == "true", default=True)
+    parser.add_argument("--max-history", type=int, default=5)
     args = parser.parse_args()
     if not args.conversation_language:
         args.conversation_language = args.language
@@ -316,7 +318,16 @@ def main():
             ollama_entry, ollama_created = config_flow(args.url, token, "ollama", {"url": args.ollama_url, "api_key": ""}, verify)
             changed |= ollama_created
         progress("configuring Ollama conversation subentry")
-        changed |= configure_ollama_subentry(args.url, token, ollama_entry, args.conversation_name, args.ollama_model, args.conversation_prompt, verify)
+        changed |= configure_ollama_subentry(
+            args.url,
+            token,
+            ollama_entry,
+            args.conversation_name,
+            args.ollama_model,
+            args.conversation_prompt,
+            args.max_history,
+            verify,
+        )
         progress("configuring Whisper integration")
         _, stt_changed = config_flow(args.url, token, "wyoming", {"host": args.stt_host, "port": args.stt_port, "_title": "faster-whisper"}, verify)
         changed |= stt_changed
