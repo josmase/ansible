@@ -167,6 +167,8 @@ def config_flow(base_url, token, handler, data, verify):
     if flow.get("type") == "form":
         errors = flow.get("errors") or {}
         raise RuntimeError(f"Config flow {handler} did not advance after 5 steps: errors={errors}, step={flow.get('step_id')}")
+    if flow.get("type") == "abort" and flow.get("reason") == "reconfigure_successful":
+        return True
     if flow.get("type") != "create_entry":
         raise RuntimeError(f"Config flow {handler} did not create an entry: {flow}")
     return flow["result"], True
