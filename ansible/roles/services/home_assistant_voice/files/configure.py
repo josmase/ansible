@@ -225,14 +225,23 @@ def configure_ollama_subentry(base_url, token, entry, name, model, verify):
 
 
 def tts_voice_available(providers, voice_id):
-    """Return whether a Wyoming TTS provider advertises the requested voice."""
+    """Check the requested voice when the HA release exposes voice metadata.
+
+    Some Home Assistant releases return only the Piper engine and language
+    from ``tts/engine/list``. In that case the Wyoming provider's advertised
+    voice list, already checked by the role's TCP probe, is authoritative.
+    """
+    saw_voice_metadata = False
     for provider in providers:
+        if "voices" not in provider:
+            continue
+        saw_voice_metadata = True
         for voice in provider.get("voices", []):
             if isinstance(voice, dict) and voice.get("voice_id") == voice_id:
                 return True
             if isinstance(voice, str) and voice == voice_id:
                 return True
-    return False
+    return False if saw_voice_metadata else None
 
 
 def pipeline_configuration(pipeline, agent, stt_engine, tts_engine, args):
@@ -329,7 +338,8 @@ def main():
         tts_engine = tts_engine or (local_pipeline or {}).get("tts_engine")
         if not agent or not stt_engine or not tts_engine:
             raise RuntimeError(f"Could not identify local voice engines: agent={agent}, agents={agents}, stt={stt}, tts={tts}")
-        if not tts_voice_available(tts, args.tts_voice):
+        voice_available = tts_voice_available(tts, args.tts_voice)
+        if voice_available is False:
             raise RuntimeError(
                 f"TTS voice {args.tts_voice} is not advertised by Home Assistant: {tts}"
             )
