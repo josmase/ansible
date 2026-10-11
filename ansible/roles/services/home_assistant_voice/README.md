@@ -39,6 +39,30 @@ The Piper image embeds the Alma voice model and runs it CPU-only. The role
 updates the existing `Local Swedish` pipeline when its TTS voice changes and
 clears Home Assistant's TTS cache after the change.
 
-The `Local Swedish to English` pipeline disables local intents so Swedish
-queries such as the time query are answered by the English conversation agent
-before being sent to Kokoro's English voice.
+The `Local Swedish to English` pipeline uses an English conversation language,
+Swedish STT, and Kokoro `af_heart`. Local intents are preferred where HA can
+match them in the pipeline language; Swedish time queries use the English
+agent's GetDateTime tool.
+
+Managed agent names include a SHA-256 configuration revision. Changing model,
+prompt or history creates a new agent and switches the existing pipeline;
+unchanged settings reuse the agent. This avoids stale options because HA's
+subentry list API does not expose configuration data.
+
+`home_assistant_voice_cleanup_legacy` defaults to true after the validated
+migration. It removes the inventoried obsolete agents and the unused direct-host Ollama
+integration. Cleanup checks all pipeline references and saves a mode-0600
+inventory snapshot under `/tmp/home-assistant-voice-cleanup-*.json`. Existing
+user-created entries are preserved. Previous agent settings remain in Git
+history and can be recreated by running the role from the corresponding revision.
+
+Run `playbooks/maintenance/retire-legacy-voice.yml` once the Kubernetes services
+are healthy. It removes the two legacy Docker containers, disables host Ollama,
+and archives `/opt/docker/wyoming-voice` as `.retired`. Model directories
+`/opt/appdata/wyoming-voice` and `/var/lib/ollama` remain available for rollback.
+
+For timing diagnostics, run `files/probe.py` with `HOME_ASSISTANT_TOKEN` in its
+environment. It accepts `--pipeline`, `--text` and `--count`, consumes the real
+TTS media stream and reports intent, first-media-byte and completion timings.
+These measurements exclude microphone capture, STT and physical speaker delay;
+they must not be presented as end-to-end hardware latency.

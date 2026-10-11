@@ -138,3 +138,18 @@
   changed_when: >-
     'changed' in (home_assistant_voice_english_configure.stdout | lower)
   no_log: true
+
+- name: Remove verified obsolete Home Assistant voice agents
+  ansible.builtin.command:
+    argv:
+      - python3
+      - "{{ role_path }}/files/cleanup.py"
+      - --url
+      - "{{ home_assistant_url }}"
+  environment:
+    HOME_ASSISTANT_TOKEN: "{{ home_assistant_token }}"
+    HOME_ASSISTANT_VERIFY_SSL: "{{ home_assistant_verify_ssl | string }}"
+  register: home_assistant_voice_cleanup
+  changed_when: "'changed:' in home_assistant_voice_cleanup.stdout"
+  when: home_assistant_voice_cleanup_legacy | bool
+  no_log: true

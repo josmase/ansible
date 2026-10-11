@@ -1,0 +1,59 @@
+---
+- name: Retire migration-owned host voice services
+  hosts: k3s_gpu_node
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Verify Kubernetes voice routes before retiring Docker
+      ansible.builtin.wait_for:
+        host: "{{ item.host }}"
+        port: "{{ item.port }}"
+        timeout: 15
+      delegate_to: localhost
+      become: false
+      loop:
+        - {host: wyoming-whisper.local.hejsan.xyz, port: 10300}
+        - {host: wyoming-piper.local.hejsan.xyz, port: 10200}
+        - {host: wyoming-kokoro.local.hejsan.xyz, port: 10201}
+        - {host: ollama.local.hejsan.xyz, port: 443}
+
+    - name: Inventory installed system services
+      ansible.builtin.service_facts:
+
+    - name: Stop and disable the retired host Ollama service
+      ansible.builtin.systemd_service:
+        name: ollama.service
+        state: stopped
+        enabled: false
+      when: "'ollama.service' in ansible_facts.services"
+
+    - name: Remove retired Wyoming Docker containers while retaining model data
+      community.docker.docker_container:
+        name: "{{ item }}"
+        state: absent
+        keep_volumes: true
+      loop:
+        - wyoming-whisper
+        - wyoming-piper
+
+    - name: Inspect legacy Compose directory
+      ansible.builtin.stat:
+        path: /opt/docker/wyoming-voice
+      register: legacy_voice_compose
+
+    - name: Archive legacy Compose directory to prevent accidental redeployment
+      ansible.builtin.command:
+        argv:
+          - mv
+          - /opt/docker/wyoming-voice
+          - /opt/docker/wyoming-voice.retired
+        creates: /opt/docker/wyoming-voice.retired
+      when: legacy_voice_compose.stat.exists
+
+    - name: Verify legacy host ports are no longer listening
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ item }}"
+        state: stopped
+        timeout: 15
+      loop: [10200, 10300, 11434]

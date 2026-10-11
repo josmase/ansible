@@ -292,6 +292,13 @@ def main():
     parser.add_argument("--prefer-local-intents", type=lambda value: value.lower() == "true", default=True)
     parser.add_argument("--max-history", type=int, default=5)
     args = parser.parse_args()
+    # Subentry options are not exposed by HA's list API. A content-derived
+    # revision makes changes reproducible without rewriting on every run.
+    settings = {"model": args.ollama_model, "prompt": args.conversation_prompt,
+                "max_history": args.max_history, "num_ctx": 8192,
+                "keep_alive": -1, "think": False, "llm_hass_api": ["assist"]}
+    revision = hashlib.sha256(json.dumps(settings, sort_keys=True).encode()).hexdigest()[:12]
+    args.conversation_name = f"{args.conversation_name} [{revision}]"
     if not args.conversation_language:
         args.conversation_language = args.language
     token = os.environ["HOME_ASSISTANT_TOKEN"]
