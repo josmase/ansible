@@ -26,6 +26,6 @@ home_assistant_voice_english_tts_language: en-us
 home_assistant_voice_english_tts_voice: af_heart
 
 home_assistant_ollama_url: "https://ollama.local.hejsan.xyz"
-home_assistant_ollama_model: qwen3:4b
+home_assistant_ollama_model: qwen2.5:3b
 home_assistant_voice_configure_integrations: true
 home_assistant_voice_configure_pipeline: true

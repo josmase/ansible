@@ -173,7 +173,7 @@ def config_flow(base_url, token, handler, data, verify):
 
 
 def configure_ollama_subentry(base_url, token, entry, name, model, verify):
-    """Create the Ollama conversation subentry used by current HA releases."""
+    """Create or update the Ollama conversation subentry."""
     ws = WebSocket(base_url, token, verify)
     subentries = ws.command({
         "type": "config_entries/subentries/list",
@@ -183,17 +183,13 @@ def configure_ollama_subentry(base_url, token, entry, name, model, verify):
         (item for item in subentries if item.get("subentry_type") == "conversation" and item.get("title") == name),
         None,
     )
-    if matching:
+    if matching and matching.get("data", {}).get("model") == model:
         return False
 
-    flow = http_json(
-        base_url,
-        token,
-        "POST",
-        "/api/config/config_entries/subentries/flow",
-        {"handler": [entry["entry_id"], "conversation"]},
-        verify,
-    )
+    flow_data = {"handler": [entry["entry_id"], "conversation"]}
+    if matching:
+        flow_data["subentry_id"] = matching["subentry_id"]
+    flow = http_json(base_url, token, "POST", "/api/config/config_entries/subentries/flow", flow_data, verify)
     for _ in range(5):
         if flow.get("type") != "form":
             break
