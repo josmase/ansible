@@ -16,6 +16,15 @@ home_assistant_voice_tts_port: 10200
 home_assistant_voice_tts_language: sv_SE
 home_assistant_voice_tts_voice: sv_SE-alma-medium
 
+home_assistant_voice_english_pipeline_name: Local Swedish to English
+home_assistant_voice_english_language: sv
+home_assistant_voice_english_conversation_language: en
+home_assistant_voice_english_stt_language: sv
+home_assistant_voice_english_tts_host: wyoming-kokoro.local.hejsan.xyz
+home_assistant_voice_english_tts_port: 10201
+home_assistant_voice_english_tts_language: en-US
+home_assistant_voice_english_tts_voice: af_heart
+
 home_assistant_ollama_url: "https://ollama.local.hejsan.xyz"
 home_assistant_ollama_model: qwen3:4b
 home_assistant_voice_configure_integrations: true

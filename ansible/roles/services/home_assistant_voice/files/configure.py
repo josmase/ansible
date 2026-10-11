@@ -135,7 +135,14 @@ def config_flow(base_url, token, handler, data, verify):
     elif data.get("_title"):
         # HA redacts Wyoming host/port data in this endpoint. Matching by the
         # service title keeps repeated role runs from creating duplicates.
-        matching = next((entry for entry in entries if entry.get("title") == data["_title"]), None)
+        wanted_title = data["_title"].lower()
+        matching = next(
+            (
+                entry for entry in entries
+                if wanted_title in entry.get("title", "").lower()
+            ),
+            None,
+        )
     else:
         matching = next((entry for entry in entries if all(entry.get("data", {}).get(key) == value for key, value in data.items() if key != "api_key")), None)
     if matching:
@@ -250,7 +257,7 @@ def pipeline_configuration(pipeline, agent, stt_engine, tts_engine, args):
         "name": args.pipeline_name,
         "language": args.language,
         "conversation_engine": agent,
-        "conversation_language": args.language,
+        "conversation_language": args.conversation_language,
         "stt_engine": stt_engine,
         "stt_language": args.stt_language,
         "tts_engine": tts_engine,
@@ -270,6 +277,7 @@ def main():
     parser.add_argument("--pipeline-name", required=True)
     parser.add_argument("--conversation-name", required=True)
     parser.add_argument("--language", required=True)
+    parser.add_argument("--conversation-language")
     parser.add_argument("--stt-host", required=True)
     parser.add_argument("--stt-port", required=True, type=int)
     parser.add_argument("--stt-language", required=True)
@@ -277,7 +285,10 @@ def main():
     parser.add_argument("--tts-port", required=True, type=int)
     parser.add_argument("--tts-language", required=True)
     parser.add_argument("--tts-voice", required=True)
+    parser.add_argument("--tts-provider", default="piper")
     args = parser.parse_args()
+    if not args.conversation_language:
+        args.conversation_language = args.language
     token = os.environ["HOME_ASSISTANT_TOKEN"]
     verify = os.environ.get("HOME_ASSISTANT_VERIFY_SSL", "true").lower() == "true"
     configure_integrations = os.environ.get("HOME_ASSISTANT_CONFIGURE_INTEGRATIONS", "true").lower() == "true"
@@ -306,8 +317,14 @@ def main():
         progress("configuring Whisper integration")
         _, stt_changed = config_flow(args.url, token, "wyoming", {"host": args.stt_host, "port": args.stt_port, "_title": "faster-whisper"}, verify)
         changed |= stt_changed
-        progress("configuring Piper integration")
-        _, tts_changed = config_flow(args.url, token, "wyoming", {"host": args.tts_host, "port": args.tts_port, "_title": "piper"}, verify)
+        progress(f"configuring {args.tts_provider} integration")
+        _, tts_changed = config_flow(
+            args.url,
+            token,
+            "wyoming",
+            {"host": args.tts_host, "port": args.tts_port, "_title": args.tts_provider},
+            verify,
+        )
         changed |= tts_changed
         # Clear stale generated media after changing TTS backends. HA can
         # otherwise reuse an invalid cached MP3 and fail while adding ID3
@@ -317,13 +334,25 @@ def main():
     if configure_pipeline:
         progress("configuring Assist pipeline")
         ws = WebSocket(args.url, token, verify)
-        agents = ws.command({"type": "conversation/agent/list", "language": args.language})["agents"]
+        agents = ws.command({"type": "conversation/agent/list", "language": args.conversation_language})["agents"]
         stt = ws.command({"type": "stt/engine/list", "language": args.stt_language})["providers"]
         tts = ws.command({"type": "tts/engine/list", "language": args.tts_language})["providers"]
         pipelines = ws.command({"type": "assist_pipeline/pipeline/list"})["pipelines"]
         agent = next((item["id"] for item in agents if item.get("name") == args.conversation_name), None)
         stt_engine = next((item["engine_id"] for item in stt if "whisper" in item["engine_id"] or "wyoming" in item["engine_id"]), None)
-        tts_engine = next((item["engine_id"] for item in tts if "piper" in item["engine_id"] or "wyoming" in item["engine_id"]), None)
+        def provider_matches(item):
+            haystack = json.dumps(item).lower()
+            if args.tts_provider.lower() in haystack:
+                return True
+            for voice in item.get("voices", []):
+                if isinstance(voice, dict) and voice.get("voice_id") == args.tts_voice:
+                    return True
+                if isinstance(voice, str) and voice == args.tts_voice:
+                    return True
+            return False
+
+        tts_engine = next((item["engine_id"] for item in tts if provider_matches(item)), None)
+        tts_engine = tts_engine or next((item["engine_id"] for item in tts if "wyoming" in item["engine_id"].lower()), None)
         # Existing pipelines are a useful compatibility fallback when HA does
         # not return providers for the requested locale (this varies between
         # HA releases and provider integrations).
@@ -350,7 +379,7 @@ def main():
                 "name": args.pipeline_name,
                 "language": args.language,
                 "conversation_engine": agent,
-                "conversation_language": args.language,
+                "conversation_language": args.conversation_language,
                 "stt_engine": stt_engine,
                 "stt_language": args.stt_language,
                 "tts_engine": tts_engine,
@@ -361,7 +390,20 @@ def main():
                 "prefer_local_intents": True,
             })
             changed = True
-        elif local_pipeline.get("tts_voice") != args.tts_voice:
+        elif any(
+            local_pipeline.get(field) != expected
+            for field, expected in {
+                "name": args.pipeline_name,
+                "language": args.language,
+                "conversation_engine": agent,
+                "conversation_language": args.conversation_language,
+                "stt_engine": stt_engine,
+                "stt_language": args.stt_language,
+                "tts_engine": tts_engine,
+                "tts_language": args.tts_language,
+                "tts_voice": args.tts_voice,
+            }.items()
+        ):
             ws.command({
                 "type": "assist_pipeline/pipeline/update",
                 **pipeline_configuration(local_pipeline, agent, stt_engine, tts_engine, args),
