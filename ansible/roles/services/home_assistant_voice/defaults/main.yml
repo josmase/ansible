@@ -22,7 +22,7 @@ home_assistant_voice_english_conversation_language: en
 home_assistant_voice_english_stt_language: sv
 home_assistant_voice_english_tts_host: wyoming-kokoro.local.hejsan.xyz
 home_assistant_voice_english_tts_port: 10201
-home_assistant_voice_english_tts_language: en-US
+home_assistant_voice_english_tts_language: en-us
 home_assistant_voice_english_tts_voice: af_heart
 
 home_assistant_ollama_url: "https://ollama.local.hejsan.xyz"
