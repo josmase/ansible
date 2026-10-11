@@ -1,0 +1,118 @@
+---
+- name: Require pinned router release and verified SSH host identity
+  ansible.builtin.assert:
+    that:
+      - home_assistant_voice_router_archive_url | length > 0
+      - home_assistant_voice_router_archive_sha256 is match('^[0-9a-f]{64}$')
+      - home_assistant_voice_router_ssh_host_key | length > 0
+      - not home_assistant_voice_router_promote or home_assistant_voice_router_acceptance_file | length > 0
+    fail_msg: Supply a published checksum-pinned release and recorded acceptance before promotion.
+
+- name: Configure key-only SSH add-on through the Home Assistant token
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_playbook_python }}"
+      - "{{ role_path }}/files/bootstrap_ssh.py"
+      - --url
+      - "{{ home_assistant_url }}"
+      - --public-key-file
+      - "{{ home_assistant_voice_router_ssh_public_key_file }}"
+      - --port
+      - "{{ home_assistant_voice_router_ssh_port | string }}"
+  environment:
+    HOME_ASSISTANT_TOKEN: "{{ home_assistant_token }}"
+  register: home_assistant_voice_router_bootstrap
+  changed_when: "'changed' in home_assistant_voice_router_bootstrap.stdout"
+  no_log: true
+
+- name: Require promotion and an explicit ownership inventory before cleanup
+  ansible.builtin.assert:
+    that:
+      - home_assistant_voice_router_promote | bool
+      - home_assistant_voice_router_ownership_file | length > 0
+    fail_msg: Legacy cleanup requires a promoted, accepted router and explicit ownership inventory.
+  when: home_assistant_voice_router_cleanup_owned | bool
+
+- name: Wait for SSH add-on
+  ansible.builtin.wait_for:
+    host: homeassistant.local.hejsan.xyz
+    port: "{{ home_assistant_voice_router_ssh_port }}"
+    timeout: 30
+
+- name: Pin authenticated Home Assistant SSH host key
+  ansible.builtin.known_hosts:
+    name: "[homeassistant.local.hejsan.xyz]:{{ home_assistant_voice_router_ssh_port }}"
+    key: "[homeassistant.local.hejsan.xyz]:{{ home_assistant_voice_router_ssh_port }} {{ home_assistant_voice_router_ssh_host_key }}"
+    state: present
+
+- name: Create private durable rollout directory
+  ansible.builtin.file:
+    path: "{{ home_assistant_voice_router_work_dir }}"
+    state: directory
+    mode: '0700'
+
+- name: Download checksum-pinned router package
+  ansible.builtin.get_url:
+    url: "{{ home_assistant_voice_router_archive_url }}"
+    dest: "{{ home_assistant_voice_router_work_dir }}/bilingual_assist.zip"
+    checksum: "sha256:{{ home_assistant_voice_router_archive_sha256 }}"
+    headers: "{{ home_assistant_voice_router_download_headers }}"
+    mode: '0600'
+  no_log: true
+
+- name: Install router and configure candidate or validated production pipeline
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_playbook_python }}"
+      - "{{ role_path }}/files/deploy_router.py"
+      - --url
+      - "{{ home_assistant_url }}"
+      - --archive
+      - "{{ home_assistant_voice_router_work_dir }}/bilingual_assist.zip"
+      - --sha256
+      - "{{ home_assistant_voice_router_archive_sha256 }}"
+      - --ssh-port
+      - "{{ home_assistant_voice_router_ssh_port | string }}"
+      - --backup-dir
+      - "{{ home_assistant_voice_router_work_dir }}"
+      - --model
+      - "{{ home_assistant_voice_router_model }}"
+      - --ollama-url
+      - "{{ home_assistant_ollama_url }}"
+      - --acceptance-file
+      - "{{ home_assistant_voice_router_acceptance_file }}"
+      - --promote
+      - "{{ home_assistant_voice_router_promote | string }}"
+  environment:
+    HOME_ASSISTANT_TOKEN: "{{ home_assistant_token }}"
+    HOME_ASSISTANT_SEARCH_PASSWORD: "{{ home_assistant_voice_router_search_password }}"
+  register: home_assistant_voice_router_deploy
+  changed_when: "'changed' in home_assistant_voice_router_deploy.stdout"
+  no_log: true
+
+- name: Retire only inventoried and unreferenced legacy voice objects
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_playbook_python }}"
+      - "{{ role_path }}/files/cleanup_router.py"
+      - --url
+      - "{{ home_assistant_url }}"
+      - --manifest
+      - "{{ home_assistant_voice_router_ownership_file }}"
+      - --backup-dir
+      - "{{ home_assistant_voice_router_work_dir }}"
+      - --acceptance-file
+      - "{{ home_assistant_voice_router_acceptance_file }}"
+      - --sha256
+      - "{{ home_assistant_voice_router_archive_sha256 }}"
+      - --model
+      - "{{ home_assistant_voice_router_model }}"
+      - --ssh-port
+      - "{{ home_assistant_voice_router_ssh_port | string }}"
+      - --apply
+  environment:
+    HOME_ASSISTANT_TOKEN: "{{ home_assistant_token }}"
+  register: home_assistant_voice_router_cleanup
+  changed_when: "'changed:' in home_assistant_voice_router_cleanup.stdout"
+  when: home_assistant_voice_router_cleanup_owned | bool
+  no_log: true

@@ -66,3 +66,42 @@ environment. It accepts `--pipeline`, `--text` and `--count`, consumes the real
 TTS media stream and reports intent, first-media-byte and completion timings.
 These measurements exclude microphone capture, STT and physical speaker delay;
 they must not be presented as end-to-end hardware latency.
+
+## Staged bilingual router
+
+`home_assistant_voice_router_enabled: true` enables the custom Swedish-native /
+English-output router installer. Supply a published archive URL and its SHA-256.
+The role uses the admin token to configure key-only SSH on port 2222, preserving
+existing authorized keys. The jumphost private key never leaves the jumphost.
+SSH host identity is pinned from the authenticated Supervisor terminal.
+
+Router tasks run without sudo so downloads and SSH trust belong to the execution
+user. Run from the `ansible/` folder in a clean, isolated checkout on the jumphost;
+do not overwrite its existing dirty checkout. The normal Swedish pipeline remains
+Alma-based. The candidate is `Local Swedish to English — Router Test`, with `sv`
+conversation input, Kokoro output, and outer `prefer_local_intents: false`.
+
+Promotion is a separate `home_assistant_voice_router_promote: true` run. It requires
+a private JSON acceptance file recording `release_sha256`, `model`, the pinned
+`whisper_revision`, timezone-aware `tested_at` within seven days,
+`regression_questions` of at least 40, and true `hardware_passed`,
+`swedish_pipeline_passed`, `gpu_concurrent_passed`, `regression_suite_passed`.
+These assertions must reflect actual tests, not text-only smoke tests.
+
+Cleanup is opt-in: set `home_assistant_voice_router_cleanup_owned: true` and
+`home_assistant_voice_router_ownership_file` only after promotion. The inventory
+contains exact pipeline ID/name, subentry parent ID/subentry ID/title, or config
+entry ID/domain/title. Start from `files/router-ownership.example.json` and
+populate only verified migration-owned objects. `cleanup_router.py` previews
+without `--apply`. All pipeline references and hardware selections are checked;
+renamed, selected, shared, or referenced objects cause refusal. Remove obsolete
+pipelines in one run, then re-preview agents in another run.
+
+Before deleting objects, private durable pipeline/hardware snapshots and actual
+HA `.storage` backups are saved, alongside the previous integration directory on
+HA. Keep them for at least seven days after hardware acceptance. Storage contains
+secrets: never commit it. Full storage restore is manual, with HA stopped and
+careful review of unrelated changes; it is not an automatic rollback mechanism.
+No models, PVCs, or backups are automatically purged. Their reference audit and
+explicit purge remain separate operations. Revert the Flux candidate overlay and
+restore the saved pipeline engine/settings for immediate configuration rollback.

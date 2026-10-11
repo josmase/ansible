@@ -135,9 +135,19 @@
     NO_PROXY: "homeassistant.local,homeassistant.local.hejsan.xyz,ollama.local.hejsan.xyz,wyoming-whisper.local.hejsan.xyz,wyoming-piper.local.hejsan.xyz,wyoming-kokoro.local.hejsan.xyz,gpu.local.hejsan.xyz"
     no_proxy: "homeassistant.local,homeassistant.local.hejsan.xyz,ollama.local.hejsan.xyz,wyoming-whisper.local.hejsan.xyz,wyoming-piper.local.hejsan.xyz,wyoming-kokoro.local.hejsan.xyz,gpu.local.hejsan.xyz"
   register: home_assistant_voice_english_configure
+  when: not home_assistant_voice_router_enabled | bool
   changed_when: >-
     'changed' in (home_assistant_voice_english_configure.stdout | lower)
   no_log: true
+
+- name: Install and configure bilingual voice router
+  ansible.builtin.include_tasks: router.yml
+  args:
+    apply:
+      become: false
+  vars:
+    ansible_become: false
+  when: home_assistant_voice_router_enabled | bool
 
 - name: Remove verified obsolete Home Assistant voice agents
   ansible.builtin.command:
@@ -151,5 +161,7 @@
     HOME_ASSISTANT_VERIFY_SSL: "{{ home_assistant_verify_ssl | string }}"
   register: home_assistant_voice_cleanup
   changed_when: "'changed:' in home_assistant_voice_cleanup.stdout"
-  when: home_assistant_voice_cleanup_legacy | bool
+  when:
+    - home_assistant_voice_cleanup_legacy | bool
+    - not home_assistant_voice_router_enabled | bool
   no_log: true

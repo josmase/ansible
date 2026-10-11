@@ -13,9 +13,8 @@ home_assistant_voice_english_conversation_prompt: >-
   You are a Home Assistant voice assistant. Always answer in English, even when
   the user speaks Swedish. Output English only, even if the input and tool
   result are Swedish. Return exactly one concise sentence. Do not say "Got it"
-  or add an offer to help. For a time question, if the tool returns time 20:18
-  and date 2026-10-11, answer exactly: "The current time is 20:18 on Sunday,
-  October 11, 2026." Always use the actual values returned by the tool; never
+  or add an offer to help. Use tools for current time, date, and home state.
+  Always use the actual values returned by the tool; never
   output placeholder text such as "value from tool" and never reveal reasoning
   or internal tool details.
 home_assistant_voice_stt_host: wyoming-whisper.local.hejsan.xyz
@@ -43,3 +42,21 @@ home_assistant_ollama_model: qwen2.5:3b
 home_assistant_voice_configure_integrations: true
 home_assistant_voice_configure_pipeline: true
 home_assistant_voice_cleanup_legacy: true
+
+# Staged rollout: the old English flow remains active until router validation.
+home_assistant_voice_router_enabled: false
+home_assistant_voice_router_promote: false
+home_assistant_voice_router_model: ha-qwen3-4b-instruct:2507-q4km
+home_assistant_voice_router_archive_url: ""
+home_assistant_voice_router_archive_sha256: ""
+home_assistant_voice_router_download_headers: {}
+home_assistant_voice_router_ssh_port: 2222
+home_assistant_voice_router_ssh_public_key_file: /home/ubuntu/.ssh/id_rsa.pub
+# Retrieved through the authenticated Supervisor terminal, not an unverified scan.
+home_assistant_voice_router_ssh_host_key: >-
+  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICb2g0xd9kcl+dNIKYYf8+LUjHtN+DFr5a3UkYXNTeSt
+home_assistant_voice_router_work_dir: /home/ubuntu/.local/state/home-assistant-voice
+home_assistant_voice_router_acceptance_file: ""
+home_assistant_voice_router_cleanup_owned: false
+home_assistant_voice_router_ownership_file: ""
+home_assistant_voice_router_search_password: "{{ vault_home_assistant_voice_search_password | default('') }}"
