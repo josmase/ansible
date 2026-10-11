@@ -24,7 +24,7 @@ resource "cloudflare_record" "local" {
     "gpu.local"           = "192.168.1.119"
     "*.staging.local"     = "192.168.1.182"
     "rustdesk.local"      = "192.168.1.181"
-    "homeassistant.local" = "192.168.1.181"
+    "homeassistant.local" = "192.168.1.45"
 
     # Kubernetes nodes (k3s cluster members)
     "kubernetes-201.local" = "192.168.1.201"

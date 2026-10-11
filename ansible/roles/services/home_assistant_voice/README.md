@@ -24,8 +24,8 @@ The Wyoming services are deployed by Flux in Kubernetes and exposed through
 Traefik TCP routes. This role only verifies those routes and configures
 Home Assistant. It no longer deploys Docker Compose services on the GPU host.
 
-The role connects to HassOS through the internal HTTPS ingress at
-`https://homeassistant.local.hejsan.xyz` and
+The role connects to HassOS through
+`http://homeassistant.local.hejsan.xyz:8123` and
 expects `vault_homeassistant_token` in the encrypted
 `inventory/group_vars/all/vault.yml`. It uses Home Assistant's API and does
 not require SSH access to HassOS.
