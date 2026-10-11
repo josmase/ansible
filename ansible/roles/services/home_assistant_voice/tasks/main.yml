@@ -63,8 +63,8 @@
     HOME_ASSISTANT_VERIFY_SSL: "{{ home_assistant_verify_ssl | string }}"
     HOME_ASSISTANT_CONFIGURE_INTEGRATIONS: "{{ home_assistant_voice_configure_integrations | string }}"
     HOME_ASSISTANT_CONFIGURE_PIPELINE: "{{ home_assistant_voice_configure_pipeline | string }}"
-    NO_PROXY: "homeassistant.local,homeassistant.local:8123,ollama.local.hejsan.xyz,wyoming-whisper.local.hejsan.xyz,wyoming-piper.local.hejsan.xyz,gpu.local.hejsan.xyz"
-    no_proxy: "homeassistant.local,homeassistant.local:8123,ollama.local.hejsan.xyz,wyoming-whisper.local.hejsan.xyz,wyoming-piper.local.hejsan.xyz,gpu.local.hejsan.xyz"
+    NO_PROXY: "homeassistant.local,homeassistant.local.hejsan.xyz,ollama.local.hejsan.xyz,wyoming-whisper.local.hejsan.xyz,wyoming-piper.local.hejsan.xyz,gpu.local.hejsan.xyz"
+    no_proxy: "homeassistant.local,homeassistant.local.hejsan.xyz,ollama.local.hejsan.xyz,wyoming-whisper.local.hejsan.xyz,wyoming-piper.local.hejsan.xyz,gpu.local.hejsan.xyz"
   register: home_assistant_voice_configure
   changed_when: >-
     'changed' in (home_assistant_voice_configure.stdout | lower)

@@ -21,9 +21,10 @@ resource "cloudflare_record" "local" {
     "proxmox.local"   = "192.168.1.100"
     "storage.local"   = "192.168.1.102"
     "ansible.local"   = "192.168.1.101"
-    "gpu.local"       = "192.168.1.119"
-    "*.staging.local" = "192.168.1.182"
-    "rustdesk.local"  = "192.168.1.181"
+    "gpu.local"           = "192.168.1.119"
+    "*.staging.local"     = "192.168.1.182"
+    "rustdesk.local"      = "192.168.1.181"
+    "homeassistant.local" = "192.168.1.181"
 
     # Kubernetes nodes (k3s cluster members)
     "kubernetes-201.local" = "192.168.1.201"
@@ -61,9 +62,8 @@ resource "cloudflare_record" "non_proxied_cname" {
   proxied = false
 }
 
-# RustDesk native clients require direct TCP and UDP connectivity. Cloudflare
-# DNS remains authoritative, but the record must stay DNS-only; normal
-# orange-cloud proxying does not support the RustDesk native ports.
+# RustDesk native clients require direct TCP and UDP connectivity, so this
+# record must remain DNS-only; Cloudflare proxying does not support its ports.
 resource "cloudflare_record" "rustdesk_native" {
   zone_id = var.zone_id
   name    = "rustdesk"

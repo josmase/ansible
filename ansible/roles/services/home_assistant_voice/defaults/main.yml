@@ -1,7 +1,7 @@
 ---
 # Home Assistant local voice configuration.
 
-home_assistant_url: "http://homeassistant.local:8123"
+home_assistant_url: "https://homeassistant.local.hejsan.xyz"
 home_assistant_token: "{{ vault_homeassistant_token }}"
 home_assistant_verify_ssl: true
 
