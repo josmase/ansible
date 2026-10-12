@@ -48,8 +48,8 @@ home_assistant_voice_router_enabled: false
 home_assistant_voice_router_promote: false
 home_assistant_voice_router_model: ha-qwen3-4b-instruct:2507-q4km
 home_assistant_voice_router_archive_url: >-
-  https://gitlab.local.hejsan.xyz/api/v4/projects/39/packages/generic/bilingual-assist/v0.1.1/bilingual_assist.zip
-home_assistant_voice_router_archive_sha256: b5e2dc480c1061b1f6f9a3ea9ce6622b23eee7ce2fce5dd11ba9589f949c9a18
+  https://gitlab.local.hejsan.xyz/api/v4/projects/39/packages/generic/bilingual-assist/v0.1.2/bilingual_assist.zip
+home_assistant_voice_router_archive_sha256: 67057de8424607eab681d6b9d7b11354d7f457235e8552ebb55e721c42f67f21
 home_assistant_voice_router_download_headers:
   Deploy-Token: "{{ vault_home_assistant_voice_router_package_token | default('') }}"
 home_assistant_voice_router_ssh_port: 2222
