@@ -80,6 +80,7 @@
     NO_PROXY: "homeassistant.local,homeassistant.local.hejsan.xyz,ollama.local.hejsan.xyz,wyoming-whisper.local.hejsan.xyz,wyoming-piper.local.hejsan.xyz,wyoming-kokoro.local.hejsan.xyz,gpu.local.hejsan.xyz"
     no_proxy: "homeassistant.local,homeassistant.local.hejsan.xyz,ollama.local.hejsan.xyz,wyoming-whisper.local.hejsan.xyz,wyoming-piper.local.hejsan.xyz,wyoming-kokoro.local.hejsan.xyz,gpu.local.hejsan.xyz"
   register: home_assistant_voice_configure
+  when: not home_assistant_voice_router_enabled | bool
   changed_when: >-
     'changed' in (home_assistant_voice_configure.stdout | lower)
   no_log: true
