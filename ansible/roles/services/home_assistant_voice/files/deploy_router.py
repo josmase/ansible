@@ -78,7 +78,7 @@ def validate_acceptance(path,sha,model):
     required=('hardware_passed','swedish_pipeline_passed','gpu_concurrent_passed','regression_suite_passed')
     if not all(data.get(k) is True for k in required) or data.get('release_sha256')!=sha or data.get('model')!=model:
         raise ValueError('Acceptance report missing, failed, or for another release/model')
-    if data.get('whisper_revision')!='08e178d48790749d25932bbc082711ddcfdfbc4f' or not data.get('tested_at'):
+    if data.get('whisper_revision')!='0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf' or not data.get('tested_at'):
         raise ValueError('Acceptance must identify STT revision and test time')
     tested=datetime.fromisoformat(data['tested_at'].replace('Z','+00:00'))
     if tested.tzinfo is None or not 0 <= (datetime.now(timezone.utc)-tested).total_seconds() <= 7*86400:

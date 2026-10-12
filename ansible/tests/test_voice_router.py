@@ -49,7 +49,7 @@ class AcceptanceTests(unittest.TestCase):
         report = dict(hardware_passed=True, swedish_pipeline_passed=True,
                       gpu_concurrent_passed=True, regression_suite_passed=True,
                       release_sha256='a'*64, model='pinned', regression_questions=40,
-                      whisper_revision='08e178d48790749d25932bbc082711ddcfdfbc4f',
+                      whisper_revision='0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf',
                       tested_at=datetime.now(timezone.utc).isoformat())
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'acceptance.json'
