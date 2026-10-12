@@ -16,7 +16,7 @@ import urllib.parse
 import urllib.request
 
 
-PROGRESS_LOG = "/tmp/home-assistant-voice-configure.log"
+PROGRESS_LOG = f"/tmp/home-assistant-voice-configure-{os.getuid()}.log"
 
 
 def progress(message):
