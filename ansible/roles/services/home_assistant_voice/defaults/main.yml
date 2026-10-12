@@ -47,9 +47,11 @@ home_assistant_voice_cleanup_legacy: true
 home_assistant_voice_router_enabled: false
 home_assistant_voice_router_promote: false
 home_assistant_voice_router_model: ha-qwen3-4b-instruct:2507-q4km
-home_assistant_voice_router_archive_url: ""
-home_assistant_voice_router_archive_sha256: ""
-home_assistant_voice_router_download_headers: {}
+home_assistant_voice_router_archive_url: >-
+  https://gitlab.local.hejsan.xyz/api/v4/projects/39/packages/generic/bilingual-assist/v0.1.0/bilingual_assist.zip
+home_assistant_voice_router_archive_sha256: 0c136bb3ed7929898c55be051ce8d885954b13b9da735f87da7cb795ce0261ac
+home_assistant_voice_router_download_headers:
+  Deploy-Token: "{{ vault_home_assistant_voice_router_package_token | default('') }}"
 home_assistant_voice_router_ssh_port: 2222
 home_assistant_voice_router_ssh_public_key_file: /home/ubuntu/.ssh/id_rsa.pub
 # Retrieved through the authenticated Supervisor terminal, not an unverified scan.
