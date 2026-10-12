@@ -6,8 +6,6 @@ available only when `home_assistant_voice_router_enabled` is explicitly false.
 
 - Ollama at `ollama.local.hejsan.xyz`
 - Wyoming Whisper at `wyoming-whisper.local.hejsan.xyz:10300`
-- Wyoming Piper at `wyoming-piper.local.hejsan.xyz:10200`
-- Swedish Alma TTS voice `sv_SE-alma-medium`
 - The bilingual router using `ha-qwen3-4b-instruct:2507-q4km`
 - Swedish Whisper input and Kokoro `af_heart` English output
 
@@ -26,24 +24,19 @@ Traefik TCP routes. This role only verifies those routes and configures
 Home Assistant. It no longer deploys Docker Compose services on the GPU host.
 
 The role connects to HassOS through
-`http://homeassistant.local.hejsan.xyz:8123` and
-expects `vault_homeassistant_token` in the encrypted
-`inventory/group_vars/all/vault.yml`. It uses Home Assistant's API and does
-not require SSH access to HassOS.
+`http://homeassistant.local.hejsan.xyz:8123` and expects
+`vault_homeassistant_token` in the encrypted
+`inventory/group_vars/all/vault.yml`. In the default router mode it also uses
+the key-only Terminal & SSH add-on to install the custom integration.
 
 The active router model is `ha-qwen3-4b-instruct:2507-q4km`. Ollama is
 configured for one loaded model on the GTX 1070; do not configure another HA
 conversation agent to load a different model on this endpoint while the router
 is active, because that evicts the router model and fails the readiness check.
 
-The Piper image embeds the Alma voice model and runs it CPU-only. The role
-updates the existing `Local Swedish` pipeline when its TTS voice changes and
-clears Home Assistant's TTS cache after the change.
-
-The `Local Swedish to English` pipeline uses an English conversation language,
-Swedish STT, and Kokoro `af_heart`. Local intents are preferred where HA can
-match them in the pipeline language; Swedish time queries use the English
-agent's GetDateTime tool.
+The current Assist configuration has a single preferred pipeline named
+`Local Swedish to English — Router Test`. The former Alma/Piper Swedish
+pipeline is not part of this active flow.
 
 Managed agent names include a SHA-256 configuration revision. Changing model,
 prompt or history creates a new agent and switches the existing pipeline;
@@ -68,19 +61,20 @@ TTS media stream and reports intent, first-media-byte and completion timings.
 These measurements exclude microphone capture, STT and physical speaker delay;
 they must not be presented as end-to-end hardware latency.
 
-## Staged bilingual router
+## Bilingual router
 
-`home_assistant_voice_router_enabled: true` (the default) enables the custom Swedish-native /
-English-output router installer. Supply a published archive URL and its SHA-256.
+`home_assistant_voice_router_enabled: true` (the default) enables the custom
+Swedish-input / English-output router installer. Supply a published archive URL and its SHA-256.
 The role uses the admin token to configure key-only SSH on port 2222, preserving
 existing authorized keys. The jumphost private key never leaves the jumphost.
 SSH host identity is pinned from the authenticated Supervisor terminal.
 
 Router tasks run without sudo so downloads and SSH trust belong to the execution
 user. Run from the `ansible/` folder in a clean, isolated checkout on the jumphost;
-do not overwrite its existing dirty checkout. The normal Swedish pipeline remains
-Alma-based. The candidate is `Local Swedish to English — Router Test`, with `sv`
-conversation input, Kokoro output, and outer `prefer_local_intents: false`.
+do not overwrite its existing dirty checkout. The router pipeline is
+`Local Swedish to English — Router Test`, with Swedish STT, Kokoro output, and
+outer `prefer_local_intents: false`. An idempotent rerun preserves and selects
+this pipeline even when the old Swedish and English pipelines have been removed.
 
 Promotion is a separate `home_assistant_voice_router_promote: true` run. It requires
 a private JSON acceptance file recording `release_sha256`, `model`, the pinned
