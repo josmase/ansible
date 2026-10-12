@@ -7,8 +7,8 @@ home_assistant_verify_ssl: true
 
 home_assistant_voice_language: sv
 home_assistant_voice_pipeline_name: Local Swedish
-home_assistant_voice_conversation_name: Local Qwen2.5 Swedish
-home_assistant_voice_english_conversation_name: Local Qwen2.5 English
+home_assistant_voice_conversation_name: Local Qwen3 Swedish
+home_assistant_voice_english_conversation_name: Local Qwen3 English
 home_assistant_voice_english_conversation_prompt: >-
   You are a Home Assistant voice assistant. Always answer in English, even when
   the user speaks Swedish. Output English only, even if the input and tool
@@ -38,13 +38,13 @@ home_assistant_voice_max_history: 5
 home_assistant_voice_english_max_history: 1
 
 home_assistant_ollama_url: "https://ollama.local.hejsan.xyz"
-home_assistant_ollama_model: qwen2.5:3b
+home_assistant_ollama_model: ha-qwen3-4b-instruct:2507-q4km
 home_assistant_voice_configure_integrations: true
 home_assistant_voice_configure_pipeline: true
 home_assistant_voice_cleanup_legacy: true
 
 # Staged rollout: the old English flow remains active until router validation.
-home_assistant_voice_router_enabled: false
+home_assistant_voice_router_enabled: true
 home_assistant_voice_router_promote: false
 home_assistant_voice_router_model: ha-qwen3-4b-instruct:2507-q4km
 home_assistant_voice_router_archive_url: >-

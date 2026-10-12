@@ -114,8 +114,9 @@ def main():
     token=os.environ['HOME_ASSISTANT_TOKEN']
     ws=WebSocket(args.url,token,True)
     snapshot=ws.command({'type':'assist_pipeline/pipeline/list'})
-    if not any(p['name']=='Local Swedish' and p['tts_voice']=='sv_SE-alma-medium' for p in snapshot['pipelines']):
-        raise ValueError('Preserved Swedish/Alma pipeline missing')
+    source=next((p for p in snapshot['pipelines'] if p['name'] in (PRODUCTION,CANDIDATE)),None)
+    if source is None or source.get('stt_engine')!='stt.faster_whisper' or source.get('tts_engine')!='tts.kokoro' or source.get('tts_voice')!='af_heart':
+        raise ValueError('A Swedish Whisper / Kokoro af_heart router pipeline is required')
     models=http_json(args.ollama_url,'','GET','/api/tags')['models']
     if not any(m['name']==args.model for m in models): raise ValueError('Pinned model is not prepared')
     show=http_json(args.ollama_url,'','POST','/api/show',{'model':args.model})
@@ -175,7 +176,10 @@ def main():
     if not agent: raise ValueError('Router entity did not become available')
     ws=WebSocket(args.url,token,True)
     pipelines=ws.command({'type':'assist_pipeline/pipeline/list'})['pipelines']
-    source=next(p for p in pipelines if p['name']==PRODUCTION)
+    current_candidate=next((p for p in pipelines if p['name']==CANDIDATE),None)
+    source=next((p for p in pipelines if p['name']==PRODUCTION),current_candidate)
+    if source is None:
+        raise ValueError('Neither the production nor router-test Assist pipeline exists')
     name=PRODUCTION if args.promote else CANDIDATE
     current=next((p for p in pipelines if p['name']==name),None)
     wanted={k:source[k] for k in ['stt_engine','stt_language','tts_engine','tts_language','tts_voice','wake_word_entity','wake_word_id']}
@@ -184,11 +188,15 @@ def main():
         ws.command({'type':'assist_pipeline/pipeline/create',**wanted});changed=True
     elif any(current.get(k)!=v for k,v in wanted.items()):
         ws.command({'type':'assist_pipeline/pipeline/update','pipeline_id':current['id'],**wanted});changed=True
-    if args.promote:
-        for selector in selectors:
-            if selector['state']!=PRODUCTION:
-                http_json(args.url,token,'POST','/api/services/select/select_option',{'entity_id':selector['entity_id'],'option':PRODUCTION});changed=True
-        if changed: http_json(args.url,token,'POST','/api/services/tts/clear_cache',{})
+    updated=ws.command({'type':'assist_pipeline/pipeline/list'})
+    selected_pipeline=next(p for p in updated['pipelines'] if p['name']==name)
+    if updated.get('preferred_pipeline')!=selected_pipeline['id']:
+        ws.command({'type':'assist_pipeline/pipeline/set_preferred','pipeline_id':selected_pipeline['id']})
+        changed=True
+    for selector in selectors:
+        if selector['state']!=name:
+            http_json(args.url,token,'POST','/api/services/select/select_option',{'entity_id':selector['entity_id'],'option':name});changed=True
+    if changed: http_json(args.url,token,'POST','/api/services/tts/clear_cache',{})
     print('changed' if changed else 'ok')
 
 

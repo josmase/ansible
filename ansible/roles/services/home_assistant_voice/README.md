@@ -1,18 +1,19 @@
 # Home Assistant local voice
 
-Configures Home Assistant to use the local Swedish voice stack:
+Configures Home Assistant to use the local voice stack. The default is the
+single bilingual router pipeline; the legacy two-pipeline configuration is
+available only when `home_assistant_voice_router_enabled` is explicitly false.
 
 - Ollama at `ollama.local.hejsan.xyz`
 - Wyoming Whisper at `wyoming-whisper.local.hejsan.xyz:10300`
 - Wyoming Piper at `wyoming-piper.local.hejsan.xyz:10200`
 - Swedish Alma TTS voice `sv_SE-alma-medium`
-- An Ollama conversation subentry using `qwen2.5:3b`
-- An Assist pipeline named `Local Swedish`
+- The bilingual router using `ha-qwen3-4b-instruct:2507-q4km`
+- Swedish Whisper input and Kokoro `af_heart` English output
 
-The role uses the current Home Assistant config-subentry API for Ollama. It
-does not modify or remove existing Assist pipelines. The Home Assistant API
-token is read from `vault_homeassistant_token` and is only passed to the local
-configuration command through its environment.
+The role configures the router pipeline and selects it as preferred. The Home
+Assistant API token is read from `vault_homeassistant_token` and is only passed
+to the local configuration command through its environment.
 
 Run it explicitly from the Ansible directory:
 
@@ -30,10 +31,10 @@ expects `vault_homeassistant_token` in the encrypted
 `inventory/group_vars/all/vault.yml`. It uses Home Assistant's API and does
 not require SSH access to HassOS.
 
-The active conversation model is `qwen2.5:3b`, a non-thinking instruct model
-with a roughly 1.9 GB Ollama image. This keeps response latency and GPU memory
-use suitable for the GTX 1070 while avoiding Qwen3's reasoning stream being
-sent to voice TTS.
+The active router model is `ha-qwen3-4b-instruct:2507-q4km`. Ollama is
+configured for one loaded model on the GTX 1070; do not configure another HA
+conversation agent to load a different model on this endpoint while the router
+is active, because that evicts the router model and fails the readiness check.
 
 The Piper image embeds the Alma voice model and runs it CPU-only. The role
 updates the existing `Local Swedish` pipeline when its TTS voice changes and
@@ -69,7 +70,7 @@ they must not be presented as end-to-end hardware latency.
 
 ## Staged bilingual router
 
-`home_assistant_voice_router_enabled: true` enables the custom Swedish-native /
+`home_assistant_voice_router_enabled: true` (the default) enables the custom Swedish-native /
 English-output router installer. Supply a published archive URL and its SHA-256.
 The role uses the admin token to configure key-only SSH on port 2222, preserving
 existing authorized keys. The jumphost private key never leaves the jumphost.
