@@ -10,7 +10,7 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] /
                          'roles/services/home_assistant_voice/files'))
-from deploy_router import verified_members, validate_acceptance
+from deploy_router import verified_members, validate_acceptance, conversation_entity_available
 from cleanup_router import candidates
 
 
@@ -61,6 +61,17 @@ class AcceptanceTests(unittest.TestCase):
             path.write_text(json.dumps(report))
             with self.assertRaises(ValueError):
                 validate_acceptance(path, 'a'*64, 'pinned')
+
+
+class ConversationEntityTests(unittest.TestCase):
+    def test_unknown_state_is_ready_for_conversation_entity(self):
+        self.assertTrue(conversation_entity_available(
+            'conversation.bilingual', [{'entity_id':'conversation.bilingual','state':'unknown'}]))
+
+    def test_unavailable_or_missing_entity_is_not_ready(self):
+        self.assertFalse(conversation_entity_available(
+            'conversation.bilingual', [{'entity_id':'conversation.bilingual','state':'unavailable'}]))
+        self.assertFalse(conversation_entity_available('conversation.bilingual', []))
 
 
 class OwnershipTests(unittest.TestCase):

@@ -88,6 +88,14 @@ def validate_acceptance(path,sha,model):
     return data
 
 
+def conversation_entity_available(agent, states):
+    """Conversation entities can be active before HA assigns a state value."""
+    return bool(agent) and any(
+        state.get('entity_id') == agent and state.get('state') != 'unavailable'
+        for state in states
+    )
+
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--url',required=True)
@@ -160,7 +168,7 @@ def main():
         states=http_json(args.url,token,'GET','/api/states')
         registry=WebSocket(args.url,token,True).command({'type':'config/entity_registry/list'})
         agent=next((e['entity_id'] for e in registry if e.get('config_entry_id')==entry_id and e['entity_id'].startswith('conversation.') and not e.get('disabled_by')),None)
-        if agent and not any(s['entity_id']==agent and s['state'] not in ('unavailable','unknown') for s in states):
+        if not conversation_entity_available(agent, states):
             agent=None
         if agent: break
         time.sleep(1)
