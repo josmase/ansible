@@ -1,0 +1,7 @@
+{
+  "operator_override": true,
+  "reason": "User explicitly requested promotion after isolated text-path validation and asked to skip the microphone recording corpus.",
+  "release_sha256": "7c5b6c769270a25d3e7129ededc0a87ebb2e3e641aaa63f7004b1ea3a43e3c74",
+  "model": "ha-qwen3-4b-instruct:2507-q4km",
+  "release_fingerprint": "9d0028f9aae8903c03d8719f3b6563d2e0b0f3ce57baed4f2940cdfd30386e88"
+}

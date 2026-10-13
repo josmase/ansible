@@ -45,7 +45,10 @@ home_assistant_voice_cleanup_legacy: true
 
 # Staged rollout: the old English flow remains active until router validation.
 home_assistant_voice_router_enabled: true
-home_assistant_voice_router_promote: false
+# Explicit user-approved promotion after isolated text-path validation. Future
+# release changes must update the immutable override binding or pass the normal
+# recorded-hardware acceptance gate.
+home_assistant_voice_router_promote: true
 home_assistant_voice_router_model: ha-qwen3-4b-instruct:2507-q4km
 home_assistant_voice_router_archive_url: >-
   https://gitlab.local.hejsan.xyz/api/v4/projects/39/packages/generic/bilingual-assist/v0.2.3/bilingual_assist_v2.zip
@@ -58,7 +61,8 @@ home_assistant_voice_router_ssh_public_key_file: /home/ubuntu/.ssh/id_rsa.pub
 home_assistant_voice_router_ssh_host_key: >-
   ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICb2g0xd9kcl+dNIKYYf8+LUjHtN+DFr5a3UkYXNTeSt
 home_assistant_voice_router_work_dir: /home/ubuntu/.local/state/home-assistant-voice
-home_assistant_voice_router_acceptance_file: ""
+home_assistant_voice_router_acceptance_file: >-
+  {{ role_path }}/files/router-operator-override-v0.2.3.json
 # Absolute path on the Ansible execution host. Required even for staging:
 # records the exact model, images, and non-secret configuration being evaluated.
 home_assistant_voice_router_release_manifest: >-

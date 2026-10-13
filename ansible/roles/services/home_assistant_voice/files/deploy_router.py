@@ -111,6 +111,16 @@ def release_fingerprint(release):
 
 def validate_acceptance(path,sha,model,release=None):
     data=json.loads(Path(path).read_text())
+    # A human can explicitly promote a release without the recording corpus,
+    # but the exception must still be bound to this exact immutable release.
+    # This is intentionally distinct from a successful test acceptance: it
+    # cannot be mistaken for one or used without an explicit checked-in record.
+    if data.get('operator_override') is True:
+        if (not isinstance(data.get('reason'),str) or not data['reason'].strip()
+                or data.get('release_sha256')!=sha or data.get('model')!=model
+                or release is None or data.get('release_fingerprint') != release_fingerprint(release)):
+            raise ValueError('Operator override is incomplete or for another release/model')
+        return data
     required=('hardware_passed','gpu_concurrent_passed','regression_suite_passed',
               'search_passed','idempotency_passed','playback_passed')
     if not all(data.get(k) is True for k in required) or data.get('release_sha256')!=sha or data.get('model')!=model:
