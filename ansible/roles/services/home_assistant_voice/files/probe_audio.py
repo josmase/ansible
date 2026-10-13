@@ -9,6 +9,7 @@ spoken reply; it never prints the access token or audio.
 import argparse
 import json
 import os
+from pathlib import Path
 import sys
 import time
 import urllib.request
@@ -23,7 +24,18 @@ def main():
     parser.add_argument('--url', default='http://homeassistant.local.hejsan.xyz:8123')
     parser.add_argument('--pipeline', default='Local Swedish to English')
     parser.add_argument('--debug', action='store_true', help='Log pipeline stage names to stderr')
+    parser.add_argument('--trace-file', help='New private file for safe protocol stage tracing')
     args = parser.parse_args()
+    trace_path = Path(args.trace_file) if args.trace_file else None
+    if trace_path and trace_path.exists():
+        raise ValueError('Refusing to overwrite trace file')
+
+    def trace(message):
+        if args.debug:
+            print(message, file=sys.stderr, flush=True)
+        if trace_path:
+            with trace_path.open('a', encoding='utf-8') as trace_output:
+                trace_output.write(message + '\n')
 
     with wave.open(args.wav, 'rb') as audio:
         if audio.getsampwidth() != 2 or audio.getnchannels() != 1:
@@ -36,8 +48,10 @@ def main():
     pipeline = next(p for p in ws.command({'type': 'assist_pipeline/pipeline/list'})['pipelines']
                     if p['name'] == args.pipeline)
     started = time.monotonic()
+    run_id = ws.next_id
+    ws.next_id += 1
     ws._send_json({
-        'id': 1,
+        'id': run_id,
         'type': 'assist_pipeline/run',
         'pipeline': pipeline['id'],
         'start_stage': 'stt',
@@ -46,6 +60,7 @@ def main():
         'conversation_id': None,
         'timeout': 60,
     })
+    trace('sent=assist_pipeline/run')
 
     result = {'pipeline': args.pipeline, 'sample_rate': sample_rate}
     binary_handler = None
@@ -53,11 +68,14 @@ def main():
     audio_url = None
     while True:
         response = ws._recv_json()
+        trace(f"message={response.get('type')} success={response.get('success')} error={response.get('error')}")
+        if response.get('id') == run_id and not response.get('success', True):
+            raise RuntimeError(response.get('error', 'Assist pipeline run was rejected'))
         event = response.get('event', {})
         kind = event.get('type')
         data = event.get('data') or {}
-        if args.debug and kind:
-            print(f'event={kind}', file=sys.stderr, flush=True)
+        if kind:
+            trace(f'event={kind}')
         if kind == 'error':
             raise RuntimeError(data)
         if kind == 'run-start':
