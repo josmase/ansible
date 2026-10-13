@@ -9,7 +9,7 @@ available only when `home_assistant_voice_router_enabled` is explicitly false.
 - The bilingual router using `ha-qwen3-4b-instruct:2507-q4km`
 - Swedish Whisper input and Kokoro `af_heart` English output
 
-The role configures the router pipeline and selects it as preferred. The Home
+The role stages the router pipeline without selecting it on the hardware. The Home
 Assistant API token is read from `vault_homeassistant_token` and is only passed
 to the local configuration command through its environment.
 
@@ -71,17 +71,39 @@ SSH host identity is pinned from the authenticated Supervisor terminal.
 
 Router tasks run without sudo so downloads and SSH trust belong to the execution
 user. Run from the `ansible/` folder in a clean, isolated checkout on the jumphost;
-do not overwrite its existing dirty checkout. The router pipeline is
-`Local Swedish to English — Router Test`, with Swedish STT, Kokoro output, and
-outer `prefer_local_intents: false`. An idempotent rerun preserves and selects
-this pipeline even when the old Swedish and English pipelines have been removed.
+do not overwrite its existing dirty checkout. The candidate router pipeline is
+`Local Swedish to English — Validation`, with Swedish STT, Kokoro output, and
+outer `prefer_local_intents: false`. An idempotent staging rerun preserves this
+pipeline without selecting it. `Swedish voice evaluation — No actions` is a
+separate recording-only pipeline that cannot call an intent, LLM, or service.
 
 Promotion is a separate `home_assistant_voice_router_promote: true` run. It requires
-a private JSON acceptance file recording `release_sha256`, `model`, the pinned
-`whisper_revision`, timezone-aware `tested_at` within seven days,
-`regression_questions` of at least 40, and true `hardware_passed`,
-`swedish_pipeline_passed`, `gpu_concurrent_passed`, `regression_suite_passed`.
-These assertions must reflect actual tests, not text-only smoke tests.
+a private JSON acceptance file and a release manifest binding the exact archive,
+Ollama digest, pinned STT/TTS images, STT revision, pipeline configuration, and
+non-secret router settings. It requires 80 recordings (40 held out), real speaker
+playback, search, idempotency, GPU-concurrency and regression passes. It refuses
+unsafe/duplicate execution, OOMs, playback failures, insufficient free VRAM, or
+timings beyond the documented gates. These assertions must reflect actual tests,
+not text-only smoke tests.
+
+### Guided hardware recording
+
+After the validation pipeline has been deployed, run the capture helper once per
+phrase from the jumphost. It temporarily selects the no-action recording pipeline,
+arms a Home Assistant capture, then restores both Voice selectors even on failure.
+The WAV and adjacent metadata are mode `0600`, must be new paths, and are ignored
+by Git:
+
+```bash
+HOME_ASSISTANT_TOKEN="…" python3 roles/services/home_assistant_voice/files/record_voice.py \
+  --url http://homeassistant.local.hejsan.xyz:8123 \
+  --output ~/.local/state/home-assistant-voice/recordings/001.wav \
+  --expected 'Tänd lamporna i sovrummet'
+```
+
+When it prints “Recording is armed”, wake the hardware and say the expected
+phrase once. The capture contains microphone audio; keep it on the jumphost and
+do not commit or upload it.
 
 Cleanup is opt-in: set `home_assistant_voice_router_cleanup_owned: true` and
 `home_assistant_voice_router_ownership_file` only after promotion. The inventory

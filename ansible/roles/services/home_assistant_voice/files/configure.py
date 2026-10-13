@@ -125,6 +125,13 @@ class WebSocket:
                     raise RuntimeError(f"Home Assistant WebSocket command failed: {response}")
                 return response.get("result")
 
+    def event(self, subscription_id):
+        """Return the next event for an established WebSocket subscription."""
+        while True:
+            response = self._recv_json()
+            if response.get("type") == "event" and response.get("id") == subscription_id:
+                return response.get("event", {})
+
 
 def config_flow(base_url, token, handler, data, verify):
     progress(f"GET config entries {handler}")

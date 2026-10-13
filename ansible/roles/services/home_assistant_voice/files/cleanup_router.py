@@ -11,13 +11,13 @@ from pathlib import Path
 import subprocess
 import time
 from configure import WebSocket, http_json
-from deploy_router import HOST, PRODUCTION, private_json, validate_acceptance
+from deploy_router import HOST, PRODUCTION, DOMAIN, private_json, validate_acceptance
 
 
 def candidates(manifest, pipelines, entities, entries, subentries, states):
     referenced = {p.get(field) for p in pipelines for field in
                   ('conversation_engine', 'stt_engine', 'tts_engine', 'wake_word_entity')}
-    protected_names = {'Local Swedish', PRODUCTION}
+    protected_names = {PRODUCTION}
     hardware_names = {s['state'] for s in states if s['entity_id'].startswith('select.')
                       and 'assistant' in s['entity_id']}
     removals = {'pipelines': [], 'subentries': [], 'entries': []}
@@ -48,7 +48,7 @@ def candidates(manifest, pipelines, entities, entries, subentries, states):
             continue
         if current['domain'] != owned['domain'] or current['title'] != owned['title']:
             raise ValueError('Config entry identity changed')
-        if current['domain'] not in ('ollama', 'wyoming'):
+        if current['domain'] not in ('ollama', 'wyoming', 'bilingual_assist'):
             raise ValueError('Only voice integrations can be removed')
         linked = [e for e in entities if e.get('config_entry_id') == current['entry_id']]
         if current.get('num_subentries') or any(e['entity_id'] in referenced for e in linked):
@@ -65,6 +65,7 @@ def main():
     parser.add_argument('--acceptance-file', default='')
     parser.add_argument('--sha256', default='')
     parser.add_argument('--model', default='')
+    parser.add_argument('--release-manifest', required=True)
     parser.add_argument('--ssh-port', type=int, default=2222)
     parser.add_argument('--apply', action='store_true')
     args = parser.parse_args()
@@ -84,11 +85,14 @@ def main():
     if not args.apply:
         print(json.dumps({'preview': removals}, indent=2))
         return
-    validate_acceptance(args.acceptance_file, args.sha256, args.model)
+    validate_acceptance(args.acceptance_file, args.sha256, args.model,
+                        json.loads(Path(args.release_manifest).read_text()))
     production = next(p for p in snapshot['pipelines'] if p['name'] == PRODUCTION)
-    router_entities = {e['entity_id'] for e in entities if e.get('platform') == 'bilingual_assist'}
+    router_entities = {e['entity_id'] for e in entities if e.get('platform') == DOMAIN}
     if production['conversation_engine'] not in router_entities or production.get('prefer_local_intents') is not False:
         raise ValueError('Router has not been promoted; cleanup refused')
+    if snapshot.get('preferred_pipeline') != production['id']:
+        raise ValueError('Accepted router is not preferred; cleanup refused')
     if not any(removals.values()):
         print('ok')
         return

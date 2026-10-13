@@ -24,6 +24,7 @@
     timeout: 15
     state: started
   delegate_to: localhost
+  when: not home_assistant_voice_router_enabled | bool
 
 - name: Wait for Kubernetes Wyoming Kokoro TCP route
   ansible.builtin.wait_for:

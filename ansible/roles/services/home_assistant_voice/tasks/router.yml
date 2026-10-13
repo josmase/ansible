@@ -6,8 +6,27 @@
       - home_assistant_voice_router_archive_sha256 is match('^[0-9a-f]{64}$')
       - home_assistant_voice_router_ssh_host_key | length > 0
       - vault_home_assistant_voice_router_package_token | default('') | length > 0
+      - home_assistant_voice_router_release_manifest | length > 0
       - not home_assistant_voice_router_promote or home_assistant_voice_router_acceptance_file | length > 0
     fail_msg: Supply a published checksum-pinned release, package-read token, and recorded acceptance before promotion.
+
+- name: Validate immutable release inputs before modifying Home Assistant
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_playbook_python }}"
+      - "{{ role_path }}/files/validate_router_release.py"
+      - --release-manifest
+      - "{{ home_assistant_voice_router_release_manifest }}"
+      - --sha256
+      - "{{ home_assistant_voice_router_archive_sha256 }}"
+      - --model
+      - "{{ home_assistant_voice_router_model }}"
+      - --acceptance-file
+      - "{{ home_assistant_voice_router_acceptance_file }}"
+      - --promote
+      - "{{ home_assistant_voice_router_promote | string }}"
+  changed_when: false
+  check_mode: false
 
 - name: Configure key-only SSH add-on through the Home Assistant token
   ansible.builtin.command:
@@ -82,6 +101,8 @@
       - "{{ home_assistant_ollama_url }}"
       - --acceptance-file
       - "{{ home_assistant_voice_router_acceptance_file }}"
+      - --release-manifest
+      - "{{ home_assistant_voice_router_release_manifest }}"
       - --promote
       - "{{ home_assistant_voice_router_promote | string }}"
   environment:
@@ -104,6 +125,8 @@
       - "{{ home_assistant_voice_router_work_dir }}"
       - --acceptance-file
       - "{{ home_assistant_voice_router_acceptance_file }}"
+      - --release-manifest
+      - "{{ home_assistant_voice_router_release_manifest }}"
       - --sha256
       - "{{ home_assistant_voice_router_archive_sha256 }}"
       - --model
