@@ -9,6 +9,7 @@ spoken reply; it never prints the access token or audio.
 import argparse
 import json
 import os
+import sys
 import time
 import urllib.request
 import wave
@@ -21,6 +22,7 @@ def main():
     parser.add_argument('--wav', required=True)
     parser.add_argument('--url', default='http://homeassistant.local.hejsan.xyz:8123')
     parser.add_argument('--pipeline', default='Local Swedish to English')
+    parser.add_argument('--debug', action='store_true', help='Log pipeline stage names to stderr')
     args = parser.parse_args()
 
     with wave.open(args.wav, 'rb') as audio:
@@ -54,6 +56,8 @@ def main():
         event = response.get('event', {})
         kind = event.get('type')
         data = event.get('data') or {}
+        if args.debug and kind:
+            print(f'event={kind}', file=sys.stderr, flush=True)
         if kind == 'error':
             raise RuntimeError(data)
         if kind == 'run-start':
