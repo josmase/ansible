@@ -69,16 +69,16 @@ class WebSocket:
             raise RuntimeError(f"Home Assistant WebSocket authentication failed: {auth}")
         self.next_id = 1
 
-    def _send_frame(self, data: bytes):
+    def _send_frame(self, data: bytes, opcode=0x1):
         mask = os.urandom(4)
         masked = bytes(value ^ mask[index % 4] for index, value in enumerate(data))
         length = len(masked)
         if length < 126:
-            header = bytes([0x81, 0x80 | length])
+            header = bytes([0x80 | opcode, 0x80 | length])
         elif length < 65536:
-            header = bytes([0x81, 0x80 | 126]) + struct.pack("!H", length)
+            header = bytes([0x80 | opcode, 0x80 | 126]) + struct.pack("!H", length)
         else:
-            header = bytes([0x81, 0x80 | 127]) + struct.pack("!Q", length)
+            header = bytes([0x80 | opcode, 0x80 | 127]) + struct.pack("!Q", length)
         self.sock.sendall(header + mask + masked)
 
     def _recv_frame(self):
@@ -109,6 +109,9 @@ class WebSocket:
 
     def _send_json(self, payload):
         self._send_frame(json.dumps(payload).encode())
+
+    def _send_binary(self, payload: bytes):
+        self._send_frame(payload, opcode=0x2)
 
     def _recv_json(self):
         return json.loads(self._recv_frame())
