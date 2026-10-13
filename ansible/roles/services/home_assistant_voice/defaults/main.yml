@@ -48,8 +48,8 @@ home_assistant_voice_router_enabled: true
 home_assistant_voice_router_promote: false
 home_assistant_voice_router_model: ha-qwen3-4b-instruct:2507-q4km
 home_assistant_voice_router_archive_url: >-
-  https://gitlab.local.hejsan.xyz/api/v4/projects/39/packages/generic/bilingual-assist/v0.1.2/bilingual_assist.zip
-home_assistant_voice_router_archive_sha256: 67057de8424607eab681d6b9d7b11354d7f457235e8552ebb55e721c42f67f21
+  https://gitlab.local.hejsan.xyz/api/v4/projects/39/packages/generic/bilingual-assist/v0.2.0/bilingual_assist_v2.zip
+home_assistant_voice_router_archive_sha256: 01bf7cca062e4b2aa76072cda5ad5207b50ec465c2c58992d5a9a3ecf7465a31
 home_assistant_voice_router_download_headers:
   Deploy-Token: "{{ vault_home_assistant_voice_router_package_token | default('') }}"
 home_assistant_voice_router_ssh_port: 2222
@@ -61,7 +61,8 @@ home_assistant_voice_router_work_dir: /home/ubuntu/.local/state/home-assistant-v
 home_assistant_voice_router_acceptance_file: ""
 # Absolute path on the Ansible execution host. Required even for staging:
 # records the exact model, images, and non-secret configuration being evaluated.
-home_assistant_voice_router_release_manifest: ""
+home_assistant_voice_router_release_manifest: >-
+  {{ role_path }}/files/router-release-v0.2.0.json
 home_assistant_voice_router_cleanup_owned: false
 home_assistant_voice_router_ownership_file: ""
 home_assistant_voice_router_search_password: "{{ vault_home_assistant_voice_search_password | default('') }}"

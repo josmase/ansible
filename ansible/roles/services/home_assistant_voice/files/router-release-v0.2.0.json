@@ -1,0 +1,30 @@
+{
+  "stt_revision": "0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf",
+  "stt_image": "artifactory.local.hejsan.xyz/gitlab-registry/josmase/infrastructure/wyoming-voice/whisper@sha256:2338b3144a58b2d1c22001669a1d07dac4ab39e084d2983895f463a4b38b1bba",
+  "tts_image": "artifactory.local.hejsan.xyz/gitlab-registry/josmase/infrastructure/kokoro-tts@sha256:aa8b9e8bc680c169e080824d402278abb73904e0156be9096ee02201164fabb3",
+  "model_digest": "83140c797cdad76d767a259263cf4ae7945bf27288332e6b4f63c14d5dd5e48b",
+  "configuration": {
+    "pipeline": {
+      "stt_engine": "stt.faster_whisper",
+      "stt_language": "sv",
+      "tts_engine": "tts.kokoro",
+      "tts_language": "en-us",
+      "tts_voice": "af_heart",
+      "wake_word_entity": null,
+      "wake_word_id": null
+    },
+    "router": {
+      "ollama_url": "https://ollama.local.hejsan.xyz",
+      "model": "ha-qwen3-4b-instruct:2507-q4km",
+      "search_url": "https://searxng.local.hejsan.xyz",
+      "search_username": "assist",
+      "search_enabled": false,
+      "session_timeout": 60,
+      "max_turns": 2,
+      "num_ctx": 4096,
+      "debug_text": false,
+      "recovery_enabled": true,
+      "classify_questions": true
+    }
+  }
+}
