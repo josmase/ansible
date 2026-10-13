@@ -62,7 +62,7 @@ home_assistant_voice_router_acceptance_file: ""
 # Absolute path on the Ansible execution host. Required even for staging:
 # records the exact model, images, and non-secret configuration being evaluated.
 home_assistant_voice_router_release_manifest: >-
-  {{ role_path }}/files/router-release-v0.2.0.json
+  {{ role_path }}/files/router-release-v0.2.1.json
 home_assistant_voice_router_cleanup_owned: false
 home_assistant_voice_router_ownership_file: ""
 home_assistant_voice_router_search_password: "{{ vault_home_assistant_voice_search_password | default('') }}"

@@ -114,8 +114,10 @@ class AcceptanceTests(unittest.TestCase):
         with self.assertRaises(ValueError): release_fingerprint(release)
 
     def test_published_validation_manifest_is_complete(self):
-        manifest=Path(__file__).resolve().parents[1] / 'roles/services/home_assistant_voice/files/router-release-v0.2.0.json'
-        self.assertEqual(len(release_fingerprint(json.loads(manifest.read_text()))),64)
+        root=Path(__file__).resolve().parents[1] / 'roles/services/home_assistant_voice/files'
+        for name in ('router-release-v0.2.0.json','router-release-v0.2.1.json'):
+            with self.subTest(name=name):
+                self.assertEqual(len(release_fingerprint(json.loads((root/name).read_text()))),64)
         release=self.release()
         release['configuration']['router']['search_password']='must-never-be-here'
         with self.assertRaises(ValueError): release_fingerprint(release)
