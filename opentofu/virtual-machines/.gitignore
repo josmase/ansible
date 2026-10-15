@@ -1,17 +1,11 @@
-*.d.ts
-*.js
 node_modules
-cdktf.out
-cdktf.log
 *terraform.*.tfstate*
 terraform.tfstate
 terraform.tfstate.backup
-.gen
 .terraform
-tsconfig.tsbuildinfo
-!jest.config.js
-!setup.js
 
 # Secrets file
 .env.secrets.sh
 variables.secret.tfvars
+*.tfvars
+*.tfvars.json

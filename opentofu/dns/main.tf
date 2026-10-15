@@ -1,9 +1,9 @@
 terraform {
-  required_version = ">= 1.6.0"
+  required_version = "= 1.13.1"
   required_providers {
     cloudflare = {
       source = "cloudflare/cloudflare"
-      # v4 syntax (cloudflare_record) -- matches existing state (tf 1.13.1).
+      # v4 syntax (cloudflare_record) -- matches existing OpenTofu state.
       # v5 renamed resources to cloudflare_dns_record; migrate deliberately.
       version = "~> 4.0"
     }
@@ -16,11 +16,11 @@ provider "cloudflare" {
 
 resource "cloudflare_record" "local" {
   for_each = {
-    "*.local"         = "192.168.1.181"
-    "media.local"     = "192.168.1.105"
-    "proxmox.local"   = "192.168.1.100"
-    "storage.local"   = "192.168.1.102"
-    "ansible.local"   = "192.168.1.101"
+    "*.local"             = "192.168.1.181"
+    "media.local"         = "192.168.1.105"
+    "proxmox.local"       = "192.168.1.100"
+    "storage.local"       = "192.168.1.102"
+    "ansible.local"       = "192.168.1.101"
     "gpu.local"           = "192.168.1.119"
     "*.staging.local"     = "192.168.1.182"
     "rustdesk.local"      = "192.168.1.181"

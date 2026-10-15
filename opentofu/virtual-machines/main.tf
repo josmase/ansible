@@ -60,3 +60,61 @@ resource "proxmox_virtual_environment_vm" "worker" {
   on_boot = false
   lifecycle { prevent_destroy = true }
 }
+
+# Existing masters are imported into this resource and then managed alongside
+# the workers. Preserve their established disks, cloud-init, and network
+# settings; this resource owns their declared CPU and memory allocation.
+resource "proxmox_virtual_environment_vm" "master" {
+  for_each  = var.masters
+  node_name = var.proxmox_node
+  vm_id     = tonumber(each.key)
+  name      = each.value.name
+  memory { dedicated = each.value.memory }
+  cpu {
+    cores = each.value.cores
+    type  = "host"
+  }
+  on_boot = false
+  started = true
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes = [
+      boot_order,
+      disk,
+      initialization,
+      network_device,
+      operating_system,
+      scsi_hardware,
+      serial_device,
+    ]
+  }
+}
+
+# Media remains in the VM fleet defined by the retired CDKTF stack. Import it
+# so the native OpenTofu configuration is the only declarative source.
+resource "proxmox_virtual_environment_vm" "media" {
+  node_name = var.proxmox_node
+  vm_id     = 105
+  name      = var.media_vm.name
+  memory { dedicated = var.media_vm.memory }
+  cpu {
+    cores = var.media_vm.cores
+    type  = "host"
+  }
+  on_boot = false
+  started = true
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes = [
+      boot_order,
+      disk,
+      initialization,
+      network_device,
+      operating_system,
+      scsi_hardware,
+      serial_device,
+    ]
+  }
+}

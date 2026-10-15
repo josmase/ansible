@@ -224,9 +224,8 @@ serial/restart semantics.
 >
 > - Jumphost synced to `7c5da01`; become verified working (pre-existing
 >   `group_vars/all/vault.yml` on the jumphost supplies the sudo password).
-> - Terraform: provider pinned to v4, executed with terraform **1.13.1**
->   (side-by-side at `~/bin/terraform131`; system default remains 1.5.2 — too old for
->   `required_version >= 1.6`). All records applied/imported; final plan = "No changes".
+> - OpenTofu: Cloudflare provider pinned to v4, executed with OpenTofu **1.13.1**.
+>   All records applied/imported; final plan = "No changes".
 >   New `kubernetes-201..206.local.hejsan.xyz` records resolve via public DNS.
 > - Playbook: workers → gpu → masters one-at-a-time. Every node `ok=8 changed=4 failed=0`
 >   (config template + sysctl template + apt drop-in + snap retain), **no restarts**
@@ -312,9 +311,9 @@ authoritative source and can be retired after a successful check-mode comparison
    and `ubuntu-ms-7977.localdomain`) — a double-execution hazard for any broad play.
    `[printer_monitors]` now references `gpu.local.hejsan.xyz`; the Ollama/Wyoming plays in
    `base.yml` target `k3s_gpu_node`.
-4. **DNS records** added to `terraform/dns/main.tf`: `kubernetes-201..206.local` →
+4. **DNS records** added to `opentofu/dns/main.tf`: `kubernetes-201..206.local` →
    .201–.206 (optional `kubernetes-119.local` left commented). ⚠️ Records are *code only*
-   until `terraform apply` runs with the Cloudflare token/state.
+   until `tofu apply` runs with the Cloudflare token/state.
 5. **Secrets:** `k3s_token` is vaulted at
    `ansible/inventory/group_vars/k3s_cluster/vault.yml` (encrypted with the repo's
    `.vault_pass` on the jumphost); non-secret install parameters are in `vars.yml`.
