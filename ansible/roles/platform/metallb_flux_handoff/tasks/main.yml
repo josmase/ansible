@@ -1,0 +1,219 @@
+---
+- name: Require explicit approval to remove the K3s MetalLB add-on
+  ansible.builtin.assert:
+    that:
+      - metallb_flux_handoff_allow_static_removal | bool
+    fail_msg: >-
+      This operation removes the K3s static MetalLB add-on. Re-run only during
+      an approved maintenance window with
+      -e metallb_flux_handoff_allow_static_removal=true.
+
+- name: Verify Kubernetes API readiness
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - get
+      - --raw=/readyz
+  changed_when: false
+  check_mode: false
+
+- name: Verify the legacy MetalLB static manifest exists
+  ansible.builtin.stat:
+    path: "{{ metallb_flux_handoff_static_manifest }}"
+  register: metallb_flux_handoff_manifest
+
+- name: Require the legacy MetalLB static manifest
+  ansible.builtin.assert:
+    that:
+      - metallb_flux_handoff_manifest.stat.exists
+    fail_msg: >-
+      Missing {{ metallb_flux_handoff_static_manifest }}. Refusing to continue
+      because the expected K3s add-on source is absent.
+
+- name: Verify the Flux MetalLB HelmRelease is present
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ metallb_flux_handoff_helmrelease_namespace }}"
+      - get
+      - helmrelease
+      - "{{ metallb_flux_handoff_helmrelease_name }}"
+  changed_when: false
+  check_mode: false
+
+- name: Verify the existing MetalLB address pool
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ metallb_flux_handoff_namespace }}"
+      - get
+      - ipaddresspool
+      - "{{ metallb_flux_handoff_pool_name }}"
+      - -o
+      - 'jsonpath={.spec.addresses[0]}'
+  register: metallb_flux_handoff_pool
+  changed_when: false
+  check_mode: false
+
+- name: Require the expected MetalLB address pool
+  ansible.builtin.assert:
+    that:
+      - metallb_flux_handoff_pool.stdout | trim == metallb_flux_handoff_pool_range
+    fail_msg: >-
+      The live MetalLB pool differs from {{ metallb_flux_handoff_pool_range }}.
+      Reconcile the Flux manifest with the live cluster before migration.
+
+- name: Verify the existing Layer 2 advertisement
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ metallb_flux_handoff_namespace }}"
+      - get
+      - l2advertisement
+      - "{{ metallb_flux_handoff_l2advertisement_name }}"
+  changed_when: false
+  check_mode: false
+
+- name: Capture current LoadBalancer allocations
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - get
+      - service
+      - --all-namespaces
+      - -o
+      - 'jsonpath={range .items[?(@.spec.type=="LoadBalancer")]}{.metadata.namespace}{"/"}{.metadata.name}{"="}{.spec.loadBalancerIP}{"|"}{.status.loadBalancer.ingress[0].ip}{"\n"}{end}'
+  register: metallb_flux_handoff_loadbalancers_before
+  changed_when: false
+  check_mode: false
+
+- name: Require at least one LoadBalancer allocation
+  ansible.builtin.assert:
+    that:
+      - metallb_flux_handoff_loadbalancers_before.stdout | trim | length > 0
+    fail_msg: "No LoadBalancer Services were found; investigate before handoff."
+
+- name: Create the static manifest backup directory
+  ansible.builtin.file:
+    path: "{{ metallb_flux_handoff_backup_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Back up the K3s MetalLB static manifest
+  ansible.builtin.copy:
+    src: "{{ metallb_flux_handoff_static_manifest }}"
+    dest: >-
+      {{ metallb_flux_handoff_backup_directory }}/metallb-crds.yaml.
+      {{ ansible_date_time.iso8601_basic_short }}.bak
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Remove the K3s MetalLB static manifest
+  ansible.builtin.file:
+    path: "{{ metallb_flux_handoff_static_manifest }}"
+    state: absent
+
+- name: Wait for K3s to remove the legacy MetalLB add-on
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - kube-system
+      - wait
+      - --for=delete
+      - "addon/{{ metallb_flux_handoff_addon_name }}"
+      - "--timeout={{ metallb_flux_handoff_timeout }}"
+  changed_when: false
+  check_mode: false
+
+- name: Request immediate Flux MetalLB reconciliation
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ metallb_flux_handoff_helmrelease_namespace }}"
+      - annotate
+      - helmrelease
+      - "{{ metallb_flux_handoff_helmrelease_name }}"
+      - "reconcile.fluxcd.io/requestedAt={{ ansible_date_time.iso8601 }}"
+      - --overwrite
+  changed_when: true
+  check_mode: false
+
+- name: Wait for Flux to install MetalLB
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ metallb_flux_handoff_helmrelease_namespace }}"
+      - wait
+      - --for=condition=Ready
+      - "helmrelease/{{ metallb_flux_handoff_helmrelease_name }}"
+      - "--timeout={{ metallb_flux_handoff_timeout }}"
+  changed_when: false
+  check_mode: false
+
+- name: Wait for the Flux-managed MetalLB controller
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ metallb_flux_handoff_namespace }}"
+      - rollout
+      - status
+      - deployment/controller
+      - "--timeout={{ metallb_flux_handoff_timeout }}"
+  changed_when: false
+  check_mode: false
+
+- name: Wait for the Flux-managed MetalLB speakers
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ metallb_flux_handoff_namespace }}"
+      - rollout
+      - status
+      - daemonset/speaker
+      - "--timeout={{ metallb_flux_handoff_timeout }}"
+  changed_when: false
+  check_mode: false
+
+- name: Capture LoadBalancer allocations after Flux reconciliation
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - get
+      - service
+      - --all-namespaces
+      - -o
+      - 'jsonpath={range .items[?(@.spec.type=="LoadBalancer")]}{.metadata.namespace}{"/"}{.metadata.name}{"="}{.spec.loadBalancerIP}{"|"}{.status.loadBalancer.ingress[0].ip}{"\n"}{end}'
+  register: metallb_flux_handoff_loadbalancers_after
+  changed_when: false
+  check_mode: false
+
+- name: Require all LoadBalancer allocations to be preserved
+  ansible.builtin.assert:
+    that:
+      - metallb_flux_handoff_loadbalancers_after.stdout == metallb_flux_handoff_loadbalancers_before.stdout
+    fail_msg: >-
+      LoadBalancer allocations changed during the handoff. Review the before
+      and after values in the Ansible output before declaring success.

@@ -1,0 +1,14 @@
+---
+# This is intentionally false by default because K3s will remove the static
+# add-on resources when its manifest is removed.
+metallb_flux_handoff_allow_static_removal: false
+metallb_flux_handoff_static_manifest: /var/lib/rancher/k3s/server/manifests/metallb-crds.yaml
+metallb_flux_handoff_backup_directory: /var/backups/metallb-flux-handoff
+metallb_flux_handoff_addon_name: metallb-crds
+metallb_flux_handoff_helmrelease_namespace: flux-system
+metallb_flux_handoff_helmrelease_name: metallb
+metallb_flux_handoff_namespace: metallb-system
+metallb_flux_handoff_pool_name: first-pool
+metallb_flux_handoff_pool_range: 192.168.1.180-192.168.1.190
+metallb_flux_handoff_l2advertisement_name: default
+metallb_flux_handoff_timeout: 10m

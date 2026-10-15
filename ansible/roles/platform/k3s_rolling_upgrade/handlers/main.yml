@@ -1,0 +1,6 @@
+---
+- name: Restart K3s after binary upgrade
+  ansible.builtin.systemd:
+    name: "{{ k3s_service_name }}"
+    state: restarted
+    daemon_reload: true

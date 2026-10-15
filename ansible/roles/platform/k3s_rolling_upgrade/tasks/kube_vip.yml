@@ -1,0 +1,110 @@
+---
+- name: Validate kube-vip upgrade inputs
+  ansible.builtin.assert:
+    that:
+      - kube_vip_upgrade_target_version | default('') is match('^v[0-9]+\\.[0-9]+\\.[0-9]+$')
+      - kube_vip_upgrade_target_version == kube_vip_tag_version
+    fail_msg: >-
+      Set kube_vip_upgrade_target_version to the committed kube_vip_tag_version
+      before starting the rolling K3s upgrade.
+
+- name: Verify the kube-vip static manifest exists
+  ansible.builtin.stat:
+    path: "{{ kube_vip_upgrade_manifest_path }}"
+  register: kube_vip_upgrade_manifest
+
+- name: Require the kube-vip static manifest
+  ansible.builtin.assert:
+    that:
+      - kube_vip_upgrade_manifest.stat.exists
+    fail_msg: "Missing kube-vip manifest: {{ kube_vip_upgrade_manifest_path }}"
+
+- name: Read the active kube-vip image
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - kube-system
+      - get
+      - daemonset
+      - kube-vip-ds
+      - -o
+      - 'jsonpath={.spec.template.spec.containers[0].image}'
+  register: kube_vip_upgrade_active_image
+  changed_when: false
+  check_mode: false
+
+- name: Upgrade kube-vip through its K3s static manifest
+  when: kube_vip_upgrade_active_image.stdout | trim != 'ghcr.io/kube-vip/kube-vip:' + kube_vip_upgrade_target_version
+  block:
+    - name: Update the kube-vip image in the static manifest
+      ansible.builtin.replace:
+        path: "{{ kube_vip_upgrade_manifest_path }}"
+        regexp: 'image: ghcr\\.io/kube-vip/kube-vip:[^[:space:]]+'
+        replace: "image: ghcr.io/kube-vip/kube-vip:{{ kube_vip_upgrade_target_version }}"
+        backup: true
+      register: kube_vip_upgrade_manifest_update
+
+    - name: Wait for the kube-vip DaemonSet rollout
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - -n
+          - kube-system
+          - rollout
+          - status
+          - daemonset/kube-vip-ds
+          - "--timeout={{ kube_vip_upgrade_rollout_timeout }}"
+      changed_when: false
+      check_mode: false
+
+    - name: Verify the target kube-vip image
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - -n
+          - kube-system
+          - get
+          - daemonset
+          - kube-vip-ds
+          - -o
+          - 'jsonpath={.spec.template.spec.containers[0].image}'
+      register: kube_vip_upgrade_target_image
+      changed_when: false
+      check_mode: false
+
+    - name: Require the target kube-vip image
+      ansible.builtin.assert:
+        that:
+          - kube_vip_upgrade_target_image.stdout | trim == 'ghcr.io/kube-vip/kube-vip:' + kube_vip_upgrade_target_version
+        fail_msg: "Kube-vip did not reach {{ kube_vip_upgrade_target_version }}."
+
+    - name: Verify API readiness through the kube-vip address
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - "--server=https://{{ apiserver_endpoint }}:6443"
+          - get
+          - --raw=/readyz
+      changed_when: false
+      check_mode: false
+  rescue:
+    - name: Restore the previous kube-vip static manifest
+      ansible.builtin.copy:
+        src: "{{ kube_vip_upgrade_manifest_update.backup_file }}"
+        dest: "{{ kube_vip_upgrade_manifest_path }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: '0644'
+      when: kube_vip_upgrade_manifest_update.backup_file | default('') | length > 0
+
+    - name: Fail after restoring the previous kube-vip manifest
+      ansible.builtin.fail:
+        msg: >-
+          Kube-vip upgrade failed. The previous static manifest was restored;
+          verify its rollout before retrying.

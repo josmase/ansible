@@ -1,0 +1,91 @@
+---
+# Safe, explicit K3s release maintenance. This intentionally does not invoke
+# vendor/k3s-ansible/site.yml: that installer reconciles every node at once.
+- name: Create and verify an etcd snapshot before a rolling K3s upgrade
+  hosts: k3s_masters[0]
+  become: true
+  gather_facts: false
+  vars:
+    k3s_upgrade_snapshot_id: "{{ k3s_upgrade_snapshot_name_prefix | default('ansible-pre-upgrade') }}-{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+  pre_tasks:
+    - name: Require an explicit target K3s version
+      ansible.builtin.assert:
+        that:
+          - k3s_upgrade_target_version | default('') | length > 1
+          - k3s_upgrade_target_version is match('^v[0-9]+\\.[0-9]+\\.[0-9]+\\+k3s[0-9]+$')
+          - kube_vip_upgrade_target_version | default('') is match('^v[0-9]+\\.[0-9]+\\.[0-9]+$')
+          - kube_vip_upgrade_target_version == kube_vip_tag_version
+        fail_msg: >-
+          Pass explicit K3s and kube-vip targets, and first commit the same
+          kube-vip version to k3s_cluster group variables. For example:
+          -e k3s_upgrade_target_version=v1.31.6+k3s1
+          -e kube_vip_upgrade_target_version=v0.8.7.
+
+    - name: Require an HA control-plane inventory
+      ansible.builtin.assert:
+        that:
+          - groups['k3s_masters'] | length >= 3
+        fail_msg: "A rolling upgrade requires all three control-plane nodes in k3s_masters."
+
+    - name: Verify Kubernetes API readiness before snapshot
+      ansible.builtin.command:
+        argv: [/usr/local/bin/k3s, kubectl, get, --raw=/readyz]
+      changed_when: false
+      check_mode: false
+
+    - name: Save a pre-upgrade etcd snapshot
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - etcd-snapshot
+          - save
+          - "--name={{ k3s_upgrade_snapshot_id }}"
+      register: k3s_upgrade_snapshot_save
+      changed_when: true
+      check_mode: false
+
+    - name: List available etcd snapshots
+      ansible.builtin.command:
+        argv: [/usr/local/bin/k3s, etcd-snapshot, list]
+      register: k3s_upgrade_snapshot_list
+      changed_when: false
+      check_mode: false
+
+    - name: Verify the pre-upgrade etcd snapshot exists
+      ansible.builtin.assert:
+        that:
+          - k3s_upgrade_snapshot_id in k3s_upgrade_snapshot_list.stdout
+        fail_msg: "K3s did not report the expected pre-upgrade etcd snapshot."
+
+- name: Upgrade K3s nodes one at a time
+  hosts: k3s_cluster
+  become: true
+  gather_facts: true
+  serial: 1
+  any_errors_fatal: true
+  order: inventory
+  pre_tasks:
+    - name: Verify all cluster nodes are Ready before continuing
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - wait
+          - --for=condition=Ready
+          - node
+          - --all
+          - "--timeout={{ k3s_upgrade_ready_timeout }}"
+      delegate_to: "{{ groups['k3s_masters'] | first }}"
+      changed_when: false
+      check_mode: false
+  roles:
+    - role: platform/k3s_rolling_upgrade
+
+- name: Upgrade kube-vip after every K3s node is healthy
+  hosts: k3s_masters[0]
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+  roles:
+    - role: platform/k3s_rolling_upgrade
+      tasks_from: kube_vip.yml

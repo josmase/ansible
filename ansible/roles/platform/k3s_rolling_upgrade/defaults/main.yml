@@ -1,0 +1,26 @@
+---
+# Target K3s release. Set this explicitly for every maintenance run; it is
+# deliberately not coupled to the vendored k3s-ansible installation role.
+k3s_upgrade_target_version: ""
+
+# Kube-vip is upgraded only after every K3s node is healthy. Set this for every
+# maintenance run and keep it equal to the committed kube_vip_tag_version.
+kube_vip_upgrade_target_version: ""
+kube_vip_upgrade_manifest_path: /var/lib/rancher/k3s/server/manifests/vip.yaml
+kube_vip_upgrade_rollout_timeout: 5m
+
+# K3s release asset source. The role validates the downloaded binary against
+# the matching upstream SHA256 manifest before installing it.
+k3s_upgrade_release_base_url: "https://github.com/k3s-io/k3s/releases/download"
+k3s_upgrade_download_directory: /var/tmp/k3s-rolling-upgrade
+
+# Drain conservatively by default. Set to true only after accounting for pods
+# not managed by a controller.
+k3s_upgrade_drain_force: false
+k3s_upgrade_drain_timeout: 10m
+k3s_upgrade_ready_timeout: 10m
+k3s_upgrade_api_timeout: 60s
+
+# etcd snapshots are created once by the playbook before the first node is
+# touched.
+k3s_upgrade_snapshot_name_prefix: ansible-pre-upgrade

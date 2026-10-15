@@ -1,5 +1,17 @@
 ---
-# Cluster installation and reconciliation are implemented by the pinned
-# k3s-ansible submodule. Run this wrapper from the ansible/ directory so its
-# ansible.cfg, production inventory, Vault password, and upstream roles apply.
-- import_playbook: ../../vendor/k3s-ansible/site.yml
+# The vendored installer reapplies K3s static add-ons, including MetalLB.
+# Existing clusters are maintained through the dedicated maintenance playbooks
+# so Flux remains the sole owner of MetalLB.
+- name: Retire the legacy K3s installer wrapper
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Stop use of the legacy K3s installer wrapper
+      ansible.builtin.fail:
+        msg: >-
+          ansible/playbooks/k3s-cluster.yml is retired for this cluster.
+          Use playbooks/maintenance/k3s_rolling_upgrade.yml for K3s and
+          kube-vip upgrades, and playbooks/maintenance/metallb_flux_handoff.yml
+          for the one-time MetalLB migration. Do not run vendor/k3s-ansible
+          against this existing cluster.

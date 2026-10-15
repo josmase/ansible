@@ -1,0 +1,263 @@
+---
+- name: Validate rolling upgrade inputs
+  ansible.builtin.assert:
+    that:
+      - k3s_upgrade_target_version | length > 1
+      - k3s_upgrade_target_version is match('^v[0-9]+\\.[0-9]+\\.[0-9]+\\+k3s[0-9]+$')
+      - k8s_node_name | default('') | length > 0
+      - k3s_service_name | default('') | length > 0
+    fail_msg: >-
+      Set k3s_upgrade_target_version to an exact K3s release (for example
+      v1.32.4+k3s1), and ensure k8s_node_name and k3s_service_name are set
+      by inventory.
+
+- name: Select an API server that is not the node being restarted
+  ansible.builtin.set_fact:
+    k3s_upgrade_api_host: >-
+      {{
+        (groups['k3s_masters'] | reject('equalto', inventory_hostname) | list | first)
+        if inventory_hostname in groups['k3s_masters']
+        else (groups['k3s_masters'] | first)
+      }}
+
+- name: Verify a remaining API server is ready
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - get
+      - --raw=/readyz
+  delegate_to: "{{ k3s_upgrade_api_host }}"
+  changed_when: false
+  check_mode: false
+
+- name: Read the installed K3s version
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - --version
+  register: k3s_upgrade_installed_version
+  changed_when: false
+  check_mode: false
+
+- name: Determine whether this node requires an upgrade
+  ansible.builtin.set_fact:
+    k3s_upgrade_needed: >-
+      {{ k3s_upgrade_target_version not in k3s_upgrade_installed_version.stdout }}
+
+- name: Report a node already at the target version
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} already runs {{ k3s_upgrade_target_version }}."
+  when: not k3s_upgrade_needed | bool
+
+- name: Upgrade one K3s node
+  when: k3s_upgrade_needed | bool
+  block:
+    - name: Cordon the node before eviction
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - cordon
+          - "{{ k8s_node_name }}"
+      delegate_to: "{{ k3s_upgrade_api_host }}"
+      changed_when: true
+
+    - name: Drain workloads from the node without forcing unmanaged pods
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - drain
+          - "{{ k8s_node_name }}"
+          - --ignore-daemonsets
+          - --delete-emptydir-data
+          - "--timeout={{ k3s_upgrade_drain_timeout }}"
+      delegate_to: "{{ k3s_upgrade_api_host }}"
+      changed_when: true
+      when: not k3s_upgrade_drain_force | bool
+
+    - name: Drain workloads from the node while forcing unmanaged pods
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - drain
+          - "{{ k8s_node_name }}"
+          - --ignore-daemonsets
+          - --delete-emptydir-data
+          - "--timeout={{ k3s_upgrade_drain_timeout }}"
+          - --force
+      delegate_to: "{{ k3s_upgrade_api_host }}"
+      changed_when: true
+      when: k3s_upgrade_drain_force | bool
+
+    - name: Require a supported node architecture
+      ansible.builtin.assert:
+        that:
+          - ansible_architecture in ['x86_64', 'aarch64']
+        fail_msg: "Unsupported K3s architecture: {{ ansible_architecture }}"
+
+    - name: Select the architecture-specific K3s release asset
+      ansible.builtin.set_fact:
+        k3s_upgrade_binary_asset: "{{ 'k3s' if ansible_architecture == 'x86_64' else 'k3s-arm64' }}"
+
+    - name: Create the local download directory
+      ansible.builtin.file:
+        path: "{{ k3s_upgrade_download_directory }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Download the target K3s binary
+      ansible.builtin.get_url:
+        url: "{{ k3s_upgrade_release_base_url }}/{{ k3s_upgrade_target_version }}/{{ k3s_upgrade_binary_asset }}"
+        dest: "{{ k3s_upgrade_download_directory }}/k3s-{{ k3s_upgrade_target_version }}"
+        owner: root
+        group: root
+        mode: '0700'
+        force: true
+
+    - name: Download the target K3s SHA256 manifest
+      ansible.builtin.get_url:
+        url: "{{ k3s_upgrade_release_base_url }}/{{ k3s_upgrade_target_version }}/sha256sum-amd64.txt"
+        dest: "{{ k3s_upgrade_download_directory }}/sha256sum-{{ k3s_upgrade_target_version }}.txt"
+        owner: root
+        group: root
+        mode: '0600'
+        force: true
+      when: ansible_architecture == 'x86_64'
+
+    - name: Download the target K3s SHA256 manifest for ARM64
+      ansible.builtin.get_url:
+        url: "{{ k3s_upgrade_release_base_url }}/{{ k3s_upgrade_target_version }}/sha256sum-arm64.txt"
+        dest: "{{ k3s_upgrade_download_directory }}/sha256sum-{{ k3s_upgrade_target_version }}.txt"
+        owner: root
+        group: root
+        mode: '0600'
+        force: true
+      when: ansible_architecture == 'aarch64'
+
+    - name: Read the downloaded K3s checksum manifest
+      ansible.builtin.slurp:
+        src: "{{ k3s_upgrade_download_directory }}/sha256sum-{{ k3s_upgrade_target_version }}.txt"
+      register: k3s_upgrade_checksum_manifest
+
+    - name: Extract the expected K3s checksum
+      ansible.builtin.set_fact:
+        k3s_upgrade_expected_checksum: >-
+          {{
+            (k3s_upgrade_checksum_manifest.content | b64decode
+            | regex_search('(?m)^([a-f0-9]{64})\\s+\\*?' + k3s_upgrade_binary_asset + '$', '\\1'))
+            | first | default('')
+          }}
+
+    - name: Require a K3s checksum in the manifest
+      ansible.builtin.assert:
+        that:
+          - k3s_upgrade_expected_checksum | length == 64
+        fail_msg: "Could not find the K3s binary checksum in the release manifest."
+
+    - name: Calculate the downloaded K3s checksum
+      ansible.builtin.command:
+        argv:
+          - sha256sum
+          - "{{ k3s_upgrade_download_directory }}/k3s-{{ k3s_upgrade_target_version }}"
+      register: k3s_upgrade_downloaded_checksum
+      changed_when: false
+      check_mode: false
+
+    - name: Verify the downloaded K3s binary
+      ansible.builtin.assert:
+        that:
+          - (k3s_upgrade_downloaded_checksum.stdout | split | first) == k3s_upgrade_expected_checksum
+        fail_msg: "Downloaded K3s binary checksum does not match the upstream manifest."
+
+    - name: Stage the verified K3s binary beside the active binary
+      ansible.builtin.command:
+        argv:
+          - install
+          - --mode=0755
+          - --owner=root
+          - --group=root
+          - "{{ k3s_upgrade_download_directory }}/k3s-{{ k3s_upgrade_target_version }}"
+          - /usr/local/bin/k3s.ansible-upgrade
+
+    - name: Atomically install the verified K3s binary
+      ansible.builtin.command:
+        argv:
+          - mv
+          - -f
+          - /usr/local/bin/k3s.ansible-upgrade
+          - /usr/local/bin/k3s
+      notify: Restart K3s after binary upgrade
+
+    - name: Restart K3s before continuing
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for the K3s service to become active
+      ansible.builtin.systemd:
+        name: "{{ k3s_service_name }}"
+      register: k3s_upgrade_service_status
+      until: k3s_upgrade_service_status.status.ActiveState == 'active'
+      retries: 30
+      delay: 5
+      changed_when: false
+
+    - name: Wait for the upgraded node to become Ready
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - wait
+          - "node/{{ k8s_node_name }}"
+          - --for=condition=Ready
+          - "--timeout={{ k3s_upgrade_ready_timeout }}"
+      delegate_to: "{{ k3s_upgrade_api_host }}"
+      changed_when: false
+
+    - name: Verify the upgraded node reports the target version
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - get
+          - "node/{{ k8s_node_name }}"
+          - -o
+          - 'jsonpath={.status.nodeInfo.kubeletVersion}'
+      delegate_to: "{{ k3s_upgrade_api_host }}"
+      register: k3s_upgrade_node_version
+      changed_when: false
+
+    - name: Require the target K3s version on the Ready node
+      ansible.builtin.assert:
+        that:
+          - k3s_upgrade_target_version in k3s_upgrade_node_version.stdout
+        fail_msg: >-
+          {{ k8s_node_name }} became Ready but reports
+          {{ k3s_upgrade_node_version.stdout | trim }} instead of
+          {{ k3s_upgrade_target_version }}.
+
+    - name: Uncordon the healthy upgraded node
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - uncordon
+          - "{{ k8s_node_name }}"
+      delegate_to: "{{ k3s_upgrade_api_host }}"
+      changed_when: true
+
+  rescue:
+    - name: Leave the failed node cordoned for investigation
+      ansible.builtin.fail:
+        msg: >-
+          Upgrade failed on {{ inventory_hostname }}. It remains cordoned to
+          prevent scheduling until the failure is investigated and repaired.
+
+  always:
+    - name: Remove the downloaded K3s release files
+      ansible.builtin.file:
+        path: "{{ k3s_upgrade_download_directory }}"
+        state: absent

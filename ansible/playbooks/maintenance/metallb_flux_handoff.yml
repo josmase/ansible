@@ -1,0 +1,11 @@
+---
+# One-time maintenance workflow. Apply the Flux MetalLB controller commit before
+# running this playbook; Flux will retry its Helm install until this playbook
+# removes the legacy K3s static add-on.
+- name: Hand MetalLB ownership from the K3s add-on to Flux
+  hosts: k3s_masters[0]
+  become: true
+  gather_facts: true
+  any_errors_fatal: true
+  roles:
+    - role: platform/metallb_flux_handoff
