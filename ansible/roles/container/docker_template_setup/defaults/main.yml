@@ -1,11 +1,12 @@
 ---
 # Docker configuration for docker_template_setup role
+docker_compose_project_name: "{{ docker_compose_dir | basename }}"
 docker_user: "{{ ansible_user }}"
 docker_group: "docker"
-docker_compose_dir: "/opt/docker/compose"
+docker_compose_dir: "/opt/docker"
 docker_script_dir: "/opt/docker/scripts"
-docker_data_dir: "/opt/docker/data"
-docker_storage_dir: "/opt/docker/storage"
+docker_data_dir: "/opt/appdata"
+docker_storage_dir: "/mnt/storage"
 docker_script_templates:
   - "common"
   - "maintenance"

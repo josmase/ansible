@@ -22,9 +22,8 @@ class MyStack extends TerraformStack {
   private defineMachines() {
     const subnet = "192.168.1";
     const baseMachine = this.defineBaseVm(subnet);
-    // Note: NFS server (storage.local.hejsan.xyz / 192.168.1.102 / VM ID 102)
-    // is manually managed in Proxmox — NOT defined here.
-    // Current: 17.5GB → Target: 2.5GB (freed 15GB allocated to workers below)
+    // Note: NFS server (storage.local.hejsan.xyz / 192.168.1.102 / VM ID 101)
+    // is manually managed in Proxmox — NOT defined here (currently 12 GiB).
     const machines: VirtualMachine[] = [
       ...this.defineKubernetesKluster(subnet, baseMachine),
       this.defineMediaServer(subnet, baseMachine),
@@ -41,7 +40,7 @@ class MyStack extends TerraformStack {
         "Main media server for stuff that is not yet running in kubernetes",
       id: 105,
       ip_address: `${subnet}.105`,
-      memory: 5000,
+      memory: 4096,
       name: "media-server",
       template: ubuntuTemplateLarge.value,
     } as VirtualMachine;
@@ -71,7 +70,7 @@ class MyStack extends TerraformStack {
       name: `kubernetes-master-${id}`,
       cores: 6,
       ip_address: `${subnet}.${id}`,
-      memory: 4000,
+      memory: 6024,
     } as VirtualMachine;
   }
 
@@ -88,7 +87,7 @@ class MyStack extends TerraformStack {
       name: `kubernetes-node-${id}`,
       cores: 6,
       ip_address: `${subnet}.${id}`,
-      memory: 15000,
+      memory: 14336,
       template: ubuntuTemplateLarge.value,
       boot_disk_size: "250G",
       data_disk_size: "750G",

@@ -4,9 +4,8 @@
 
 # Service Templates
 services:
-  templates:
-    - copyparty
-    # - nfs
+  # Copyparty is intentionally disabled; its persistent data is retained.
+  templates: []
 
 # NFS Configuration
 # geerlingguy.nfs expects complete export lines in nfs_exports.

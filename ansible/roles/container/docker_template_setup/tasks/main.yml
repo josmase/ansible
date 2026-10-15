@@ -15,6 +15,8 @@
     path: "{{ item['path'] }}"
     state: absent
   with_items: "{{ existing_docker_templates['files'] }}"
+  when: (item['path'] | basename | regex_replace('\\.yml$', '')) not in services.templates
+  register: outdated_docker_templates
   tags:
     - docker
     - templates
@@ -62,6 +64,28 @@
     - docker
     - cleanup
 
+- name: Find containers from this Compose project when no templates are desired
+  community.docker.docker_host_info:
+    containers: true
+    containers_all: true
+    containers_filters:
+      label: "com.docker.compose.project={{ docker_compose_project_name }}"
+  register: managed_compose_containers
+  when: services.templates | length == 0
+  tags:
+    - docker
+    - cleanup
+
+- name: Remove containers from projects with no deployed templates
+  community.docker.docker_container:
+    name: "{{ item.Names[0] | regex_replace('^/', '') }}"
+    state: absent
+  loop: "{{ managed_compose_containers.containers | default([]) }}"
+  when: services.templates | length == 0
+  tags:
+    - docker
+    - cleanup
+
 - name: Ensure Transmission config directory exists
   file:
     path: "{{ docker_data_dir }}/transmission"
@@ -94,7 +118,9 @@
   when: "'transmission' in services.templates"
 - name: Start container services
   command: "{{ docker_script_dir }}/start.sh"
-  when: compose_templates.changed
+  when:
+    - services.templates | length > 0
+    - compose_templates.changed or outdated_docker_templates.changed | default(false)
   tags:
     - docker
     - service

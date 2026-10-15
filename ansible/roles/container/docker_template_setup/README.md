@@ -2,6 +2,11 @@
 
 This role manages Docker Compose templates and container deployments for various services.
 
+Compose deployment is reconciled against `services.templates`: obsolete compose
+files and their orphaned project containers are removed, including when the
+desired template list is empty. Container removal does not remove Docker volumes
+or bind-mounted application data.
+
 ## Requirements
 
 - Ansible 2.9 or higher
