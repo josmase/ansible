@@ -217,6 +217,10 @@
           - --for=condition=Ready
           - "--timeout={{ k3s_upgrade_ready_timeout }}"
       delegate_to: "{{ k3s_upgrade_api_host }}"
+      register: k3s_upgrade_node_ready
+      until: k3s_upgrade_node_ready.rc == 0
+      retries: 12
+      delay: 5
       changed_when: false
 
     - name: Verify the upgraded node reports the target version
