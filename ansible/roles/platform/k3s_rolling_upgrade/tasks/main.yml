@@ -139,19 +139,21 @@
         force: true
       when: ansible_architecture == 'aarch64'
 
-    - name: Read the downloaded K3s checksum manifest
-      ansible.builtin.slurp:
-        src: "{{ k3s_upgrade_download_directory }}/sha256sum-{{ k3s_upgrade_target_version }}.txt"
-      register: k3s_upgrade_checksum_manifest
+    - name: Extract the expected K3s checksum from the release manifest
+      ansible.builtin.command:
+        argv:
+          - awk
+          - -v
+          - "asset={{ k3s_upgrade_binary_asset }}"
+          - '$2 == asset || $2 == "*" asset { print $1 }'
+          - "{{ k3s_upgrade_download_directory }}/sha256sum-{{ k3s_upgrade_target_version }}.txt"
+      register: k3s_upgrade_checksum_lookup
+      changed_when: false
+      check_mode: false
 
-    - name: Extract the expected K3s checksum
+    - name: Record the expected K3s checksum
       ansible.builtin.set_fact:
-        k3s_upgrade_expected_checksum: >-
-          {{
-            (k3s_upgrade_checksum_manifest.content | b64decode
-            | regex_findall('(?m)^([a-f0-9]{64})\\s+\\*?' + k3s_upgrade_binary_asset + '$'))
-            | first | default('')
-          }}
+        k3s_upgrade_expected_checksum: "{{ k3s_upgrade_checksum_lookup.stdout | trim }}"
 
     - name: Require a K3s checksum in the manifest
       ansible.builtin.assert:
