@@ -54,7 +54,7 @@
     - name: Verify the pre-upgrade etcd snapshot exists
       ansible.builtin.assert:
         that:
-          - k3s_upgrade_snapshot_id in k3s_upgrade_snapshot_list.stdout
+          - (k3s_upgrade_snapshot_id + '-') in k3s_upgrade_snapshot_list.stdout
         fail_msg: "K3s did not report the expected pre-upgrade etcd snapshot."
 
 - name: Upgrade K3s nodes one at a time
