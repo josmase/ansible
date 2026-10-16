@@ -24,6 +24,39 @@
     group: root
     mode: '0644'
 
+- name: Wait for K3s to apply the kube-vip manifest
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - kube-system
+      - get
+      - daemonset
+      - kube-vip-ds
+      - -o
+      - 'jsonpath={.spec.template.spec.containers[0].image}'
+  register: kube_vip_upgrade_reconciled_image
+  until: kube_vip_upgrade_reconciled_image.stdout | trim == 'ghcr.io/kube-vip/kube-vip:' + kube_vip_upgrade_target_version
+  retries: 30
+  delay: 2
+  changed_when: false
+  check_mode: false
+
+- name: Wait for the reconciled kube-vip DaemonSet rollout
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - kube-system
+      - rollout
+      - status
+      - daemonset/kube-vip-ds
+      - "--timeout={{ kube_vip_upgrade_rollout_timeout }}"
+  changed_when: false
+  check_mode: false
+
 - name: Verify the kube-vip static manifest exists
   ansible.builtin.stat:
     path: "{{ kube_vip_upgrade_manifest_path }}"
