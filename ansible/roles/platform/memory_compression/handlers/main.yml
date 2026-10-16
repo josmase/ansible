@@ -1,0 +1,4 @@
+---
+- name: Reload systemd generators
+  ansible.builtin.systemd:
+    daemon_reload: true

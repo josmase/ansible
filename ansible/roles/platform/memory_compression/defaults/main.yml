@@ -1,0 +1,10 @@
+---
+# Compressed swap provides short-term host-memory headroom.  Kubernetes Pods
+# remain on the kubelet's default NoSwap policy; this role configures only the
+# host's zram swap device.
+memory_compression_package: systemd-zram-generator
+memory_compression_kernel_module_package: "linux-modules-extra-{{ ansible_kernel }}"
+memory_compression_device: zram0
+memory_compression_zram_size: "min(ram / 4, 8192)"
+memory_compression_algorithm: lz4
+memory_compression_swap_priority: 100

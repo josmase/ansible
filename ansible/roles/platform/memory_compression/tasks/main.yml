@@ -1,0 +1,70 @@
+---
+- name: Install systemd zram generator
+  ansible.builtin.apt:
+    name: "{{ memory_compression_package }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: Fail on unsupported operating systems
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == "Debian"
+    fail_msg: >-
+      platform/memory_compression currently supports Debian-family hosts only.
+      Add the platform package mapping before using it on another OS family.
+
+- name: Check whether the running kernel provides zram
+  ansible.builtin.command: modinfo -n zram
+  register: memory_compression_zram_module
+  changed_when: false
+  failed_when: false
+
+- name: Install running kernel's extra modules when zram is missing
+  ansible.builtin.apt:
+    name: "{{ memory_compression_kernel_module_package }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - ansible_os_family == "Debian"
+    - memory_compression_zram_module.rc != 0
+
+- name: Load the zram kernel module
+  ansible.builtin.modprobe:
+    name: zram
+    state: present
+
+- name: Configure compressed zram swap
+  ansible.builtin.template:
+    src: zram-generator.conf.j2
+    dest: /etc/systemd/zram-generator.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd generators
+
+- name: Apply generated zram systemd units
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable compressed zram swap
+  ansible.builtin.systemd:
+    name: "dev-{{ memory_compression_device }}.swap"
+    state: started
+  when: not ansible_check_mode
+
+- name: Read active swap devices
+  ansible.builtin.command: swapon --noheadings --show=NAME
+  register: memory_compression_swapon
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify compressed zram swap is active
+  ansible.builtin.assert:
+    that:
+      - "'/dev/' + memory_compression_device in memory_compression_swapon.stdout_lines"
+    fail_msg: >-
+      Expected /dev/{{ memory_compression_device }} to be active swap after
+      configuring systemd-zram-generator.
+  when: not ansible_check_mode

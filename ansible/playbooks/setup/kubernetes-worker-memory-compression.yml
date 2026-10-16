@@ -1,0 +1,12 @@
+---
+# Worker-only by design: Kubernetes advises against swap on control-plane nodes.
+# serial: 1 limits package/configuration changes to one workload node at a time.
+- name: Configure compressed memory on Kubernetes worker nodes
+  hosts: k3s_workers
+  become: true
+  serial: 1
+  roles:
+    - role: platform/memory_compression
+      tags:
+        - memory_compression
+        - zram

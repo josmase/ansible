@@ -1,0 +1,6 @@
+# Managed by ansible (platform/memory_compression). Local edits will be overwritten.
+# Host-only compressed swap: Kubernetes workloads retain the kubelet NoSwap policy.
+[{{ memory_compression_device }}]
+zram-size = {{ memory_compression_zram_size }}
+compression-algorithm = {{ memory_compression_algorithm }}
+swap-priority = {{ memory_compression_swap_priority }}
