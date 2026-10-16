@@ -5,9 +5,11 @@
   hosts: k3s_masters[0]
   become: true
   gather_facts: false
-  vars:
-    k3s_upgrade_snapshot_id: "{{ k3s_upgrade_snapshot_name_prefix | default('ansible-pre-upgrade') }}-{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
   pre_tasks:
+    - name: Set the immutable pre-upgrade snapshot ID
+      ansible.builtin.set_fact:
+        k3s_upgrade_snapshot_id: "{{ k3s_upgrade_snapshot_name_prefix | default('ansible-pre-upgrade') }}-{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+
     - name: Require an explicit target K3s version
       ansible.builtin.assert:
         that:
