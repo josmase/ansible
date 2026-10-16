@@ -42,6 +42,7 @@ extra_server_args: >-
   --tls-san {{ apiserver_endpoint }}
   --disable servicelb
   --disable traefik
+  --disable local-storage
 
 extra_agent_args: >-
   {{ extra_args }}
