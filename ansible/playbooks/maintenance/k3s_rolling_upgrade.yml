@@ -90,4 +90,4 @@
   any_errors_fatal: true
   roles:
     - role: platform/k3s_rolling_upgrade
-      tasks_from: kube_vip.yml
+      tasks_from: kube_vip
