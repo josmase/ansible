@@ -8,6 +8,22 @@
       Set kube_vip_upgrade_target_version to the committed kube_vip_tag_version
       before starting the rolling K3s upgrade.
 
+- name: Ensure the K3s static-manifest directory exists
+  ansible.builtin.file:
+    path: "{{ kube_vip_upgrade_manifest_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Render the managed kube-vip static manifest
+  ansible.builtin.template:
+    src: vip.yaml.j2
+    dest: "{{ kube_vip_upgrade_manifest_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+
 - name: Verify the kube-vip static manifest exists
   ansible.builtin.stat:
     path: "{{ kube_vip_upgrade_manifest_path }}"
