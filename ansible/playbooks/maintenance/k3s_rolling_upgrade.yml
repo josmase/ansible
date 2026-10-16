@@ -88,6 +88,8 @@
   become: true
   gather_facts: false
   any_errors_fatal: true
-  roles:
-    - role: platform/k3s_rolling_upgrade
-      tasks_from: kube_vip
+  tasks:
+    - name: Upgrade kube-vip through its static manifest
+      ansible.builtin.import_role:
+        name: platform/k3s_rolling_upgrade
+        tasks_from: kube_vip
