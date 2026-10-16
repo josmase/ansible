@@ -149,7 +149,7 @@
         k3s_upgrade_expected_checksum: >-
           {{
             (k3s_upgrade_checksum_manifest.content | b64decode
-            | regex_search('(?m)^([a-f0-9]{64})\\s+\\*?' + k3s_upgrade_binary_asset + '$', '\\1'))
+            | regex_findall('(?m)^([a-f0-9]{64})\\s+\\*?' + k3s_upgrade_binary_asset + '$'))
             | first | default('')
           }}
 
