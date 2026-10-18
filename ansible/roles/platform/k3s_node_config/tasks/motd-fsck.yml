@@ -1,0 +1,8 @@
+---
+- name: Keep the fsck MOTD check from probing mounted DRBD volumes
+  ansible.builtin.template:
+    src: fsck-at-reboot.j2
+    dest: /etc/update-motd.d/98-fsck-at-reboot
+    owner: root
+    group: root
+    mode: "0755"

@@ -10,3 +10,9 @@
   tags:
     - sysctl
     - tuning
+
+- name: Avoid fsck MOTD probes on CSI DRBD filesystems
+  ansible.builtin.import_tasks: motd-fsck.yml
+  tags:
+    - motd
+    - drbd_motd

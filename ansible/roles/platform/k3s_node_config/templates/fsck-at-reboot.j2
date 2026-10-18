@@ -1,0 +1,12 @@
+#!/bin/sh
+# The Ubuntu fsck MOTD checker runs dumpe2fs on every mounted ext filesystem.
+# CSI volumes use ext4 on DRBD devices; probing them can block indefinitely in
+# DRBD I/O and leave the SSH login process stuck. Keep the normal fsck notice on
+# nodes without DRBD mounts, and skip this informational check while one exists.
+if awk '$1 ~ /^\/dev\/drbd[0-9]+$/ { found = 1 } END { exit !found }' /proc/mounts; then
+    exit 0
+fi
+
+if [ -x /usr/lib/update-notifier/update-motd-fsck-at-reboot ]; then
+    exec /usr/lib/update-notifier/update-motd-fsck-at-reboot "$@"
+fi
