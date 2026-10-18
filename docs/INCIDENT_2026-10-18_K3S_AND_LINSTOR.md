@@ -8,7 +8,7 @@
 
 - Requests to the Kubernetes API from the jumphost timed out or returned `ServiceUnavailable`.
 - Master logs showed etcd peer TLS handshake timeouts, failed linearizable `ReadIndex` calls, `etcdserver: no leader`, and API handler deadlines. A node lookup stalled for about 10 seconds waiting for raft agreement.
-- At 21:15 CEST, master 201 reported failed etcd readiness; requests to masters 202 and 203 timed out, and SSH to master 203 stalled before its banner. K3s had restarted twice on 201 and three times on 202. The cluster was not stable at the last check.
+- At 21:16 CEST, API readiness on 201 was refused and requests to 202 and 203 timed out. K3s on 201 was still activating with three restarts; 202 had also reached three restarts, and SSH to 203 stalled before its banner. The cluster was not stable at the last check.
 
 ## Findings
 
@@ -33,4 +33,3 @@ The LINSTOR failure and DRBD stalls are a serious storage-plane outage and may c
 - Obtain the detailed LINSTOR report for `6AD519AD-00000-000000`; restore controller database access before attempting changes to LINSTOR resources or DRBD volumes.
 - Reconnect the LINSTOR satellites and verify DRBD resource state and persistent-volume integrity before considering worker reboots.
 - Re-run the Ansible hygiene playbook on every target node after connectivity is stable. The previous run timed out waiting for privilege escalation on worker 204.
-
