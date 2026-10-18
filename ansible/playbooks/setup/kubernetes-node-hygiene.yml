@@ -29,3 +29,10 @@
     - role: core/node_hygiene
       tags:
         - hygiene
+    - role: core/logging_setup
+      vars:
+        logging_docker_enabled: false
+        logging_initial_cleanup: false
+      tags:
+        - logging
+        - logrotate

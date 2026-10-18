@@ -40,11 +40,13 @@ logging_unifi_logrotate_compress: true
 # ============================================
 # Application Log Paths (for logrotate)
 # ============================================
-logging_additional_log_paths: []
-# - path: "/var/log/myapp/*.log"
-#   rotate: 4
-#   interval: "weekly"
-#   compress: true
+logging_additional_log_paths:
+  - name: system-large
+    path: "/var/log/syslog /var/log/kern.log /var/log/auth.log"
+    rotate: 7
+    interval: "daily"
+    maxsize: "100M"
+    compress: true
 
 # ============================================
 # Cleanup Tasks (first-run only)
