@@ -1,0 +1,409 @@
+---
+# Recovery-only workflow. It never uses /mnt/drives or the mergerfs storage role.
+# Destructive phases require both recovery_window_confirmed and a phase-specific flag.
+- name: Create and operate the bd869be1 isolated recovery workspace
+  hosts: storage_servers
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+  vars:
+    recovery_phase: preflight # preflight|burnin|provision|clone|analyze
+    recovery_window_confirmed: false
+    recovery_window_id: ""
+    recovery_accept_target_loss: false
+    recovery_execute_burnin: false
+    recovery_execute_provision: false
+    recovery_execute_clone: false
+    recovery_source_serial: JEHB7ZBN
+    recovery_target_serial: ZL2PM4XC
+    recovery_source_mapper: automapped_bd869be1
+    recovery_target_mapper: automapped_f98dff21
+    recovery_workspace: /mnt/recovery/bd869be1
+    recovery_root: /root/drive-recovery-JEHB7ZBN-20261018
+    recovery_min_free_bytes: 274877906944 # 256 GiB
+    recovery_proxmox_host: 192.168.1.100
+    recovery_storage_vmid: '101'
+
+  pre_tasks:
+    - name: Require a named maintenance window
+      ansible.builtin.assert:
+        that:
+          - recovery_window_confirmed | bool
+          - recovery_window_id | string | length > 0
+        fail_msg: >-
+          Refusing recovery work without recovery_window_confirmed=true and a
+          non-empty recovery_window_id.
+
+    - name: Record recovery start time
+      ansible.builtin.command: date -u --iso-8601=seconds
+      register: recovery_started_at
+      changed_when: false
+
+    - name: Resolve source backing partition from the protected mapper
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          partition="$(cryptsetup status {{ recovery_source_mapper | quote }} | awk '/device:/ {print $2}')"
+          test -b "$partition"
+          disk="/dev/$(lsblk -nro PKNAME "$partition" | head -n 1)"
+          test -b "$disk"
+          printf '%s %s\n' "$partition" "$disk"
+      register: recovery_source_backing
+      changed_when: false
+
+    - name: Record protected source paths
+      ansible.builtin.set_fact:
+        recovery_source_partition: "{{ recovery_source_backing.stdout.split()[0] }}"
+        recovery_source_disk: "{{ recovery_source_backing.stdout.split()[1] }}"
+
+    - name: Verify source mapper identity and set source block devices read-only
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          test "$(cryptsetup status {{ recovery_source_mapper | quote }} | awk '/device:/ {print $2}')" = {{ recovery_source_partition | quote }}
+          test -b {{ recovery_source_partition | quote }}
+          blockdev --setro {{ recovery_source_disk | quote }}
+          blockdev --setro /dev/mapper/{{ recovery_source_mapper | quote }}
+          test "$(blockdev --getro {{ recovery_source_disk | quote }})" = 1
+          test "$(blockdev --getro /dev/mapper/{{ recovery_source_mapper | quote }})" = 1
+          test "$(cryptsetup status {{ recovery_source_mapper | quote }} | awk '/mode:/ {print $2}')" = readonly
+          ! findmnt -rn -S /dev/mapper/{{ recovery_source_mapper | quote }} | grep -q .
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Confirm source and target are outside mergerfs
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          ! findmnt -rn -S /dev/mapper/{{ recovery_source_mapper | quote }} | grep -q .
+          ! findmnt -rn -S /dev/mapper/{{ recovery_target_mapper | quote }} | grep -q .
+          ! findmnt -rn -T /mnt/storage -o SOURCE | grep -Eq '{{ recovery_source_mapper }}|{{ recovery_target_mapper }}'
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Verify direct-disk assignments on Proxmox
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ recovery_proxmox_host }}"
+          - qm
+          - config
+          - "{{ recovery_storage_vmid }}"
+      delegate_to: localhost
+      become: false
+      register: recovery_vm_config
+      changed_when: false
+
+    - name: Require the expected source and target serials in VM 101 config
+      ansible.builtin.assert:
+        that:
+          - recovery_vm_config.stdout is search(recovery_source_serial)
+          - recovery_vm_config.stdout is search(recovery_target_serial)
+        fail_msg: Proxmox VM disk assignment does not contain both expected serials.
+
+    - name: Resolve target SCSI slot from the verified Proxmox assignment
+      ansible.builtin.set_fact:
+        recovery_target_scsi_slot: "{{ recovery_vm_config.stdout_lines | select('search', recovery_target_serial) | first | regex_replace(':.*$', '') }}"
+
+    - name: Resolve target guest disk from the verified virtual SCSI slot
+      ansible.builtin.shell:
+        cmd: >-
+          lsblk -dn -o PATH,SERIAL | grep -F drive-{{ recovery_target_scsi_slot }} | cut -d ' ' -f1
+      register: recovery_target_guest_disk_result
+      changed_when: false
+
+    - name: Record and verify target guest disk
+      ansible.builtin.set_fact:
+        recovery_target_disk: "{{ recovery_target_guest_disk_result.stdout | trim }}"
+
+    - name: Require target guest disk resolution
+      ansible.builtin.assert:
+        that: recovery_target_disk | length > 0
+        fail_msg: Unable to resolve the target disk from its verified VM SCSI slot.
+
+    - name: Resolve target disk on Proxmox by serial
+      ansible.builtin.shell:
+        cmd: >-
+          ssh -o BatchMode=yes root@{{ recovery_proxmox_host }}
+          "lsblk -dn -o PATH,SERIAL | grep -F {{ recovery_target_serial }} | cut -d ' ' -f1"
+      delegate_to: localhost
+      become: false
+      register: recovery_target_host_disk_result
+      changed_when: false
+
+    - name: Record Proxmox target device
+      ansible.builtin.set_fact:
+        recovery_target_host_disk: "{{ recovery_target_host_disk_result.stdout | trim }}"
+
+    - name: Require exactly one Proxmox target device
+      ansible.builtin.assert:
+        that:
+          - recovery_target_host_disk | length > 0
+        fail_msg: Unable to resolve the target disk on Proxmox by serial.
+
+    - name: Capture preflight manifests without secrets
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          install -d -m 0700 {{ recovery_root | quote }}
+          {
+            printf 'window_id=%s\n' {{ recovery_window_id | quote }}
+            printf 'source_serial=%s\nsource_disk=%s\nsource_mapper=%s\n' {{ recovery_source_serial | quote }} {{ recovery_source_disk | quote }} {{ recovery_source_mapper | quote }}
+            printf 'target_serial=%s\ntarget_disk=%s\ntarget_mapper=%s\n' {{ recovery_target_serial | quote }} {{ recovery_target_disk | quote }} {{ recovery_target_mapper | quote }}
+            cryptsetup status {{ recovery_source_mapper | quote }}
+            cryptsetup status {{ recovery_target_mapper | quote }} || true
+            lsblk -o NAME,PATH,SERIAL,SIZE,FSTYPE,UUID,MOUNTPOINTS {{ recovery_source_disk | quote }} {{ recovery_target_disk | quote }}
+          } > {{ recovery_root | quote }}/preflight-manifest.txt
+        executable: /bin/bash
+      changed_when: false
+
+  tasks:
+    - name: Read target SMART long-test status on Proxmox
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ recovery_proxmox_host }}"
+          - smartctl
+          - -l
+          - selftest
+          - "{{ recovery_target_host_disk }}"
+      delegate_to: localhost
+      become: false
+      register: recovery_target_selftest
+      changed_when: false
+      when: recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
+
+    - name: Require a completed successful target long test
+      ansible.builtin.assert:
+        that:
+          - recovery_target_selftest.stdout is search('Extended offline +Completed without error')
+          - recovery_target_selftest.stdout is not search('Extended offline +Self-test routine in progress')
+        fail_msg: Target SMART extended test has not completed successfully; no destructive recovery action ran.
+      when: recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
+
+    - name: Capture target SMART attributes
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ recovery_proxmox_host }}"
+          - smartctl
+          - -A
+          - "{{ recovery_target_host_disk }}"
+      delegate_to: localhost
+      become: false
+      register: recovery_target_smart_before
+      changed_when: false
+      when: recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
+
+    - name: Require clean target SMART counters
+      ansible.builtin.assert:
+        that:
+          - recovery_target_smart_before.stdout is search('Reallocated_Sector_Ct.*[[:space:]]0$')
+          - recovery_target_smart_before.stdout is search('Current_Pending_Sector.*[[:space:]]0$')
+          - recovery_target_smart_before.stdout is search('Offline_Uncorrectable.*[[:space:]]0$')
+          - recovery_target_smart_before.stdout is search('UDMA_CRC_Error_Count.*[[:space:]]0$')
+        fail_msg: Target SMART counters are unsuitable for the only recovery clone.
+      when: recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
+
+    - name: Require explicit target-loss acknowledgement for destructive phases
+      ansible.builtin.assert:
+        that:
+          - recovery_accept_target_loss | bool
+        fail_msg: Target data loss must be explicitly acknowledged.
+      when: recovery_phase in ['burnin', 'provision']
+
+    - name: Require explicit burn-in enablement
+      ansible.builtin.assert:
+        that:
+          - recovery_execute_burnin | bool
+        fail_msg: Burn-in requires recovery_execute_burnin=true.
+      when: recovery_phase == 'burnin'
+
+    - name: Retire the old target mapping and its automatic mount records
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          findmnt -rn -S /dev/mapper/{{ recovery_target_mapper | quote }} && exit 1 || true
+          cryptsetup close {{ recovery_target_mapper | quote }} || true
+          sed -i '\|{{ recovery_target_mapper }}|d' /etc/fstab
+          sed -i '\|{{ recovery_target_mapper }}|d' /etc/crypttab
+          systemctl daemon-reload
+        executable: /bin/bash
+      when: recovery_phase in ['burnin', 'provision']
+
+    - name: Destructively verify the target with a full write/read badblocks pass
+      ansible.builtin.command:
+        argv:
+          - badblocks
+          - -wsv
+          - -b
+          - '4096'
+          - "{{ recovery_target_disk }}"
+      async: 1728000
+      poll: 30
+      register: recovery_burnin
+      when: recovery_phase == 'burnin'
+
+    - name: Re-check target SMART after burn-in
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ recovery_proxmox_host }}"
+          - smartctl
+          - -A
+          - "{{ recovery_target_host_disk }}"
+      delegate_to: localhost
+      become: false
+      register: recovery_target_smart_after
+      changed_when: false
+      when: recovery_phase == 'burnin'
+
+    - name: Require target SMART remains clean after burn-in
+      ansible.builtin.assert:
+        that:
+          - recovery_target_smart_after.stdout is search('Reallocated_Sector_Ct.*[[:space:]]0$')
+          - recovery_target_smart_after.stdout is search('Current_Pending_Sector.*[[:space:]]0$')
+          - recovery_target_smart_after.stdout is search('Offline_Uncorrectable.*[[:space:]]0$')
+        fail_msg: Target developed SMART errors during burn-in.
+      when: recovery_phase == 'burnin'
+
+    - name: Require explicit provision enablement
+      ansible.builtin.assert:
+        that:
+          - recovery_execute_provision | bool
+        fail_msg: Provisioning requires recovery_execute_provision=true.
+      when: recovery_phase == 'provision'
+
+    - name: Calculate recovery clone partition size
+      ansible.builtin.command:
+        argv: [blockdev, --getsize64, "/dev/mapper/{{ recovery_source_mapper }}"]
+      register: recovery_source_bytes
+      changed_when: false
+      when: recovery_phase == 'provision'
+
+    - name: Create isolated two-partition recovery layout
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          source_bytes={{ recovery_source_bytes.stdout | trim | int }}
+          clone_sectors=$(( (source_bytes + 67108864 + 511) / 512 ))
+          wipefs --all --force {{ recovery_target_disk | quote }}
+          sgdisk --zap-all {{ recovery_target_disk | quote }}
+          sgdisk --clear \
+            --new=1:2048:+${clone_sectors}s --typecode=1:8309 --change-name=1:RECOVERY_CLONE \
+            --new=2:0:0 --typecode=2:8309 --change-name=2:RECOVERY_OUTPUT \
+            {{ recovery_target_disk | quote }}
+          partprobe {{ recovery_target_disk | quote }}
+          udevadm settle
+        executable: /bin/bash
+      when: recovery_phase == 'provision'
+
+    - name: Create encrypted clone and output containers
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          test -b {{ recovery_target_disk }}1
+          test -b {{ recovery_target_disk }}2
+          cryptsetup luksFormat --type luks2 --batch-mode --key-file /home/ubuntu/keyfile {{ recovery_target_disk }}1
+          cryptsetup luksFormat --type luks2 --batch-mode --key-file /home/ubuntu/keyfile {{ recovery_target_disk }}2
+          cryptsetup open --key-file /home/ubuntu/keyfile {{ recovery_target_disk }}1 recovery-clone
+          cryptsetup open --key-file /home/ubuntu/keyfile {{ recovery_target_disk }}2 recovery-output
+          test "$(blockdev --getsize64 /dev/mapper/recovery-clone)" -ge {{ recovery_source_bytes.stdout | trim | int }}
+          mkfs.ext4 -F -m 0 -L RECOVERY_BD869BE1 /dev/mapper/recovery-output
+          install -d -m 0700 {{ recovery_workspace | quote }}
+          mount /dev/mapper/recovery-output {{ recovery_workspace | quote }}
+          install -d -m 0700 {{ recovery_workspace | quote }}/reports {{ recovery_workspace | quote }}/tree-recovery {{ recovery_workspace | quote }}/carved
+          cryptsetup luksHeaderBackup {{ recovery_target_disk }}1 --header-backup-file {{ recovery_root | quote }}/recovery-clone.luks-header
+          cryptsetup luksHeaderBackup {{ recovery_target_disk }}2 --header-backup-file {{ recovery_root | quote }}/recovery-output.luks-header
+          sha256sum {{ recovery_root | quote }}/recovery-*.luks-header > {{ recovery_root | quote }}/recovery-luks-header.sha256
+        executable: /bin/bash
+      when: recovery_phase == 'provision'
+
+    - name: Require explicit clone enablement
+      ansible.builtin.assert:
+        that:
+          - recovery_execute_clone | bool
+        fail_msg: Cloning requires recovery_execute_clone=true.
+      when: recovery_phase == 'clone'
+
+    - name: Install recovery tools
+      ansible.builtin.apt:
+        name: [gddrescue, testdisk]
+        state: present
+        update_cache: false
+      when: recovery_phase in ['clone', 'analyze']
+
+    - name: Require provisioned recovery workspace before clone
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          mountpoint -q {{ recovery_workspace | quote }}
+          test -b /dev/mapper/recovery-clone
+          test "$(blockdev --getro /dev/mapper/{{ recovery_source_mapper }})" = 1
+        executable: /bin/bash
+      changed_when: false
+      when: recovery_phase == 'clone'
+
+    - name: Clone the read-only plaintext source mapper
+      ansible.builtin.command:
+        argv:
+          - ddrescue
+          - --force
+          - --idirect
+          - --retry-passes=3
+          - "/dev/mapper/{{ recovery_source_mapper }}"
+          - /dev/mapper/recovery-clone
+          - "{{ recovery_workspace }}/reports/plaintext-clone.map"
+      async: 1728000
+      poll: 30
+      when: recovery_phase == 'clone'
+
+    - name: Compare source mapper and plaintext clone byte-for-byte
+      ansible.builtin.command:
+        argv:
+          - cmp
+          - --silent
+          - "/dev/mapper/{{ recovery_source_mapper }}"
+          - /dev/mapper/recovery-clone
+      async: 1728000
+      poll: 30
+      when: recovery_phase == 'clone'
+
+    - name: Set validated plaintext clone read-only
+      ansible.builtin.command:
+        argv: [blockdev, --setro, /dev/mapper/recovery-clone]
+      when: recovery_phase == 'clone'
+
+    - name: Require read-only clone for diagnostics
+      ansible.builtin.command:
+        argv: [blockdev, --getro, /dev/mapper/recovery-clone]
+      register: recovery_clone_readonly
+      changed_when: false
+      failed_when: recovery_clone_readonly.stdout | trim != '1'
+      when: recovery_phase == 'analyze'
+
+    - name: Run read-only clone diagnostics
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          report={{ recovery_workspace | quote }}/reports/readonly-analysis.txt
+          {
+            date -u --iso-8601=seconds
+            blockdev --getsize64 /dev/mapper/recovery-clone
+            blkid -p -o full /dev/mapper/recovery-clone || true
+            wipefs -n /dev/mapper/recovery-clone || true
+            file -sL /dev/mapper/recovery-clone || true
+            testdisk /list /dev/mapper/recovery-clone || true
+            e2fsck -f -n /dev/mapper/recovery-clone || true
+          } > "$report" 2>&1
+          sha256sum "$report" > "$report.sha256"
+        executable: /bin/bash
+      when: recovery_phase == 'analyze'
