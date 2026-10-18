@@ -11,6 +11,7 @@
 - At 21:16 CEST, API readiness on 201 was refused and requests to 202 and 203 timed out. K3s on 201 was still activating with three restarts; 202 had also reached three restarts, and SSH to 203 stalled before its banner. The cluster was not stable at the last check.
 - Later checks briefly showed `/readyz` succeeding on 201 and all seven nodes `Ready`, but this did not persist. By 21:38 CEST, 201 had reached 11 K3s restarts, 202 had one restart since its reset, SSH to 203 was timing out, and an etcd metrics sample on 202 showed `has_leader=0`. API requests hung again.
 - At 21:41 CEST, 201's K3s process was running but its etcd metrics reported `has_leader=0`; SSH banner exchange timed out on both 202 and 203. Proxmox still showed all three VMs running. Their boot-disk read IOPS limits were active, with QEMU reads around 160–200 MB/s per VM and host NVMe utilization around 47%. The limits contain the high read bursts but have not restored etcd quorum or API service.
+- At 21:42 CEST, API requests from 201 continued timing out; SSH to 202 and 203 also timed out. All master VMs remained running on Proxmox, with the configured read limits still present and host NVMe utilization around 41%. The latest guest root-space check on 201 showed 9.5 GiB free (57% used); `logrotate.timer` was active on 201 and reachable workers 204–206 and node119. Worker204 remained severely loaded (load average ~194), consistent with the previously observed DRBD blocked I/O.
 
 ## Findings
 
@@ -37,6 +38,7 @@ The LINSTOR failure and DRBD stalls are a serious storage-plane outage and may c
 ## Follow-up
 
 - Restore stable etcd quorum and verify `/readyz` and node leases across all masters over a sustained period.
+- Resolve worker204's DRBD I/O stall and verify blocked resources before restarting the worker or manipulating volumes.
 - Restore quorum using surviving persistent member state and its existing snapshots. Do not run a force-new-cluster, etcd reset/restore, or member removal until authoritative member history and the last committed revision are established.
 - Identify why master startup/catch-up generates very high reads on the shared NVMe; review Proxmox/KVM and guest block I/O traces before changing VM disk limits. The 2500 read IOPS limits are active runtime configuration and may constrain future catch-up; remove or adjust them after the source is understood and the cluster is stable.
 - Diagnose the transient etcd peer TLS verification failures and confirm the authoritative member/peer identity before any certificate changes.
