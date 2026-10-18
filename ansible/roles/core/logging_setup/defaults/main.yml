@@ -22,6 +22,8 @@ logging_docker_max_file: 3                  # Max log files per container
 # Logrotate Configuration
 # ============================================
 logging_logrotate_enabled: true
+logging_logrotate_timer_override_enabled: false
+logging_logrotate_timer_schedule: hourly
 
 # Docker container logs logrotate
 logging_docker_logrotate_rotate: 3

@@ -42,3 +42,47 @@
   tags:
     - logging
     - logrotate
+
+- name: Configure logrotate timer schedule
+  become: true
+  ansible.builtin.file:
+    path: /etc/systemd/system/logrotate.timer.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: logging_logrotate_timer_override_enabled | bool
+  tags:
+    - logging
+    - logrotate
+
+- name: Write logrotate timer schedule override
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/logrotate.timer.d/ansible-override.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible (core/logging_setup).
+      [Timer]
+      OnCalendar=
+      OnCalendar={{ logging_logrotate_timer_schedule }}
+      AccuracySec=5m
+      Persistent=true
+  when: logging_logrotate_timer_override_enabled | bool
+  notify: Restart logrotate timer
+  tags:
+    - logging
+    - logrotate
+
+- name: Remove logrotate timer override when disabled
+  become: true
+  ansible.builtin.file:
+    path: /etc/systemd/system/logrotate.timer.d/ansible-override.conf
+    state: absent
+  when: not (logging_logrotate_timer_override_enabled | bool)
+  notify: Restart logrotate timer
+  tags:
+    - logging
+    - logrotate

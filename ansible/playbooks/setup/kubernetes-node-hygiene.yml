@@ -34,5 +34,6 @@
         logging_docker_enabled: false
         logging_unifi_logrotate_enabled: false
         logging_initial_cleanup: false
+        logging_logrotate_timer_override_enabled: true
       tags:
         - logging
