@@ -10,6 +10,7 @@
 - Master logs showed etcd peer TLS handshake timeouts, failed linearizable `ReadIndex` calls, `etcdserver: no leader`, and API handler deadlines. A node lookup stalled for about 10 seconds waiting for raft agreement.
 - At 21:16 CEST, API readiness on 201 was refused and requests to 202 and 203 timed out. K3s on 201 was still activating with three restarts; 202 had also reached three restarts, and SSH to 203 stalled before its banner. The cluster was not stable at the last check.
 - Later checks briefly showed `/readyz` succeeding on 201 and all seven nodes `Ready`, but this did not persist. By 21:38 CEST, 201 had reached 11 K3s restarts, 202 had one restart since its reset, SSH to 203 was timing out, and an etcd metrics sample on 202 showed `has_leader=0`. API requests hung again.
+- At 21:41 CEST, 201's K3s process was running but its etcd metrics reported `has_leader=0`; SSH banner exchange timed out on both 202 and 203. Proxmox still showed all three VMs running. Their boot-disk read IOPS limits were active, with QEMU reads around 160–200 MB/s per VM and host NVMe utilization around 47%. The limits contain the high read bursts but have not restored etcd quorum or API service.
 
 ## Findings
 
@@ -30,11 +31,13 @@ The LINSTOR failure and DRBD stalls are a serious storage-plane outage and may c
 - Rebooted master 201 through Proxmox. Graceful reboot of 202 timed out, so it was hard-reset and started again. Graceful reboot of 203 timed out, so it was hard-reset. A later hard reset of 201 restored SSH and briefly restored API readiness. No etcd reset/restore command was run.
 - Later, Proxmox root SSH access from the jumphost was used to identify VM 202 as a read-burst source (~1.6–1.75 GB/s). Its graceful shutdown again timed out; only VM 202 was reset. Its QEMU read rate fell to zero, but a similar read burst then moved to VM 203. Proxmox read limits of `iops_rd=2500` were applied to the `scsi0` boot disks of VMs 201, 202, and 203. This reduced the 203 observed read rate from ~1.6 GB/s to ~200 MB/s and NVMe utilization from ~100% to ~28% in one sample. Subsequent samples still showed renewed K3s restarts, loss of etcd leader, and API timeouts, so this is a temporary containment measure rather than recovery.
 - A later API snapshot from 201 showed all seven nodes Ready, but LINSTOR controller, affinity controller, CSI controller, and Piraeus operator remained in `CrashLoopBackOff`; all four satellites were `Connected=False`. Controller log retrieval through the Kubernetes API then failed because the node proxy to 192.168.1.119:10250 returned 502. No controller diagnostic helper was deployed, and no LINSTOR/DRBD or etcd data was changed.
+- Subsequent API requests from 201 hung with `context deadline exceeded`. A read-only attempt to inspect the LINSTOR controller log volume directly on `.119` was denied by host permissions; its SSH account requires an interactive sudo password. Proxmox serial terminal opens but yields no guest shell. No helper pod could be created while the API was timing out.
 - API readiness and all-node Ready status were observed temporarily, but follow-up checks showed renewed etcd readiness failures and API timeouts.
 
 ## Follow-up
 
 - Restore stable etcd quorum and verify `/readyz` and node leases across all masters over a sustained period.
+- Restore quorum using surviving persistent member state and its existing snapshots. Do not run a force-new-cluster, etcd reset/restore, or member removal until authoritative member history and the last committed revision are established.
 - Identify why master startup/catch-up generates very high reads on the shared NVMe; review Proxmox/KVM and guest block I/O traces before changing VM disk limits. The 2500 read IOPS limits are active runtime configuration and may constrain future catch-up; remove or adjust them after the source is understood and the cluster is stable.
 - Diagnose the transient etcd peer TLS verification failures and confirm the authoritative member/peer identity before any certificate changes.
 - Obtain the detailed LINSTOR report for `6AD519AD-00000-000000`; restore controller database access before attempting changes to LINSTOR resources or DRBD volumes.
