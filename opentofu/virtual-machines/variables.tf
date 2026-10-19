@@ -36,7 +36,7 @@ variable "masters" {
   default = {
     "201" = { ip = "192.168.1.201", name = "kubernetes-master-201", memory = 5120, cores = 6, started = true }
     "202" = { ip = "192.168.1.202", name = "kubernetes-master-202", memory = 5120, cores = 6, started = true }
-    "203" = { ip = "192.168.1.203", name = "kubernetes-master-203", memory = 5120, cores = 6, started = false }
+    "203" = { ip = "192.168.1.203", name = "kubernetes-master-203", memory = 5120, cores = 6, started = true }
   }
 }
 
