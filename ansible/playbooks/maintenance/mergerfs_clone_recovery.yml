@@ -12,6 +12,7 @@
     recovery_window_id: ""
     recovery_accept_target_loss: false
     recovery_execute_burnin: false
+    recovery_ignore_target_smart_long_test: false
     recovery_execute_provision: false
     recovery_execute_clone: false
     recovery_source_serial: JEHB7ZBN
@@ -182,7 +183,7 @@
         that:
           - recovery_target_selftest.stdout is search('Extended offline +Completed without error')
           - recovery_target_selftest.stdout is not search('Extended offline +Self-test routine in progress')
-        fail_msg: Target SMART extended test has not completed successfully; no destructive recovery action ran.
+        fail_msg: Target SMART extended test has not completed successfully; set recovery_ignore_target_smart_long_test=true only with an explicit waiver.
       when: recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
 
     - name: Capture target SMART attributes
