@@ -1,5 +1,5 @@
 ---
-rustfs_image: "rustfs/rustfs@sha256:8d8bfa61f3a20cdcf644562bb8c3a314ca03c66a9827f6056f741e787bf0c804"
+rustfs_image: "rustfs/rustfs:1.0.2@sha256:7e948dad4748bda48f8985fda7195f8cf2e4259427011f6120acc2c9acf51587"
 rustfs_cli_image: "rustfs/rc@sha256:9f4e5cd6e43576f2daaa5f6338827ef8296f5eb781175950b0bf62c92e983686"
 rustfs_compose_dir: /opt/rustfs
 rustfs_secret_dir: /etc/rustfs
