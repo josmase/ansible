@@ -58,6 +58,7 @@ resource "proxmox_virtual_environment_vm" "worker" {
   }
   serial_device { device = "socket" }
   on_boot = false
+  started = each.value.started
   lifecycle { prevent_destroy = true }
 }
 
