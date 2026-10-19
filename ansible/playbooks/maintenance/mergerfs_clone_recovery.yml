@@ -238,10 +238,10 @@
     - name: Require clean target SMART counters
       ansible.builtin.assert:
         that:
-          - recovery_target_smart_before.stdout is search('Reallocated_Sector_Ct.*[[:space:]]0$')
-          - recovery_target_smart_before.stdout is search('Current_Pending_Sector.*[[:space:]]0$')
-          - recovery_target_smart_before.stdout is search('Offline_Uncorrectable.*[[:space:]]0$')
-          - recovery_target_smart_before.stdout is search('UDMA_CRC_Error_Count.*[[:space:]]0$')
+          - recovery_target_smart_before.stdout is search('Reallocated_Sector_Ct.*\s+0\s*$')
+          - recovery_target_smart_before.stdout is search('Current_Pending_Sector.*\s+0\s*$')
+          - recovery_target_smart_before.stdout is search('Offline_Uncorrectable.*\s+0\s*$')
+          - recovery_target_smart_before.stdout is search('UDMA_CRC_Error_Count.*\s+0\s*$')
         fail_msg: Target SMART counters are unsuitable for the only recovery clone.
       when: recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
 
@@ -303,9 +303,9 @@
     - name: Require target SMART remains clean after burn-in
       ansible.builtin.assert:
         that:
-          - recovery_target_smart_after.stdout is search('Reallocated_Sector_Ct.*[[:space:]]0$')
-          - recovery_target_smart_after.stdout is search('Current_Pending_Sector.*[[:space:]]0$')
-          - recovery_target_smart_after.stdout is search('Offline_Uncorrectable.*[[:space:]]0$')
+          - recovery_target_smart_after.stdout is search('Reallocated_Sector_Ct.*\s+0\s*$')
+          - recovery_target_smart_after.stdout is search('Current_Pending_Sector.*\s+0\s*$')
+          - recovery_target_smart_after.stdout is search('Offline_Uncorrectable.*\s+0\s*$')
         fail_msg: Target developed SMART errors during burn-in.
       when: recovery_phase == 'burnin'
 
