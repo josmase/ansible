@@ -32,11 +32,11 @@ variable "workers" {
 }
 
 variable "masters" {
-  type = map(object({ ip = string, name = string, memory = number, cores = number }))
+  type = map(object({ ip = string, name = string, memory = number, cores = number, started = bool }))
   default = {
-    "201" = { ip = "192.168.1.201", name = "kubernetes-master-201", memory = 7168, cores = 6 }
-    "202" = { ip = "192.168.1.202", name = "kubernetes-master-202", memory = 7168, cores = 6 }
-    "203" = { ip = "192.168.1.203", name = "kubernetes-master-203", memory = 7168, cores = 6 }
+    "201" = { ip = "192.168.1.201", name = "kubernetes-master-201", memory = 5120, cores = 6, started = true }
+    "202" = { ip = "192.168.1.202", name = "kubernetes-master-202", memory = 5120, cores = 6, started = true }
+    "203" = { ip = "192.168.1.203", name = "kubernetes-master-203", memory = 5120, cores = 6, started = false }
   }
 }
 

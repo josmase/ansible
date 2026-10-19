@@ -75,7 +75,7 @@ resource "proxmox_virtual_environment_vm" "master" {
     type  = "host"
   }
   on_boot = false
-  started = true
+  started = each.value.started
 
   lifecycle {
     prevent_destroy = true
