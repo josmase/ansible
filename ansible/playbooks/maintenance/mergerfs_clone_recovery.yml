@@ -212,8 +212,8 @@
     - name: Require a completed successful target long test
       ansible.builtin.assert:
         that:
-          - recovery_target_selftest.stdout is search('Extended offline +Completed without error')
-          - recovery_target_selftest.stdout is not search('Extended offline +Self-test routine in progress')
+          - recovery_target_selftest.stdout is search('(?m)Extended offline +Completed without error')
+          - recovery_target_selftest.stdout is not search('(?m)Extended offline +Self-test routine in progress')
         fail_msg: Target SMART extended test has not completed successfully; set recovery_ignore_target_smart_long_test=true only with an explicit waiver.
       when:
         - recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
@@ -238,10 +238,10 @@
     - name: Require clean target SMART counters
       ansible.builtin.assert:
         that:
-          - recovery_target_smart_before.stdout is search('Reallocated_Sector_Ct.*\s+0\s*$')
-          - recovery_target_smart_before.stdout is search('Current_Pending_Sector.*\s+0\s*$')
-          - recovery_target_smart_before.stdout is search('Offline_Uncorrectable.*\s+0\s*$')
-          - recovery_target_smart_before.stdout is search('UDMA_CRC_Error_Count.*\s+0\s*$')
+          - recovery_target_smart_before.stdout is search('(?m)Reallocated_Sector_Ct.*\s+0\s*$')
+          - recovery_target_smart_before.stdout is search('(?m)Current_Pending_Sector.*\s+0\s*$')
+          - recovery_target_smart_before.stdout is search('(?m)Offline_Uncorrectable.*\s+0\s*$')
+          - recovery_target_smart_before.stdout is search('(?m)UDMA_CRC_Error_Count.*\s+0\s*$')
         fail_msg: Target SMART counters are unsuitable for the only recovery clone.
       when: recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
 
@@ -303,9 +303,9 @@
     - name: Require target SMART remains clean after burn-in
       ansible.builtin.assert:
         that:
-          - recovery_target_smart_after.stdout is search('Reallocated_Sector_Ct.*\s+0\s*$')
-          - recovery_target_smart_after.stdout is search('Current_Pending_Sector.*\s+0\s*$')
-          - recovery_target_smart_after.stdout is search('Offline_Uncorrectable.*\s+0\s*$')
+          - recovery_target_smart_after.stdout is search('(?m)Reallocated_Sector_Ct.*\s+0\s*$')
+          - recovery_target_smart_after.stdout is search('(?m)Current_Pending_Sector.*\s+0\s*$')
+          - recovery_target_smart_after.stdout is search('(?m)Offline_Uncorrectable.*\s+0\s*$')
         fail_msg: Target developed SMART errors during burn-in.
       when: recovery_phase == 'burnin'
 
