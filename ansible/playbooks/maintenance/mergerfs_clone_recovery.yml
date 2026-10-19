@@ -13,6 +13,7 @@
     recovery_accept_target_loss: false
     recovery_execute_burnin: false
     recovery_ignore_target_smart_long_test: false
+    recovery_detach_legacy_branches: false
     recovery_execute_provision: false
     recovery_execute_clone: false
     recovery_source_serial: JEHB7ZBN
@@ -56,6 +57,36 @@
       ansible.builtin.set_fact:
         recovery_source_partition: "{{ recovery_source_backing.stdout.split()[0] }}"
         recovery_source_disk: "{{ recovery_source_backing.stdout.split()[1] }}"
+
+    - name: Require explicit isolation approval when legacy recovery branches are mounted
+      ansible.builtin.assert:
+        that: recovery_detach_legacy_branches | bool
+        fail_msg: >-
+          The source or target remains in the normal storage configuration. Set
+          recovery_detach_legacy_branches=true to detach only these recovery disks
+          and rebuild MergerFS from the healthy branches before continuing.
+      when: recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
+
+    - name: Detach legacy source and target mounts and rebuild the healthy MergerFS pool
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          install -d -m 0700 {{ recovery_root | quote }}
+          cp -a /etc/fstab {{ recovery_root | quote }}/fstab.before-recovery-isolation
+          cp -a /etc/crypttab {{ recovery_root | quote }}/crypttab.before-recovery-isolation
+          systemctl stop mnt-storage.mount || umount /mnt/storage || true
+          umount /mnt/drives/{{ recovery_source_mapper | quote }} || true
+          umount /mnt/drives/{{ recovery_target_mapper | quote }} || true
+          sed -i '\|/dev/mapper/{{ recovery_source_mapper }}|d;\|/dev/mapper/{{ recovery_target_mapper }}|d' /etc/fstab
+          sed -i '\|^{{ recovery_source_mapper }}[[:space:]]|d;\|^{{ recovery_target_mapper }}[[:space:]]|d' /etc/crypttab
+          rmdir /mnt/drives/{{ recovery_source_mapper | quote }} /mnt/drives/{{ recovery_target_mapper | quote }} 2>/dev/null || true
+          systemctl daemon-reload
+          systemctl start mnt-storage.mount
+          ! findmnt -rn -S /dev/mapper/{{ recovery_source_mapper | quote }} | grep -q .
+          ! findmnt -rn -S /dev/mapper/{{ recovery_target_mapper | quote }} | grep -q .
+          ! findmnt -rn -T /mnt/storage -o SOURCE | grep -Eq '{{ recovery_source_mapper }}|{{ recovery_target_mapper }}'
+        executable: /bin/bash
+      when: recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
 
     - name: Verify source mapper identity and set source block devices read-only
       ansible.builtin.shell:
@@ -184,7 +215,9 @@
           - recovery_target_selftest.stdout is search('Extended offline +Completed without error')
           - recovery_target_selftest.stdout is not search('Extended offline +Self-test routine in progress')
         fail_msg: Target SMART extended test has not completed successfully; set recovery_ignore_target_smart_long_test=true only with an explicit waiver.
-      when: recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
+      when:
+        - recovery_phase in ['burnin', 'provision', 'clone', 'analyze']
+        - not (recovery_ignore_target_smart_long_test | bool)
 
     - name: Capture target SMART attributes
       ansible.builtin.command:
