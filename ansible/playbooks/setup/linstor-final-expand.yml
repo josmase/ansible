@@ -184,9 +184,9 @@
             flat: true
       when: linstor_expand_apply | bool
 
-    - name: Initialize the exact new PV with two 2 GiB metadata areas
+    - name: Initialize the exact new PV with two 1 GiB metadata areas
       ansible.builtin.command:
-        argv: [pvcreate, --yes, --metadatasize, 2g, --pvmetadatacopies, "2", "{{ linstor_expand_disks[0].path }}"]
+        argv: [pvcreate, --yes, --metadatasize, 1g, --pvmetadatacopies, "2", "{{ linstor_expand_disks[0].path }}"]
       when: linstor_expand_apply | bool
       changed_when: true
 
