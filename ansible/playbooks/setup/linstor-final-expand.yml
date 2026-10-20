@@ -260,7 +260,7 @@
           - >-
             (linstor_expand_mda_state.stdout | from_json).report[0].pv
             | selectattr('pv_name', 'equalto', linstor_expand_old_disks[0].path)
-            | selectattr('pv_mda_count', 'equalto', '0') | list | length == 1
+            | selectattr('pv_mda_used_count', 'equalto', '0') | list | length == 1
           - >-
             (linstor_expand_mda_state.stdout | from_json).report[0].pv
             | selectattr('pv_name', 'equalto', linstor_expand_disks[0].path)
