@@ -38,3 +38,10 @@ accepts active LVM mappings on an already verified expansion PV; the empty
 disk guard still applies before first initialization. Host monitoring is
 enabled persistently through `lvm2-monitor.service`, with a profile visible
 in both host and satellite namespaces.
+
+Apply the Flux-managed `host-lvm-profile` satellite configuration before
+running the expansion playbook. The playbook labels each prepared worker
+`storage.josmase.io/lvm-profile-ready=true`, waits for a ready satellite with
+the read-only host profile mount, and checks replica health before the next
+worker. This stages satellite pod rollouts serially rather than updating all
+worker satellites at once.

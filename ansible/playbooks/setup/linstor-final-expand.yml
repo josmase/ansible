@@ -383,6 +383,41 @@
         - (linstor_expand_host_monitor.stdout | from_json).report[0].lv[0].seg_monitor | trim != 'monitored'
       changed_when: true
 
+    - name: Require the Flux-managed satellite profile configuration
+      ansible.builtin.command:
+        argv: [kubectl, get, linstorsatelliteconfiguration, host-lvm-profile, --output, json]
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      when: linstor_expand_apply | bool
+
+    - name: Enable the satellite profile mount on this prepared worker
+      ansible.builtin.command:
+        argv: [kubectl, label, node, "{{ k8s_node_name }}", storage.josmase.io/lvm-profile-ready=true, --overwrite]
+      delegate_to: localhost
+      become: false
+      register: linstor_expand_profile_label
+      changed_when: "'not labeled' not in linstor_expand_profile_label.stdout"
+      when: linstor_expand_apply | bool
+
+    - name: Wait for a ready satellite with the host profile mounted
+      ansible.builtin.shell: >-
+        pod="$(kubectl get pods -n piraeus-datastore --request-timeout=15s --field-selector spec.nodeName={{ k8s_node_name }} -o json |
+          jq -r '[.items[] |
+            select(.metadata.deletionTimestamp == null) |
+            select(any(.spec.containers[]; .name == "linstor-satellite" and any(.volumeMounts[]?; .name == "host-lvm-profile" and .mountPath == "/etc/lvm/profile" and .readOnly == true))) |
+            select(any(.status.conditions[]?; .type == "Ready" and .status == "True"))] | first | .metadata.name // empty')" &&
+        test -n "$pod" &&
+        kubectl exec -n piraeus-datastore "$pod" -c linstor-satellite --request-timeout=15s -- cat /etc/lvm/profile/linstor_thin_autoextend.profile >/dev/null
+      delegate_to: localhost
+      become: false
+      register: linstor_expand_satellite_profile
+      changed_when: false
+      retries: 60
+      delay: 5
+      until: linstor_expand_satellite_profile.rc == 0
+      when: linstor_expand_apply | bool
+
     - name: Refresh LINSTOR storage-pool discovery and verify its reported pool size
       ansible.builtin.shell: >-
         kubectl get --raw /api/v1/namespaces/piraeus-datastore/services/http:linstor-controller:3370/proxy/v1/view/storage-pools |
@@ -413,6 +448,10 @@
       delegate_to: localhost
       become: false
       changed_when: false
+      register: linstor_expand_satellites_after
+      retries: 30
+      delay: 5
+      until: linstor_expand_satellites_after.rc == 0
       no_log: true
 
     - name: Verify every LINSTOR replica remains healthy after this worker
@@ -429,4 +468,8 @@
       delegate_to: localhost
       become: false
       changed_when: false
+      register: linstor_expand_replicas_after
+      retries: 30
+      delay: 5
+      until: linstor_expand_replicas_after.rc == 0
       no_log: true
