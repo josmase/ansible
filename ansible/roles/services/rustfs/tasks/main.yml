@@ -7,7 +7,11 @@
       - rustfs_root_secret_key | length >= 32
       - rustfs_backup_access_key | length >= 16
       - rustfs_backup_secret_key | length >= 32
+      - rustfs_backup_v2_access_key | length >= 16
+      - rustfs_backup_v2_secret_key | length >= 32
       - rustfs_root_access_key != rustfs_backup_access_key
+      - rustfs_backup_v2_access_key != rustfs_backup_access_key
+      - rustfs_backup_v2_access_key != rustfs_root_access_key
     fail_msg: "Set a non-loopback bind address and encrypted RustFS credentials."
   no_log: true
 
@@ -63,6 +67,26 @@
     - {name: backup-access-key, value: "{{ rustfs_backup_access_key }}"}
     - {name: backup-secret-key, value: "{{ rustfs_backup_secret_key }}"}
   no_log: true
+
+- name: Install RustFS v2 scoped backup credential files
+  ansible.builtin.copy:
+    content: "{{ item.value }}\n"
+    dest: "{{ rustfs_secret_dir }}/{{ item.name }}"
+    owner: "{{ rustfs_uid }}"
+    group: "{{ rustfs_gid }}"
+    mode: "0400"
+  loop:
+    - {name: backup-v2-access-key, value: "{{ rustfs_backup_v2_access_key }}"}
+    - {name: backup-v2-secret-key, value: "{{ rustfs_backup_v2_secret_key }}"}
+  no_log: true
+
+- name: Install the RustFS v2 scoped backup policy
+  ansible.builtin.template:
+    src: linstor-backups-v2-policy.json.j2
+    dest: "{{ rustfs_secret_dir }}/linstor-backups-v2-policy.json"
+    owner: root
+    group: root
+    mode: "0644"
 
 - name: Install the RustFS compose definition
   ansible.builtin.template:

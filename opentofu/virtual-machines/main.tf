@@ -38,6 +38,17 @@ resource "proxmox_virtual_environment_vm" "worker" {
     backup       = true
     serial       = "linstor-data-${each.key}"
   }
+  dynamic "disk" {
+    for_each = each.value.expansion_disk_gib > 0 ? [each.value.expansion_disk_gib] : []
+    content {
+      interface    = "scsi2"
+      datastore_id = var.storage
+      size         = disk.value
+      file_format  = "raw"
+      backup       = true
+      serial       = "linstor-expand-${each.key}"
+    }
+  }
   initialization {
     datastore_id = var.storage
     ip_config {

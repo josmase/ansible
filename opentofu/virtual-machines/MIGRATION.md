@@ -38,3 +38,21 @@ operation begins. Keep masters strictly one-at-a-time to preserve etcd quorum.
 
 CDKTF has been removed. Do not reintroduce a second VM definition or apply a
 legacy state against these VMs.
+
+## LINSTOR worker expansion
+
+The new `scsi2` disks use serials `linstor-expand-204/205/206` and sizes 1,
+96, and 160 GiB on the existing `Kubernetes` datastore. The full plan should
+show only three in-place worker updates, each adding its one disk. Refresh the
+Proxmox free-space reading before every apply and require at least 200 GiB to
+remain after the planned disk is allocated. Current measured free space was
+about 476.6 GiB; all three additions together leave about 219.5 GiB.
+
+Apply one VM instance at a time in order 204, 205, 206. For each worker, create
+and review a targeted plan for only `proxmox_virtual_environment_vm.worker["N"]`,
+apply that saved plan, and verify the guest sees the expected serial and size
+before preparing the next worker. Do not apply the un-targeted three-worker
+plan. Perform LVM changes with `ansible/playbooks/setup/linstor-final-expand.yml`
+only after the isolated metadata rehearsal, off-cluster backups, replica
+health checks, and exact per-host confirmation have passed. Never shrink the
+thin pool or detach an expansion disk.

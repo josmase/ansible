@@ -23,11 +23,18 @@ variable "image_storage" {
 variable "ssh_public_key" { type = string }
 
 variable "workers" {
-  type = map(object({ ip = string, name = string, memory = number, cores = number, started = bool }))
+  type = map(object({ ip = string, name = string, memory = number, cores = number, started = bool, expansion_disk_gib = number }))
   default = {
-    "204" = { ip = "192.168.1.204", name = "kubernetes-node-204", memory = 3072, cores = 6, started = false }
-    "205" = { ip = "192.168.1.205", name = "kubernetes-node-205", memory = 3072, cores = 6, started = false }
-    "206" = { ip = "192.168.1.206", name = "kubernetes-node-206", memory = 3072, cores = 6, started = false }
+    "204" = { ip = "192.168.1.204", name = "kubernetes-node-204", memory = 3072, cores = 6, started = false, expansion_disk_gib = 1 }
+    "205" = { ip = "192.168.1.205", name = "kubernetes-node-205", memory = 3072, cores = 6, started = false, expansion_disk_gib = 96 }
+    "206" = { ip = "192.168.1.206", name = "kubernetes-node-206", memory = 3072, cores = 6, started = false, expansion_disk_gib = 160 }
+  }
+  validation {
+    condition = contains(keys(var.workers), "204") && contains(keys(var.workers), "205") && contains(keys(var.workers), "206") &&
+      var.workers["204"].expansion_disk_gib == 1 &&
+      var.workers["205"].expansion_disk_gib == 96 &&
+      var.workers["206"].expansion_disk_gib == 160
+    error_message = "Keep the attached LINSTOR expansion disks at their declared sizes; do not remove or shrink them."
   }
 }
 

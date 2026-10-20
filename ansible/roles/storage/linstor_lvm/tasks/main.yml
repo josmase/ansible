@@ -89,6 +89,7 @@
   community.general.lvg:
     vg: "{{ linstor_lvm_vg_name }}"
     pvs: "{{ linstor_lvm_device }}"
+    remove_extra_pvs: "{{ linstor_lvm_remove_extra_pvs | bool }}"
     pvresize: true
     state: present
 
@@ -98,6 +99,7 @@
     thinpool: "{{ linstor_lvm_thinpool_name }}"
     size: "{{ linstor_lvm_thinpool_size }}"
     opts: "--poolmetadatasize {{ linstor_lvm_thinpool_metadata_size }}"
+    shrink: "{{ linstor_lvm_allow_shrink | bool }}"
     state: present
 
 - name: Create the LVM profile directory

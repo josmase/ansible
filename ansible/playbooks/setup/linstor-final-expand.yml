@@ -1,0 +1,383 @@
+---
+# Guarded, serial expansion for the existing final LINSTOR VGs. Keep this play
+# in inspect mode until the isolated LVM rehearsal and external backups pass.
+- name: Expand final LINSTOR worker VGs
+  hosts: linstor_final_nodes
+  become: true
+  serial: 1
+  order: sorted
+  vars:
+    linstor_expand_apply: false
+    linstor_expand_rehearsal_passed: false
+    linstor_expand_external_backups_verified: false
+    linstor_expand_confirmation: ""
+    linstor_expand_backup_dir: /var/backups/linstor-vg
+    linstor_expand_nodes:
+      "204": {disk_gib: 1, pool: 680g}
+      "205": {disk_gib: 96, pool: 760g}
+      "206": {disk_gib: 160, pool: 840g}
+    linstor_expand_node_id: "{{ k8s_node_name | regex_replace('^kubernetes-node-', '') }}"
+    linstor_expand_disk_serial: "linstor-expand-{{ linstor_expand_node_id }}"
+    linstor_expand_old_disk_serial: "linstor-data-{{ linstor_expand_node_id }}"
+    linstor_expand_expected_size_bytes: "{{ linstor_expand_nodes[linstor_expand_node_id].disk_gib * 1073741824 }}"
+    linstor_expand_pool_target: "{{ linstor_expand_nodes[linstor_expand_node_id].pool }}"
+    linstor_expand_pool_target_kib: "{{ (linstor_expand_pool_target | regex_replace('g$', '') | int) * 1048576 }}"
+    linstor_expand_minimum_mda_free_bytes: 16777216
+  pre_tasks:
+    - name: Verify all diskful worker satellites are available before this worker
+      ansible.builtin.shell: >-
+        kubectl get linstorsatellites.piraeus.io -o json |
+        jq -e --arg n204 kubernetes-node-204 --arg n205 kubernetes-node-205 --arg n206 kubernetes-node-206 '
+          def ready($name): any(.items[]; .metadata.name == $name and (.status.freeCapacityBytes // 0) > 0 and any(.status.conditions[]?; .type == "Available" and .status == "True"));
+          ready($n204) and ready($n205) and ready($n206)
+        ' >/dev/null
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      no_log: true
+
+    - name: Verify every existing LINSTOR replica is healthy before this worker
+      ansible.builtin.shell: >-
+        kubectl get --raw /api/v1/namespaces/piraeus-datastore/services/http:linstor-controller:3370/proxy/v1/view/resources |
+        jq -e '
+          length > 0 and all(.[];
+            (.volumes | length) > 0 and all(.volumes[];
+              (.state.disk_state == "UpToDate" or .state.disk_state == "Diskless") and
+              all(.state.replication_states[]?; .replication_state == "Established")
+            )
+          )
+        ' >/dev/null
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      no_log: true
+
+  tasks:
+    - name: Require completed rehearsal and off-cluster backups before mutation
+      ansible.builtin.assert:
+        that:
+          - not (linstor_expand_apply | bool) or linstor_expand_rehearsal_passed | bool
+          - not (linstor_expand_apply | bool) or linstor_expand_external_backups_verified | bool
+          - not (linstor_expand_apply | bool) or linstor_expand_confirmation == 'EXPAND:' ~ inventory_hostname ~ ':' ~ linstor_expand_disk_serial
+        fail_msg: "Live expansion requires rehearsal evidence, off-cluster backups, and the exact EXPAND confirmation."
+
+    - name: Read block-device inventory
+      ansible.builtin.command:
+        argv: [lsblk, --json, --bytes, --output, "PATH,SERIAL,SIZE,TYPE,FSTYPE,MOUNTPOINTS,PKNAME"]
+      register: linstor_expand_lsblk
+      changed_when: false
+      check_mode: false
+
+    - name: Find the expansion disk by serial
+      ansible.builtin.set_fact:
+        linstor_expand_disks: >-
+          {{ (linstor_expand_lsblk.stdout | from_json).blockdevices
+             | selectattr('type', 'equalto', 'disk')
+             | selectattr('serial', 'defined')
+             | selectattr('serial', 'equalto', linstor_expand_disk_serial)
+             | list }}
+        linstor_expand_old_disks: >-
+          {{ (linstor_expand_lsblk.stdout | from_json).blockdevices
+             | selectattr('type', 'equalto', 'disk')
+             | selectattr('serial', 'defined')
+             | selectattr('serial', 'equalto', linstor_expand_old_disk_serial)
+             | list }}
+
+    - name: Require one correctly sized expansion disk and one existing data disk
+      ansible.builtin.assert:
+        that:
+          - linstor_expand_disks | length == 1
+          - linstor_expand_old_disks | length == 1
+          - ((linstor_expand_disks[0].size | int) - (linstor_expand_expected_size_bytes | int)) | abs <= 16777216
+          - linstor_expand_disks[0].path != linstor_expand_old_disks[0].path
+          - linstor_expand_disks[0].mountpoints | select | list | length == 0
+        fail_msg: "Disk serial, size, mount, or identity guard failed; no LVM changes were made."
+
+    - name: Read root filesystem source
+      ansible.builtin.command:
+        argv: [findmnt, --noheadings, --output, SOURCE, /]
+      register: linstor_expand_root_source
+      changed_when: false
+      check_mode: false
+
+    - name: Find the root filesystem's physical disk ancestor
+      ansible.builtin.command:
+        argv: [lsblk, --inverse, --noheadings, --paths, --output, NAME,TYPE, "{{ linstor_expand_root_source.stdout | trim }}"]
+      register: linstor_expand_root_ancestry
+      changed_when: false
+      check_mode: false
+
+    - name: Record the root disk
+      ansible.builtin.set_fact:
+        linstor_expand_root_disk: "{{ linstor_expand_root_ancestry.stdout_lines | select('search', ' disk$') | map('regex_replace', ' disk$', '') | last | default('') }}"
+
+    - name: Refuse the root disk
+      ansible.builtin.assert:
+        that:
+          - linstor_expand_root_disk | length > 0
+          - linstor_expand_disks[0].path != linstor_expand_root_disk
+        fail_msg: "Expansion disk resolves to the root device or the root ancestry could not be determined."
+
+    - name: Require the expansion disk has no child partitions
+      ansible.builtin.command:
+        argv: [lsblk, --noheadings, --paths, --output, NAME, "{{ linstor_expand_disks[0].path }}"]
+      register: linstor_expand_children
+      changed_when: false
+      check_mode: false
+
+    - name: Refuse partitions or mounted descendants
+      ansible.builtin.assert:
+        that:
+          - linstor_expand_children.stdout_lines | length == 1
+          - linstor_expand_children.stdout_lines[0] | trim == linstor_expand_disks[0].path
+        fail_msg: "Expansion disk has child devices; investigate before initializing it."
+
+    - name: Inspect signatures on the new disk
+      ansible.builtin.command:
+        argv: [wipefs, --no-act, "{{ linstor_expand_disks[0].path }}"]
+      register: linstor_expand_signatures
+      changed_when: false
+      check_mode: false
+
+    - name: Require an uninitialized new disk
+      ansible.builtin.assert:
+        that:
+          - linstor_expand_signatures.stdout | trim | length == 0
+        fail_msg: "Expansion disk has signatures; stop and investigate instead of initializing it."
+
+    - name: Read existing LVM PV membership
+      ansible.builtin.command:
+        argv: [pvs, --reportformat, json, --units, b, --nosuffix, --options, "pv_name,vg_name"]
+      register: linstor_expand_pvs
+      changed_when: false
+      check_mode: false
+
+    - name: Verify the original data PV belongs to the expected VG
+      ansible.builtin.assert:
+        that:
+          - >-
+            (linstor_expand_pvs.stdout | from_json).report[0].pv
+            | selectattr('vg_name', 'equalto', 'linstor_vg')
+            | selectattr('pv_name', 'equalto', linstor_expand_old_disks[0].path)
+            | list | length == 1
+        fail_msg: "Expected original LINSTOR PV was not found in linstor_vg."
+
+    - name: Save a VG metadata backup on the Ansible controller
+      block:
+        - name: Create off-cluster backup directory
+          ansible.builtin.file:
+            path: "{{ linstor_expand_backup_dir }}"
+            state: directory
+            mode: "0700"
+          delegate_to: localhost
+          become: false
+
+        - name: Write current VG configuration backup on worker
+          ansible.builtin.command:
+            argv: [vgcfgbackup, --file, "/var/tmp/linstor_vg-{{ inventory_hostname }}.conf", linstor_vg]
+          changed_when: true
+
+        - name: Fetch VG configuration backup to Ansible controller
+          ansible.builtin.fetch:
+            src: "/var/tmp/linstor_vg-{{ inventory_hostname }}.conf"
+            dest: "{{ linstor_expand_backup_dir }}/linstor_vg-{{ inventory_hostname }}.conf"
+            flat: true
+      when: linstor_expand_apply | bool
+
+    - name: Initialize the exact new PV with two 64 MiB metadata areas
+      ansible.builtin.command:
+        argv: [pvcreate, --yes, --metadatasize, 64m, --pvmetadatacopies, "2", "{{ linstor_expand_disks[0].path }}"]
+      when: linstor_expand_apply | bool
+      changed_when: true
+
+    - name: Add the new PV to linstor_vg
+      ansible.builtin.command:
+        argv: [vgextend, linstor_vg, "{{ linstor_expand_disks[0].path }}"]
+      when: linstor_expand_apply | bool
+      changed_when: true
+
+    - name: Verify the original and expansion PVs are both members of linstor_vg
+      ansible.builtin.command:
+        argv: [pvs, --reportformat, json, --options, "pv_name,vg_name"]
+      register: linstor_expand_membership
+      changed_when: false
+      when: linstor_expand_apply | bool
+
+    - name: Require both serial-identified PV paths in the expected VG
+      ansible.builtin.assert:
+        that:
+          - >-
+            (linstor_expand_membership.stdout | from_json).report[0].pv
+            | selectattr('pv_name', 'equalto', linstor_expand_old_disks[0].path)
+            | selectattr('vg_name', 'equalto', 'linstor_vg') | list | length == 1
+          - >-
+            (linstor_expand_membership.stdout | from_json).report[0].pv
+            | selectattr('pv_name', 'equalto', linstor_expand_disks[0].path)
+            | selectattr('vg_name', 'equalto', 'linstor_vg') | list | length == 1
+        fail_msg: "Both original and expansion PVs must belong to linstor_vg before proceeding."
+      when: linstor_expand_apply | bool
+
+    - name: Read the two metadata areas from the new PV
+      ansible.builtin.command:
+        argv: [pvck, --dump, metadata, "{{ linstor_expand_disks[0].path }}"]
+      register: linstor_expand_mda1
+      changed_when: false
+      when: linstor_expand_apply | bool
+
+    - name: Read the second metadata area from the new PV
+      ansible.builtin.command:
+        argv: [pvck, --dump, metadata, --settings, mda_num=2, "{{ linstor_expand_disks[0].path }}"]
+      register: linstor_expand_mda2
+      changed_when: false
+      when: linstor_expand_apply | bool
+
+    - name: Require identical current VG metadata in both new areas
+      ansible.builtin.assert:
+        that:
+          - linstor_expand_mda1.stdout == linstor_expand_mda2.stdout
+          - "'linstor_vg' in linstor_expand_mda1.stdout"
+          - "'linstor_thin' in linstor_expand_mda1.stdout"
+        fail_msg: "Both new metadata areas must contain identical current VG metadata before the original PV is ignored."
+      when: linstor_expand_apply | bool
+
+    - name: Mark only the original small metadata area ignored
+      ansible.builtin.command:
+        argv: [pvchange, --metadataignore, y, "{{ linstor_expand_old_disks[0].path }}"]
+      when: linstor_expand_apply | bool
+      changed_when: true
+
+    - name: Read metadata-copy state after the transition
+      ansible.builtin.command:
+        argv: [pvs, --reportformat, json, --options, "pv_name,pv_mda_count,pv_mda_used_count,pv_mda_size"]
+      register: linstor_expand_mda_state
+      changed_when: false
+      when: linstor_expand_apply | bool
+
+    - name: Require the original metadata ignored and both new copies in use
+      ansible.builtin.assert:
+        that:
+          - >-
+            (linstor_expand_mda_state.stdout | from_json).report[0].pv
+            | selectattr('pv_name', 'equalto', linstor_expand_old_disks[0].path)
+            | selectattr('pv_mda_count', 'equalto', '0') | list | length == 1
+          - >-
+            (linstor_expand_mda_state.stdout | from_json).report[0].pv
+            | selectattr('pv_name', 'equalto', linstor_expand_disks[0].path)
+            | selectattr('pv_mda_count', 'equalto', '2')
+            | selectattr('pv_mda_used_count', 'equalto', '2') | list | length == 1
+        fail_msg: "Original MDA is not ignored or both expanded PV metadata areas are not in use."
+      when: linstor_expand_apply | bool
+
+    - name: Verify minimum in-use VG metadata headroom
+      ansible.builtin.command:
+        argv: [vgs, --reportformat, json, --units, b, --nosuffix, --options, "vg_name,vg_mda_free"]
+      register: linstor_expand_vgs
+      changed_when: false
+      when: linstor_expand_apply | bool
+
+    - name: Require 16 MiB free metadata space
+      ansible.builtin.assert:
+        that:
+          - >-
+            (linstor_expand_vgs.stdout | from_json).report[0].vg
+            | selectattr('vg_name', 'equalto', 'linstor_vg')
+            | selectattr('vg_mda_free', 'defined')
+            | map(attribute='vg_mda_free') | map('float') | min
+            >= linstor_expand_minimum_mda_free_bytes
+        fail_msg: "In-use VG metadata headroom is below 16 MiB; stop before pool extension."
+      when: linstor_expand_apply | bool
+
+    - name: Read current thin-pool size
+      ansible.builtin.command:
+        argv: [lvs, --reportformat, json, --units, g, --nosuffix, --options, "lv_name,lv_size,lv_attr", linstor_vg/linstor_thin]
+      register: linstor_expand_lvs
+      changed_when: false
+      check_mode: false
+
+    - name: Refuse any requested pool shrink
+      ansible.builtin.assert:
+        that:
+          - (linstor_expand_lvs.stdout | from_json).report[0].lv | length == 1
+          - (linstor_expand_lvs.stdout | from_json).report[0].lv[0].lv_size | float <= (linstor_expand_pool_target | regex_replace('g$', '') | float)
+        fail_msg: "Requested pool target is below the current size; shrinking is prohibited."
+
+    - name: Extend the thin pool to its worker-specific target
+      ansible.builtin.command:
+        argv: [lvextend, --size, "{{ linstor_expand_pool_target }}", linstor_vg/linstor_thin]
+      when: linstor_expand_apply | bool
+      changed_when: true
+
+    - name: Create the host LVM profile directory
+      ansible.builtin.file:
+        path: /etc/lvm/profile
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      when: linstor_expand_apply | bool
+
+    - name: Install LVM auto-extension profile in the host namespace
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../../roles/storage/linstor_lvm/templates/thin_autoextend.profile.j2"
+        dest: /etc/lvm/profile/linstor_thin_autoextend.profile
+        owner: root
+        group: root
+        mode: "0644"
+      vars:
+        linstor_lvm_autoextend_threshold: 75
+        linstor_lvm_autoextend_percent: 5
+      when: linstor_expand_apply | bool
+
+    - name: Attach LVM auto-extension profile without changing metadata copy management
+      ansible.builtin.command:
+        argv: [lvchange, --metadataprofile, linstor_thin_autoextend, linstor_vg/linstor_thin]
+      when: linstor_expand_apply | bool
+      changed_when: true
+
+    - name: Refresh LINSTOR storage-pool discovery and verify its reported pool size
+      ansible.builtin.shell: >-
+        kubectl get --raw /api/v1/namespaces/piraeus-datastore/services/http:linstor-controller:3370/proxy/v1/view/storage-pools |
+        jq -e --arg node "{{ k8s_node_name }}" --argjson expected {{ linstor_expand_pool_target_kib }} '
+          any(.[];
+            .node_name == $node and .storage_pool_name == "linstor-thin" and
+            .provider_kind == "LVM_THIN" and
+            ((.total_capacity // 0) | tonumber) >= $expected
+          )
+        ' >/dev/null
+      delegate_to: localhost
+      become: false
+      register: linstor_expand_pool_discovery
+      changed_when: false
+      retries: 30
+      delay: 10
+      until: linstor_expand_pool_discovery.rc == 0
+      when: linstor_expand_apply | bool
+      no_log: true
+
+    - name: Verify all diskful worker satellites remain available after this worker
+      ansible.builtin.shell: >-
+        kubectl get linstorsatellites.piraeus.io -o json |
+        jq -e --arg n204 kubernetes-node-204 --arg n205 kubernetes-node-205 --arg n206 kubernetes-node-206 '
+          def ready($name): any(.items[]; .metadata.name == $name and (.status.freeCapacityBytes // 0) > 0 and any(.status.conditions[]?; .type == "Available" and .status == "True"));
+          ready($n204) and ready($n205) and ready($n206)
+        ' >/dev/null
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      no_log: true
+
+    - name: Verify every LINSTOR replica remains healthy after this worker
+      ansible.builtin.shell: >-
+        kubectl get --raw /api/v1/namespaces/piraeus-datastore/services/http:linstor-controller:3370/proxy/v1/view/resources |
+        jq -e '
+          length > 0 and all(.[];
+            (.volumes | length) > 0 and all(.volumes[];
+              (.state.disk_state == "UpToDate" or .state.disk_state == "Diskless") and
+              all(.state.replication_states[]?; .replication_state == "Established")
+            )
+          )
+        ' >/dev/null
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      no_log: true
