@@ -24,9 +24,10 @@ Initialization still requires `linstor_lvm_initialize=true` and the exact
 `ERASE:<inventory-host>:<serial>` confirmation at execution time.
 
 The final workers use the separate guarded playbook
-`ansible/playbooks/setup/linstor-final-expand.yml`. It adds a new 64 MiB × 2
-metadata PV, checks both copies before setting `metadataignore` on the original
-PV, requires at least 16 MiB free VG metadata, and grows the existing pool
-without shrinking. It runs one node at a time and refuses mutation until the
-isolated rehearsal, external backups, and exact `EXPAND:<inventory-host>:<serial>`
-confirmation are supplied.
+`ansible/playbooks/setup/linstor-final-expand.yml`. It adds a new PV with two
+1 GiB metadata areas (2 GiB total reserved on the expansion disk), checks both
+copies before setting `metadataignore` on the original PV, requires at least
+16 MiB free VG metadata, and grows the existing pool without shrinking. It
+runs one node at a time and refuses mutation until the isolated rehearsal,
+external backups, and exact `EXPAND:<inventory-host>:<serial>` confirmation
+are supplied.
