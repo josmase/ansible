@@ -46,7 +46,7 @@
 
 - name: Read permanent volume-group capacity
   ansible.builtin.command:
-    argv: [vgs, --units, b, --nosuffix, --noheadings, --separator, ",", --options, "vg_size,vg_free", "{{ linstor_storage_vg_name }}"]
+    argv: [vgs, --units, b, --nosuffix, --noheadings, --separator, ",", --options, "vg_size,vg_free,vg_mda_size,vg_mda_free", "{{ linstor_storage_vg_name }}"]
   register: linstor_storage_vg_report
   changed_when: false
   check_mode: false
@@ -72,6 +72,7 @@
       - linstor_storage_root_size.stdout | trim | int >= linstor_storage_root_disk_min_bytes | int
       - linstor_storage_root_size.stdout | trim | int <= linstor_storage_root_disk_max_bytes | int
       - linstor_storage_vg_fields[1] | trim | float >= linstor_storage_min_vg_free_bytes | int
+      - linstor_storage_vg_fields[3] | trim | float >= linstor_storage_min_vg_mda_free_bytes | int
       - linstor_storage_lv_fields[0] | trim | float >= linstor_storage_min_thinpool_bytes | int
       - linstor_storage_lv_fields[1] | trim | float >= linstor_storage_min_metadata_bytes | int
       - linstor_storage_lv_fields[2] | trim == linstor_storage_autoextend_profile
