@@ -13,9 +13,9 @@
     linstor_expand_confirmation: ""
     linstor_expand_backup_dir: /var/backups/linstor-vg
     linstor_expand_nodes:
-      "204": {disk_gib: 1, pool: 680g}
-      "205": {disk_gib: 96, pool: 760g}
-      "206": {disk_gib: 160, pool: 840g}
+      "204": {disk_gib: 80, pool: 740g}
+      "205": {disk_gib: 80, pool: 740g}
+      "206": {disk_gib: 80, pool: 740g}
     linstor_expand_node_id: "{{ k8s_node_name | regex_replace('^kubernetes-node-', '') }}"
     linstor_expand_disk_serial: "linstor-expand-{{ linstor_expand_node_id }}"
     linstor_expand_old_disk_serial: "linstor-data-{{ linstor_expand_node_id }}"

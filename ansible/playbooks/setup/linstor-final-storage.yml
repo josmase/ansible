@@ -10,9 +10,9 @@
     linstor_lvm_thinpool_name: linstor_thin
     linstor_lvm_thinpool_size: "{{ linstor_final_thinpool_sizes[k8s_node_name | regex_replace('^kubernetes-node-', '')] }}"
     linstor_final_thinpool_sizes:
-      "204": 680g
-      "205": 760g
-      "206": 840g
+      "204": 740g
+      "205": 740g
+      "206": 740g
     linstor_lvm_remove_extra_pvs: false
     linstor_lvm_autoextend_threshold: 75
     linstor_lvm_autoextend_percent: 5
