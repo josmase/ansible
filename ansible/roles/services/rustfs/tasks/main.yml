@@ -199,6 +199,10 @@
       - "{{ rustfs_cli_image }}"
       - /bootstrap/bootstrap.sh
       - verify
+  register: rustfs_identity_verification
+  retries: 12
+  delay: 10
+  until: rustfs_identity_verification.rc == 0
   changed_when: false
   no_log: true
   when: not ansible_check_mode
