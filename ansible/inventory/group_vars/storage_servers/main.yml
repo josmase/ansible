@@ -26,3 +26,6 @@ rustfs_root_access_key: "{{ vault_rustfs_root_access_key | default('') }}"
 rustfs_root_secret_key: "{{ vault_rustfs_root_secret_key | default('') }}"
 rustfs_backup_access_key: "{{ vault_rustfs_backup_access_key | default('') }}"
 rustfs_backup_secret_key: "{{ vault_rustfs_backup_secret_key | default('') }}"
+
+rustfs_backup_v2_access_key: "{{ vault_rustfs_backup_v2_access_key | default('') }}"
+rustfs_backup_v2_secret_key: "{{ vault_rustfs_backup_v2_secret_key | default('') }}"
