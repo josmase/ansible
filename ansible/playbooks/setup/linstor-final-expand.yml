@@ -102,7 +102,7 @@
 
     - name: Find the root filesystem's physical disk ancestor
       ansible.builtin.command:
-        argv: [lsblk, --inverse, --noheadings, --paths, --output, NAME,TYPE, "{{ linstor_expand_root_source.stdout | trim }}"]
+        argv: [lsblk, --inverse, --noheadings, --paths, --output, "NAME,TYPE", "{{ linstor_expand_root_source.stdout | trim }}"]
       register: linstor_expand_root_ancestry
       changed_when: false
       check_mode: false
