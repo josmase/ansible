@@ -93,14 +93,48 @@
     pvresize: true
     state: present
 
-- name: Create the LINSTOR thin pool
+- name: Read the existing thin pool before enforcing its minimum size
+  ansible.builtin.command:
+    argv:
+      - lvs
+      - --reportformat
+      - json
+      - --units
+      - b
+      - --nosuffix
+      - --options
+      - lv_name,lv_size,lv_attr
+      - --select
+      - "lv_name={{ linstor_lvm_thinpool_name }}"
+      - "{{ linstor_lvm_vg_name }}"
+  register: linstor_lvm_existing_pool_report
+  changed_when: false
+  check_mode: false
+  when: linstor_lvm_vg_name in (linstor_lvm_existing_vgs.stdout_lines | map('trim') | list) or not ansible_check_mode
+
+- name: Record any existing thin pool
+  ansible.builtin.set_fact:
+    linstor_lvm_existing_pool: "{{ (linstor_lvm_existing_pool_report.stdout | from_json).report[0].lv if linstor_lvm_existing_pool_report is not skipped else [] }}"
+
+- name: Refuse an unexpected logical volume with the thin-pool name
+  ansible.builtin.assert:
+    that:
+      - linstor_lvm_existing_pool | length <= 1
+      - linstor_lvm_existing_pool | length == 0 or linstor_lvm_existing_pool[0].lv_attr is match('^t')
+    fail_msg: "The existing logical volume must be a thin pool."
+
+- name: Create or extend the LINSTOR thin pool to its minimum size
   community.general.lvol:
     vg: "{{ linstor_lvm_vg_name }}"
     thinpool: "{{ linstor_lvm_thinpool_name }}"
     size: "{{ linstor_lvm_thinpool_size }}"
     opts: "--poolmetadatasize {{ linstor_lvm_thinpool_metadata_size }}"
-    shrink: "{{ linstor_lvm_allow_shrink | bool }}"
+    shrink: false
     state: present
+  when: >-
+    linstor_lvm_existing_pool | length == 0 or
+    (linstor_lvm_existing_pool[0].lv_size | float) <
+    (linstor_lvm_thinpool_size | ansible.builtin.human_to_bytes)
 
 - name: Create the LVM profile directory
   ansible.builtin.file:

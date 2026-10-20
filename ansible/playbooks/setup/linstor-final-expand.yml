@@ -125,13 +125,6 @@
       changed_when: false
       check_mode: false
 
-    - name: Refuse partitions or mounted descendants
-      ansible.builtin.assert:
-        that:
-          - linstor_expand_children.stdout_lines | length == 1
-          - linstor_expand_children.stdout_lines[0] | trim == linstor_expand_disks[0].path
-        fail_msg: "Expansion disk has child devices; investigate before initializing it."
-
     - name: Inspect signatures on the new disk
       ansible.builtin.command:
         argv: [wipefs, --no-act, "{{ linstor_expand_disks[0].path }}"]
@@ -160,8 +153,23 @@
             or
             (linstor_expand_new_pv_records | length == 1 and linstor_expand_new_pv_records[0].vg_name == 'linstor_vg'
              and linstor_expand_new_pv_records[0].pv_mda_count == '2'
-             and linstor_expand_new_pv_records[0].pv_mda_used_count == '2')
+             and linstor_expand_new_pv_records[0].pv_mda_used_count == '2'
+             and linstor_expand_new_pv_records[0].pv_mda_size | float >= 2147483648)
         fail_msg: "Expansion disk has an unexpected signature or PV state; investigate before proceeding."
+
+    - name: Refuse child devices before first PV initialization
+      ansible.builtin.assert:
+        that:
+          - linstor_expand_children.stdout_lines | length == 1
+          - linstor_expand_children.stdout_lines[0] | trim == linstor_expand_disks[0].path
+        fail_msg: "A disk being initialized must not have child devices. Existing verified PVs may have active LVM mappings."
+      when: linstor_expand_new_pv_records | length == 0
+
+    - name: Record the original PV metadata state
+      ansible.builtin.set_fact:
+        linstor_expand_old_pv_records: >-
+          {{ (linstor_expand_pvs.stdout | from_json).report[0].pv
+             | selectattr('pv_name', 'equalto', linstor_expand_old_disks[0].path) | list }}
 
     - name: Verify the original data PV belongs to the expected VG
       ansible.builtin.assert:
@@ -256,7 +264,9 @@
     - name: Mark only the original small metadata area ignored
       ansible.builtin.command:
         argv: [pvchange, --metadataignore, y, "{{ linstor_expand_old_disks[0].path }}"]
-      when: linstor_expand_apply | bool
+      when:
+        - linstor_expand_apply | bool
+        - linstor_expand_old_pv_records[0].pv_mda_used_count != '0'
       changed_when: true
 
     - name: Read metadata-copy state after the transition
@@ -307,12 +317,13 @@
       changed_when: false
       check_mode: false
 
-    - name: Refuse any requested pool shrink
+    - name: Validate the existing thin pool before enforcing its minimum size
       ansible.builtin.assert:
         that:
           - (linstor_expand_lvs.stdout | from_json).report[0].lv | length == 1
-          - (linstor_expand_lvs.stdout | from_json).report[0].lv[0].lv_size | float <= (linstor_expand_pool_target | regex_replace('g$', '') | float)
-        fail_msg: "Requested pool target is below the current size; shrinking is prohibited."
+          - (linstor_expand_lvs.stdout | from_json).report[0].lv[0].lv_attr is match('^t')
+          - (linstor_expand_lvs.stdout | from_json).report[0].lv[0].lv_size | float > 0
+        fail_msg: "Expected one healthy thin-pool LV. Configured sizes are minimums; larger existing pools are preserved."
 
     - name: Extend the thin pool to its worker-specific target
       ansible.builtin.command:
@@ -341,10 +352,35 @@
         linstor_lvm_autoextend_percent: 5
       when: linstor_expand_apply | bool
 
+    - name: Read the host thin-pool profile and monitoring state
+      ansible.builtin.command:
+        argv: [lvs, --reportformat, json, --options, "lv_profile,seg_monitor", linstor_vg/linstor_thin]
+      register: linstor_expand_host_monitor
+      changed_when: false
+      check_mode: false
+      when: linstor_expand_apply | bool
+
     - name: Attach LVM auto-extension profile without changing metadata copy management
       ansible.builtin.command:
         argv: [lvchange, --metadataprofile, linstor_thin_autoextend, linstor_vg/linstor_thin]
+      when:
+        - linstor_expand_apply | bool
+        - (linstor_expand_host_monitor.stdout | from_json).report[0].lv[0].lv_profile | trim != 'linstor_thin_autoextend'
+      changed_when: true
+
+    - name: Enable persistent host LVM monitoring
+      ansible.builtin.systemd_service:
+        name: lvm2-monitor.service
+        enabled: true
+        state: started
       when: linstor_expand_apply | bool
+
+    - name: Monitor the thin pool from the host namespace
+      ansible.builtin.command:
+        argv: [lvchange, --monitor, y, linstor_vg/linstor_thin]
+      when:
+        - linstor_expand_apply | bool
+        - (linstor_expand_host_monitor.stdout | from_json).report[0].lv[0].seg_monitor | trim != 'monitored'
       changed_when: true
 
     - name: Refresh LINSTOR storage-pool discovery and verify its reported pool size

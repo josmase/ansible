@@ -31,3 +31,10 @@ copies before setting `metadataignore` on the original PV, requires at least
 runs one node at a time and refuses mutation until the isolated rehearsal,
 external backups, and exact `EXPAND:<inventory-host>:<serial>` confirmation
 are supplied.
+
+Configured thin-pool sizes are minimums. Reruns preserve larger pools created
+by automatic extension and never shrink them. The expansion playbook also
+accepts active LVM mappings on an already verified expansion PV; the empty
+disk guard still applies before first initialization. Host monitoring is
+enabled persistently through `lvm2-monitor.service`, with a profile visible
+in both host and satellite namespaces.
