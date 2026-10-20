@@ -139,18 +139,29 @@
       changed_when: false
       check_mode: false
 
-    - name: Require an uninitialized new disk
-      ansible.builtin.assert:
-        that:
-          - linstor_expand_signatures.stdout | trim | length == 0
-        fail_msg: "Expansion disk has signatures; stop and investigate instead of initializing it."
-
     - name: Read existing LVM PV membership
       ansible.builtin.command:
-        argv: [pvs, --reportformat, json, --units, b, --nosuffix, --options, "pv_name,vg_name"]
+        argv: [pvs, --reportformat, json, --units, b, --nosuffix, --options, "pv_name,vg_name,pv_mda_count,pv_mda_used_count,pv_mda_size"]
       register: linstor_expand_pvs
       changed_when: false
       check_mode: false
+
+    - name: Find any existing PV record for the expansion disk
+      ansible.builtin.set_fact:
+        linstor_expand_new_pv_records: >-
+          {{ (linstor_expand_pvs.stdout | from_json).report[0].pv
+             | selectattr('pv_name', 'equalto', linstor_expand_disks[0].path) | list }}
+
+    - name: Require either a blank disk or the expected already-added PV
+      ansible.builtin.assert:
+        that:
+          - >-
+            (linstor_expand_new_pv_records | length == 0 and linstor_expand_signatures.stdout | trim | length == 0)
+            or
+            (linstor_expand_new_pv_records | length == 1 and linstor_expand_new_pv_records[0].vg_name == 'linstor_vg'
+             and linstor_expand_new_pv_records[0].pv_mda_count == '2'
+             and linstor_expand_new_pv_records[0].pv_mda_used_count == '2')
+        fail_msg: "Expansion disk has an unexpected signature or PV state; investigate before proceeding."
 
     - name: Verify the original data PV belongs to the expected VG
       ansible.builtin.assert:
@@ -187,13 +198,13 @@
     - name: Initialize the exact new PV with two 2 GiB metadata areas
       ansible.builtin.command:
         argv: [pvcreate, --yes, --metadatasize, 2g, --pvmetadatacopies, "2", "{{ linstor_expand_disks[0].path }}"]
-      when: linstor_expand_apply | bool
+      when: linstor_expand_apply | bool and linstor_expand_new_pv_records | length == 0
       changed_when: true
 
     - name: Add the new PV to linstor_vg
       ansible.builtin.command:
         argv: [vgextend, linstor_vg, "{{ linstor_expand_disks[0].path }}"]
-      when: linstor_expand_apply | bool
+      when: linstor_expand_apply | bool and linstor_expand_new_pv_records | length == 0
       changed_when: true
 
     - name: Verify the original and expansion PVs are both members of linstor_vg
@@ -234,7 +245,8 @@
     - name: Require identical current VG metadata in both new areas
       ansible.builtin.assert:
         that:
-          - linstor_expand_mda1.stdout_lines[0] | regex_search('crc (\\S+) # vgname (\\S+) seqno (\\d+)') == linstor_expand_mda2.stdout_lines[0] | regex_search('crc (\\S+) # vgname (\\S+) seqno (\\d+)')
+          - linstor_expand_mda1.stdout_lines[0].split('crc ')[1].split()[0] == linstor_expand_mda2.stdout_lines[0].split('crc ')[1].split()[0]
+          - linstor_expand_mda1.stdout_lines[0].split('seqno ')[1].split()[0] == linstor_expand_mda2.stdout_lines[0].split('seqno ')[1].split()[0]
           - linstor_expand_mda1.stdout_lines[1:] == linstor_expand_mda2.stdout_lines[1:]
           - "'linstor_vg' in linstor_expand_mda1.stdout"
           - "'linstor_thin' in linstor_expand_mda1.stdout"
@@ -305,7 +317,7 @@
     - name: Extend the thin pool to its worker-specific target
       ansible.builtin.command:
         argv: [lvextend, --size, "{{ linstor_expand_pool_target }}", linstor_vg/linstor_thin]
-      when: linstor_expand_apply | bool
+      when: linstor_expand_apply | bool and (linstor_expand_lvs.stdout | from_json).report[0].lv[0].lv_size | float < (linstor_expand_pool_target | regex_replace('g$', '') | float)
       changed_when: true
 
     - name: Create the host LVM profile directory
