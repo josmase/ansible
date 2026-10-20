@@ -30,10 +30,12 @@ variable "workers" {
     "206" = { ip = "192.168.1.206", name = "kubernetes-node-206", memory = 3072, cores = 6, started = false, expansion_disk_gib = 160 }
   }
   validation {
-    condition = contains(keys(var.workers), "204") && contains(keys(var.workers), "205") && contains(keys(var.workers), "206") &&
+    condition = (
+      contains(keys(var.workers), "204") && contains(keys(var.workers), "205") && contains(keys(var.workers), "206") &&
       var.workers["204"].expansion_disk_gib == 1 &&
       var.workers["205"].expansion_disk_gib == 96 &&
       var.workers["206"].expansion_disk_gib == 160
+    )
     error_message = "Keep the attached LINSTOR expansion disks at their declared sizes; do not remove or shrink them."
   }
 }
