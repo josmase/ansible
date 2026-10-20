@@ -1,0 +1,502 @@
+---
+# Full SMART and ext4 maintenance for the nine disks passed through to storage
+# VM 101. This playbook stops NFS and RustFS and unmounts the complete pool.
+# Run only from the Ansible jumphost during an explicitly scheduled outage.
+#
+# Required extra vars:
+#   mergerfs_maintenance_window_confirmed=true
+#   mergerfs_maintenance_window_id=<approved change/window reference>
+#
+# Filesystem repairs are refused unless each affected mapper has a separately
+# verified independent copy of all protected data, supplied as:
+#   mergerfs_verified_backups:
+#     - source: /dev/mapper/automapped_<uuid-prefix>
+#       reference: <independent destination, manifest and verification log>
+#       verified: true
+#       excluded_paths: [files/movies/, files/series/]
+#       protected_data_complete: true
+# Movies and series are intentionally excluded from backup; all other paths
+# are protected. See mergerfs_disk_maintenance.md for the offline copy and
+# checksum verification procedure.
+#   mergerfs_repair_approved=true
+#
+# A SMART failure or I/O error aborts the play with mounts and services stopped.
+# This playbook does not replace disks or return a suspect branch to service.
+
+- name: Check and repair mergerfs data disks during a scheduled outage
+  hosts: storage_servers
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    mergerfs_mountpoint: /mnt/storage
+    mergerfs_expected_branches: 9
+    mergerfs_proxmox_host: 192.168.1.100
+    mergerfs_storage_vmid: 101
+    mergerfs_smart_poll_retries: 2880
+    mergerfs_smart_poll_delay: 60
+    mergerfs_smart_test_timeout: 172800
+    mergerfs_fsck_poll_retries: 4320
+    mergerfs_fsck_poll_delay: 60
+    mergerfs_fsck_timeout: 259200
+    mergerfs_maintenance_window_confirmed: false
+    mergerfs_maintenance_window_id: ""
+    mergerfs_repair_approved: false
+    mergerfs_verified_backups: []
+    mergerfs_backup_excluded_paths:
+      - files/movies/
+      - files/series/
+
+  pre_tasks:
+    - name: Require an explicitly scheduled maintenance window
+      ansible.builtin.assert:
+        that:
+          - mergerfs_maintenance_window_confirmed | bool
+          - mergerfs_maintenance_window_id | string | length > 0
+        fail_msg: >-
+          Refusing disk maintenance without a confirmed maintenance window and
+          its change or schedule reference.
+
+    - name: Record the maintenance start time for kernel-log checks
+      ansible.builtin.command:
+        argv: [date, -u, --iso-8601=seconds]
+      register: mergerfs_maintenance_started_at
+      changed_when: false
+
+    - name: Read current ext4 branch mounts
+      ansible.builtin.shell:
+        cmd: >-
+          findmnt --raw --noheadings --types ext4 --output SOURCE,TARGET |
+          awk '$2 ~ /^\/mnt\/drives\/automapped_/ {print $1, $2}'
+      register: mergerfs_branch_probe
+      changed_when: false
+
+    - name: Initialize branch inventory
+      ansible.builtin.set_fact:
+        mergerfs_branches: []
+
+    - name: Record each mounted mergerfs branch
+      ansible.builtin.set_fact:
+        mergerfs_branches: >-
+          {{ mergerfs_branches + [{'source': item.split()[0], 'target': item.split()[1]}] }}
+      loop: "{{ mergerfs_branch_probe.stdout_lines }}"
+      when: item.split() | length == 2
+
+    - name: Require exactly the expected encrypted ext4 branches
+      ansible.builtin.assert:
+        that:
+          - mergerfs_branches | length == mergerfs_expected_branches
+          - mergerfs_branches | map(attribute='source') | select('match', '^/dev/mapper/automapped_') | list | length == mergerfs_expected_branches
+          - mergerfs_branches | map(attribute='target') | select('match', '^/mnt/drives/automapped_') | list | length == mergerfs_expected_branches
+        fail_msg: >-
+          The live branch inventory does not match the nine expected mergerfs
+          drives. No services or mounts have been changed.
+
+    - name: Confirm mergerfs is the live pool mount
+      ansible.builtin.command:
+        argv: [findmnt, --noheadings, --raw, --mountpoint, "{{ mergerfs_mountpoint }}", --output, FSTYPE]
+      register: mergerfs_pool_fstype
+      changed_when: false
+
+    - name: Require the mergerfs pool mount
+      ansible.builtin.assert:
+        that:
+          - mergerfs_pool_fstype.stdout | trim == 'fuse.mergerfs'
+        fail_msg: "{{ mergerfs_mountpoint }} is not mounted as mergerfs."
+
+    - name: Read physical disk assignments from Proxmox VM 101
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ mergerfs_proxmox_host }}"
+          - qm
+          - config
+          - "{{ mergerfs_storage_vmid }}"
+      delegate_to: localhost
+      become: false
+      register: mergerfs_vm_config
+      changed_when: false
+
+    - name: Initialize physical disk inventory
+      ansible.builtin.set_fact:
+        mergerfs_physical_disks: []
+
+    - name: Record directly assigned physical disks
+      ansible.builtin.set_fact:
+        mergerfs_physical_disks: >-
+          {{ mergerfs_physical_disks + [item.split(': ', 1)[1].split(',', 1)[0] | trim] }}
+      loop: "{{ mergerfs_vm_config.stdout_lines }}"
+      when: "item is match('^scsi[0-9]+: /dev/disk/by-id/')"
+
+    - name: Require nine directly assigned physical disks
+      ansible.builtin.assert:
+        that:
+          - mergerfs_physical_disks | length == mergerfs_expected_branches
+          - mergerfs_physical_disks | unique | list | length == mergerfs_expected_branches
+        fail_msg: >-
+          Proxmox VM {{ mergerfs_storage_vmid }} does not expose exactly nine
+          unique by-id data disks. No services or mounts have been changed.
+
+    - name: Resolve host device names for targeted kernel-log checks
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ mergerfs_proxmox_host }}"
+          - readlink
+          - -f
+          - "{{ item }}"
+      delegate_to: localhost
+      become: false
+      loop: "{{ mergerfs_physical_disks }}"
+      register: mergerfs_physical_device_paths
+      changed_when: false
+
+    - name: Record resolved host device names
+      ansible.builtin.set_fact:
+        mergerfs_host_device_names: "{{ mergerfs_host_device_names | default([]) + [item.stdout | basename] }}"
+      loop: "{{ mergerfs_physical_device_paths.results }}"
+
+    - name: Require nine resolved host devices
+      ansible.builtin.assert:
+        that:
+          - mergerfs_host_device_names | length == mergerfs_expected_branches
+          - mergerfs_host_device_names | unique | list | length == mergerfs_expected_branches
+        fail_msg: "Could not uniquely map all Proxmox data devices to kernel device names."
+
+  tasks:
+    - name: Stop RustFS to prevent writes during checks
+      ansible.builtin.systemd_service:
+        name: rustfs
+        state: stopped
+
+    - name: Stop NFS exports to prevent writes during checks
+      ansible.builtin.systemd_service:
+        name: nfs-server
+        state: stopped
+
+    - name: Unmount the mergerfs pool
+      ansible.builtin.command:
+        argv: [umount, /mnt/storage]
+      changed_when: true
+
+    - name: Unmount every ext4 branch
+      ansible.builtin.command:
+        argv: [umount, "{{ item.target }}"]
+      loop: "{{ mergerfs_branches }}"
+      changed_when: true
+
+    - name: Start SMART extended tests on all nine disks concurrently
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ mergerfs_proxmox_host }}"
+          - smartctl
+          - -t
+          - long
+          - "{{ item }}"
+      delegate_to: localhost
+      become: false
+      loop: "{{ mergerfs_physical_disks }}"
+      register: mergerfs_smart_started
+      changed_when: false
+      async: "{{ mergerfs_smart_test_timeout }}"
+      poll: 0
+
+    - name: Wait for each concurrently running SMART test
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ mergerfs_proxmox_host }}"
+          - smartctl
+          - -c
+          - "{{ item }}"
+      delegate_to: localhost
+      become: false
+      loop: "{{ mergerfs_physical_disks }}"
+      register: mergerfs_smart_status
+      changed_when: false
+      until: "'Self-test routine in progress' not in mergerfs_smart_status.stdout"
+      retries: "{{ mergerfs_smart_poll_retries }}"
+      delay: "{{ mergerfs_smart_poll_delay }}"
+
+    - name: Require the latest SMART extended test to pass for every disk
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ mergerfs_proxmox_host }}"
+          - smartctl
+          - -l
+          - selftest
+          - "{{ item }}"
+      delegate_to: localhost
+      become: false
+      loop: "{{ mergerfs_physical_disks }}"
+      register: mergerfs_smart_results
+      changed_when: false
+      failed_when: "'Completed without error' not in mergerfs_smart_results.stdout"
+
+    - name: Require overall SMART health for every disk
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ mergerfs_proxmox_host }}"
+          - smartctl
+          - -H
+          - -A
+          - -l
+          - error
+          - "{{ item }}"
+      delegate_to: localhost
+      become: false
+      loop: "{{ mergerfs_physical_disks }}"
+      register: mergerfs_smart_health
+      changed_when: false
+      failed_when: >-
+        not (
+          mergerfs_smart_health.stdout is search('SMART overall-health self-assessment test result: PASSED')
+          or mergerfs_smart_health.stdout is search('SMART Health Status: OK')
+        )
+
+    - name: Launch full read-only ext4 checks on all unmounted branches concurrently
+      ansible.builtin.shell:
+        cmd: >-
+          e2fsck -f -n {{ item.source | quote }};
+          fsck_rc=$?;
+          echo MERGERFS_FSCK_RC=$fsck_rc;
+          exit 0
+      loop: "{{ mergerfs_branches }}"
+      register: mergerfs_fsck_started
+      changed_when: false
+      async: "{{ mergerfs_fsck_timeout }}"
+      poll: 0
+
+    - name: Wait for each concurrent read-only ext4 check
+      ansible.builtin.async_status:
+        jid: "{{ item.ansible_job_id }}"
+      loop: "{{ mergerfs_fsck_started.results }}"
+      register: mergerfs_fsck_finished
+      until: mergerfs_fsck_finished.finished | default(false)
+      retries: "{{ mergerfs_fsck_poll_retries }}"
+      delay: "{{ mergerfs_fsck_poll_delay }}"
+
+    - name: Initialize filesystem check result lists
+      ansible.builtin.set_fact:
+        mergerfs_fsck_failures: []
+        mergerfs_fsck_unexpected: []
+
+    - name: Record branches with ext4 inconsistencies that may be repairable
+      ansible.builtin.set_fact:
+        mergerfs_fsck_failures: "{{ mergerfs_fsck_failures + [item.item.item.source] }}"
+      loop: "{{ mergerfs_fsck_finished.results }}"
+      when: "'MERGERFS_FSCK_RC=4' in item.stdout"
+
+    - name: Record filesystem checks with operational or unexpected errors
+      ansible.builtin.set_fact:
+        mergerfs_fsck_unexpected: "{{ mergerfs_fsck_unexpected + [item.item.item.source] }}"
+      loop: "{{ mergerfs_fsck_finished.results }}"
+      when:
+        - "'MERGERFS_FSCK_RC=0' not in item.stdout"
+        - "'MERGERFS_FSCK_RC=4' not in item.stdout"
+
+    - name: Abort on filesystem check operational failures
+      ansible.builtin.assert:
+        that:
+          - mergerfs_fsck_unexpected | length == 0
+        fail_msg: >-
+          An ext4 check failed for a reason other than reported filesystem
+          inconsistencies. No repair or remount will be attempted.
+
+    - name: Require explicit repair approval when checks find filesystem errors
+      ansible.builtin.assert:
+        that:
+          - mergerfs_repair_approved | bool
+          - >-
+            mergerfs_fsck_failures
+            | difference(
+                mergerfs_verified_backups
+                | selectattr('verified', 'equalto', true)
+                | selectattr('protected_data_complete', 'defined')
+                | selectattr('protected_data_complete', 'equalto', true)
+                | map(attribute='source') | list
+              ) | length == 0
+        fail_msg: >-
+          Read-only ext4 checks found errors. The pool will remain offline until
+          each affected branch has an independently verified copy of all
+          protected data (excluding only movies and series) and repair is
+          explicitly approved. No repair has been attempted.
+      when: mergerfs_fsck_failures | length > 0
+
+    - name: Require a non-empty backup verification reference for every repair target
+      ansible.builtin.assert:
+        that:
+          - >-
+            mergerfs_verified_backups
+            | selectattr('source', 'equalto', item)
+            | selectattr('verified', 'equalto', true)
+            | selectattr('protected_data_complete', 'defined')
+            | selectattr('protected_data_complete', 'equalto', true)
+            | selectattr('excluded_paths', 'defined')
+            | selectattr('excluded_paths', 'equalto', mergerfs_backup_excluded_paths)
+            | selectattr('reference', 'defined')
+            | selectattr('reference', 'string')
+            | selectattr('reference', 'ne', '')
+            | list | length > 0
+        fail_msg: >-
+          No verified independent copy of all protected data, with the exact
+          movies/series exclusions and a verification reference, was supplied
+          for {{ item }}. Repair is refused.
+      loop: "{{ mergerfs_fsck_failures }}"
+      when: mergerfs_fsck_failures | length > 0
+
+    - name: Repair only branches with verified independent backups
+      ansible.builtin.shell:
+        cmd: >-
+          e2fsck -f -y {{ item | quote }};
+          fsck_rc=$?;
+          echo MERGERFS_REPAIR_RC=$fsck_rc;
+          exit 0
+      loop: "{{ mergerfs_fsck_failures }}"
+      register: mergerfs_fsck_repairs
+      changed_when: true
+      when: mergerfs_fsck_failures | length > 0
+
+    - name: Require each filesystem repair to complete without remaining errors
+      ansible.builtin.assert:
+        that:
+          - "'MERGERFS_REPAIR_RC=0' in item.stdout or 'MERGERFS_REPAIR_RC=1' in item.stdout"
+        fail_msg: "Filesystem repair failed or left errors on {{ item.item }}."
+      loop: "{{ mergerfs_fsck_repairs.results | default([]) }}"
+      when: mergerfs_fsck_failures | length > 0
+
+    - name: Verify repaired branches with read-only ext4 checks
+      ansible.builtin.shell:
+        cmd: >-
+          e2fsck -f -n {{ item | quote }};
+          fsck_rc=$?;
+          echo MERGERFS_FSCK_RC=$fsck_rc;
+          exit 0
+      loop: "{{ mergerfs_fsck_failures }}"
+      register: mergerfs_fsck_reverification
+      changed_when: false
+      failed_when: "'MERGERFS_FSCK_RC=0' not in mergerfs_fsck_reverification.stdout"
+      when: mergerfs_fsck_failures | length > 0
+
+    - name: Check storage VM kernel logs for new I/O errors
+      ansible.builtin.command:
+        argv:
+          - journalctl
+          - -k
+          - --since
+          - "{{ mergerfs_maintenance_started_at.stdout }}"
+          - --no-pager
+      register: mergerfs_guest_kernel_log
+      changed_when: false
+      failed_when: >-
+        mergerfs_guest_kernel_log.stdout is search(
+          '(?im)(I/O error|Buffer I/O error|Aborted Command|medium error|uncorrectable error)'
+        )
+
+    - name: Read Proxmox kernel logs for the maintenance interval
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ mergerfs_proxmox_host }}"
+          - journalctl
+          - -k
+          - --since
+          - "{{ mergerfs_maintenance_started_at.stdout }}"
+          - --no-pager
+      delegate_to: localhost
+      become: false
+      register: mergerfs_proxmox_kernel_log
+      changed_when: false
+
+    - name: Reject new I/O errors on any of the nine tested host devices
+      ansible.builtin.assert:
+        that:
+          - >-
+            mergerfs_proxmox_kernel_log.stdout_lines
+            | select('search', '(?i)(\[' ~ item ~ '\]|dev ' ~ item ~ '(\D|$))')
+            | select('search', '(?i)(I/O error|Buffer I/O error|Aborted Command|medium error|uncorrectable error|FAILED Result)')
+            | list | length == 0
+        fail_msg: "Proxmox logged a new storage error for tested device {{ item }}."
+      loop: "{{ mergerfs_host_device_names }}"
+
+    - name: Remount each branch using its existing fstab entry
+      ansible.builtin.command:
+        argv: [mount, "{{ item.target }}"]
+      loop: "{{ mergerfs_branches }}"
+      changed_when: true
+
+    - name: Remount the mergerfs pool using its existing fstab entry
+      ansible.builtin.command:
+        argv: [mount, /mnt/storage]
+      changed_when: true
+
+    - name: Verify mergerfs includes all nine branches
+      ansible.builtin.shell:
+        cmd: >-
+          findmnt --raw --noheadings --types ext4 --output SOURCE,TARGET |
+          awk '$2 ~ /^\/mnt\/drives\/automapped_/ {count++} END {print count+0}'
+      register: mergerfs_remounted_branch_count
+      changed_when: false
+      failed_when: mergerfs_remounted_branch_count.stdout | trim | int != mergerfs_expected_branches
+
+    - name: Start NFS exports after storage validation
+      ansible.builtin.systemd_service:
+        name: nfs-server
+        state: started
+
+    - name: Start RustFS after storage validation
+      ansible.builtin.systemd_service:
+        name: rustfs
+        state: started
+
+    - name: Verify RustFS readiness
+      ansible.builtin.uri:
+        url: "http://{{ rustfs_bind_address }}:{{ rustfs_api_port }}/health/ready"
+        status_code: 200
+        return_content: false
+      register: mergerfs_rustfs_readiness
+      retries: 30
+      delay: 5
+      until: mergerfs_rustfs_readiness.status | default(0) == 200
+
+    - name: Verify the Proxmox NFS backup storage is active
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - "root@{{ mergerfs_proxmox_host }}"
+          - pvesm
+          - status
+          - --storage
+          - proxmox-backups
+      delegate_to: localhost
+      become: false
+      register: mergerfs_nfs_validation
+      changed_when: false
+      failed_when: "'active' not in mergerfs_nfs_validation.stdout"
+
+    - name: Report required post-maintenance LINSTOR backup validation
+      ansible.builtin.debug:
+        msg: >-
+          Disk and filesystem checks passed. Before resuming K3s upgrades, restore
+          the LINSTOR RustFS remote if needed, create a new LINSTOR backup, and
+          verify that backup in RustFS.

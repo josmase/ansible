@@ -1,0 +1,97 @@
+---
+- name: Read the saved application-maintenance state
+  ansible.builtin.slurp:
+    src: "{{ k3s_application_maintenance_state_path }}"
+  register: k3s_application_maintenance_saved_state
+
+- name: Parse the saved application-maintenance state
+  ansible.builtin.set_fact:
+    k3s_application_maintenance_state: "{{ k3s_application_maintenance_saved_state.content | b64decode | from_json }}"
+
+- name: Validate the saved application-maintenance state
+  ansible.builtin.assert:
+    that:
+      - k3s_application_maintenance_state.version | int == 1
+      - k3s_application_maintenance_state.flux_kustomizations | length > 0
+    fail_msg: "The saved application-maintenance state is incomplete or unsupported."
+
+- name: Restore captured application workload replicas
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ item.metadata.namespace }}"
+      - scale
+      - "{{ item.kind | lower }}/{{ item.metadata.name }}"
+      - "--replicas={{ item.spec.replicas | default(1) }}"
+  loop: "{{ k3s_application_maintenance_state.workloads }}"
+  changed_when: true
+
+- name: Restore captured CronJob suspension state
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ item.metadata.namespace }}"
+      - patch
+      - cronjob
+      - "{{ item.metadata.name }}"
+      - --type=merge
+      - -p
+      - "{{ {'spec': {'suspend': item.spec.suspend | default(false) | bool}} | to_json }}"
+  loop: "{{ k3s_application_maintenance_state.cronjobs }}"
+  changed_when: true
+
+- name: Restore captured Flux Kustomization suspension state
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ k3s_application_maintenance_flux_namespace }}"
+      - patch
+      - kustomization.kustomize.toolkit.fluxcd.io
+      - "{{ item.metadata.name }}"
+      - --type=merge
+      - -p
+      - "{{ {'spec': {'suspend': item.spec.suspend | default(false) | bool}} | to_json }}"
+  loop: "{{ k3s_application_maintenance_state.flux_kustomizations }}"
+  changed_when: true
+
+- name: Request immediate Flux reconciliation
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ k3s_application_maintenance_flux_namespace }}"
+      - annotate
+      - kustomization.kustomize.toolkit.fluxcd.io
+      - "{{ item.metadata.name }}"
+      - "reconcile.fluxcd.io/requestedAt={{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      - --overwrite
+  loop: "{{ k3s_application_maintenance_state.flux_kustomizations }}"
+  when: not (item.spec.suspend | default(false) | bool)
+  changed_when: true
+
+- name: Wait for restored Flux Kustomizations
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ k3s_application_maintenance_flux_namespace }}"
+      - wait
+      - --for=condition=Ready
+      - "kustomization.kustomize.toolkit.fluxcd.io/{{ item.metadata.name }}"
+      - "--timeout={{ k3s_application_maintenance_flux_timeout }}"
+  loop: "{{ k3s_application_maintenance_state.flux_kustomizations }}"
+  when: not (item.spec.suspend | default(false) | bool)
+  changed_when: false
+
+- name: Remove the recovered application-maintenance state record
+  ansible.builtin.file:
+    path: "{{ k3s_application_maintenance_state_path }}"
+    state: absent

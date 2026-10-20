@@ -25,6 +25,12 @@ tofu plan -var-file=tofu.tfvars
 Do not apply a plan until it has been reviewed. The VM root must never replace
 or destroy an existing VM during adoption.
 
+Master VM memory is configured per node in `virtual-machines/variables.tf`.
+For safe memory reduction, profile K3s first and lower one master allocation
+per reviewed plan/apply, verifying etcd quorum and cluster recovery before
+continuing. See `../docs/K3S_MASTER_MEMORY.md` for the profile, Go soft-limit,
+and acceptance procedure.
+
 ## Local state handoff
 
 The previous `terraform/` paths contain ignored local state only; they are not

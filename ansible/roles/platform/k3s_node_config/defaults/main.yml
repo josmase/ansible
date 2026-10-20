@@ -14,3 +14,12 @@ k3s_service_name: k3s-node
 # Safety guard: restarts only happen when explicitly requested for a run.
 # Nodes already run the desired values; flips to true only when changing them.
 k3s_restart_enabled: false
+
+# Temporary K3s profiling is disabled by default. Enable only for a targeted
+# master run, collect profiles through a protected supervisor connection, then
+# disable it again.
+k3s_enable_pprof: false
+
+# Optional Go soft memory budget for k3s.service. Leave unset until a heap
+# profile establishes a safe value. Example syntax: 6GiB.
+k3s_gomemlimit: ""

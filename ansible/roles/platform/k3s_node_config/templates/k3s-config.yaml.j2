@@ -4,3 +4,6 @@ kubelet-arg:
   - "eviction-hard={{ k8s_eviction_hard }}"
   - "image-gc-high-threshold={{ k8s_image_gc_high_threshold }}"
   - "image-gc-low-threshold={{ k8s_image_gc_low_threshold }}"
+{% if (k3s_role | default('')) == 'master' and k3s_enable_pprof | bool %}
+enable-pprof: true
+{% endif %}

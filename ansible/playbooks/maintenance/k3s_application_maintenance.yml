@@ -1,0 +1,10 @@
+---
+# Application capacity preparation/restoration for the scheduled K3s program.
+# Run this separately from the node-upgrade playbook, with an explicit action.
+- name: Prepare or restore application capacity for K3s maintenance
+  hosts: k3s_masters[0]
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+  roles:
+    - role: platform/k3s_application_maintenance

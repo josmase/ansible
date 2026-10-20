@@ -1,0 +1,148 @@
+---
+- name: Refuse to overwrite an existing maintenance-state record
+  ansible.builtin.stat:
+    path: "{{ k3s_application_maintenance_state_path }}"
+  register: k3s_application_maintenance_existing_state
+
+- name: Require restoration of the previous maintenance state first
+  ansible.builtin.assert:
+    that:
+      - not k3s_application_maintenance_existing_state.stat.exists
+    fail_msg: >-
+      {{ k3s_application_maintenance_state_path }} already exists. Run the
+      restore action first, or investigate the incomplete maintenance run.
+
+- name: Verify each planned Flux Kustomization exists
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ k3s_application_maintenance_flux_namespace }}"
+      - get
+      - kustomization.kustomize.toolkit.fluxcd.io
+      - "{{ item }}"
+      - -o
+      - json
+  loop: "{{ k3s_application_maintenance_flux_kustomizations }}"
+  register: k3s_application_maintenance_flux_get
+  changed_when: false
+  check_mode: false
+
+- name: Record planned Flux Kustomization state
+  ansible.builtin.set_fact:
+    k3s_application_maintenance_flux_state: >-
+      {{ k3s_application_maintenance_flux_get.results | map(attribute='stdout') | map('from_json') | list }}
+
+- name: Record application workload state
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ item }}"
+      - get
+      - deployment,statefulset
+      - -o
+      - json
+  loop: "{{ k3s_application_maintenance_namespaces }}"
+  register: k3s_application_maintenance_workloads_get
+  changed_when: false
+  check_mode: false
+
+- name: Record application CronJob state
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ item }}"
+      - get
+      - cronjob
+      - -o
+      - json
+  loop: "{{ k3s_application_maintenance_namespaces }}"
+  register: k3s_application_maintenance_cronjobs_get
+  changed_when: false
+  check_mode: false
+
+- name: Build the immutable maintenance-state record
+  ansible.builtin.set_fact:
+    k3s_application_maintenance_state:
+      version: 1
+      flux_kustomizations: "{{ k3s_application_maintenance_flux_state }}"
+      workloads: "{{ k3s_application_maintenance_workloads_get.results | map(attribute='stdout') | map('from_json') | map(attribute='items') | flatten }}"
+      cronjobs: "{{ k3s_application_maintenance_cronjobs_get.results | map(attribute='stdout') | map('from_json') | map(attribute='items') | flatten }}"
+
+- name: Save application state before changing capacity
+  ansible.builtin.copy:
+    content: "{{ k3s_application_maintenance_state | to_nice_json }}\n"
+    dest: "{{ k3s_application_maintenance_state_path }}"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Suspend the planned Flux Kustomizations
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ k3s_application_maintenance_flux_namespace }}"
+      - patch
+      - kustomization.kustomize.toolkit.fluxcd.io
+      - "{{ item.metadata.name }}"
+      - --type=merge
+      - -p
+      - '{"spec":{"suspend":true}}'
+  loop: "{{ k3s_application_maintenance_flux_state }}"
+  when: not (item.spec.suspend | default(false) | bool)
+  changed_when: true
+
+- name: Suspend CronJobs in application namespaces
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ item.metadata.namespace }}"
+      - patch
+      - cronjob
+      - "{{ item.metadata.name }}"
+      - --type=merge
+      - -p
+      - '{"spec":{"suspend":true}}'
+  loop: "{{ k3s_application_maintenance_state.cronjobs }}"
+  when: not (item.spec.suspend | default(false) | bool)
+  changed_when: true
+
+- name: Scale captured application workloads to zero
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ item.metadata.namespace }}"
+      - scale
+      - "{{ item.kind | lower }}/{{ item.metadata.name }}"
+      - --replicas=0
+  loop: "{{ k3s_application_maintenance_state.workloads }}"
+  changed_when: true
+
+- name: Verify application workloads have scaled to zero
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - -n
+      - "{{ item.metadata.namespace }}"
+      - get
+      - "{{ item.kind | lower }}/{{ item.metadata.name }}"
+      - -o
+      - 'jsonpath={.spec.replicas}'
+  loop: "{{ k3s_application_maintenance_state.workloads }}"
+  register: k3s_application_maintenance_scaled_workloads
+  until: k3s_application_maintenance_scaled_workloads.stdout | trim == '0'
+  retries: 12
+  delay: 5
+  changed_when: false

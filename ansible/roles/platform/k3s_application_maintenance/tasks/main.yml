@@ -1,0 +1,35 @@
+---
+- name: Validate application-maintenance inputs
+  ansible.builtin.assert:
+    that:
+      - k3s_maintenance_action in ['prepare', 'restore']
+      - k3s_application_maintenance_flux_kustomizations | length > 0
+      - k3s_application_maintenance_namespaces | length > 0
+      - k3s_application_maintenance_flux_namespace not in k3s_application_maintenance_namespaces
+      - "'kube-system' not in k3s_application_maintenance_namespaces"
+      - "'cert-manager' not in k3s_application_maintenance_namespaces"
+      - "'cnpg-system' not in k3s_application_maintenance_namespaces"
+      - "'piraeus-datastore' not in k3s_application_maintenance_namespaces"
+      - "'metallb-system' not in k3s_application_maintenance_namespaces"
+      - "'local-path-storage' not in k3s_application_maintenance_namespaces"
+      - "'nvidia-device-plugin' not in k3s_application_maintenance_namespaces"
+    fail_msg: >-
+      Use prepare or restore and retain the protected system namespaces outside
+      the application-maintenance plan.
+
+- name: Run application maintenance preparation
+  when: k3s_maintenance_action == 'prepare'
+  block:
+    - name: Suspend application capacity
+      ansible.builtin.include_tasks: prepare.yml
+  rescue:
+    - name: Restore captured state after failed preparation
+      ansible.builtin.include_tasks: restore.yml
+
+    - name: Fail after restoration attempt
+      ansible.builtin.fail:
+        msg: "Application maintenance preparation failed; captured state restoration was attempted."
+
+- name: Restore application capacity and Flux reconciliation
+  ansible.builtin.include_tasks: restore.yml
+  when: k3s_maintenance_action == 'restore'

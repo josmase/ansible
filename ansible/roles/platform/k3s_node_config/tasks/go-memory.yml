@@ -1,0 +1,40 @@
+---
+- name: Validate optional K3s Go memory limit
+  ansible.builtin.assert:
+    that:
+      - k3s_role | default('') == 'master'
+      - k3s_gomemlimit is match('^[0-9]+(B|KiB|MiB|GiB|TiB)?$')
+    fail_msg: >-
+      Set k3s_gomemlimit only on masters and use a Go memory size such as 6GiB,
+      or leave it empty.
+  when: k3s_gomemlimit | default('') | length > 0
+
+- name: Ensure K3s systemd drop-in directory exists
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ k3s_service_name }}.service.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: k3s_gomemlimit | default('') | length > 0
+
+- name: Configure the optional K3s Go soft memory limit
+  ansible.builtin.template:
+    src: k3s-gomemlimit.conf.j2
+    dest: "/etc/systemd/system/{{ k3s_service_name }}.service.d/20-gomemlimit.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  when: k3s_gomemlimit | default('') | length > 0
+  notify:
+    - Reload systemd
+    - Restart k3s
+
+- name: Remove the managed K3s Go memory limit when unset
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ k3s_service_name }}.service.d/20-gomemlimit.conf"
+    state: absent
+  when: k3s_gomemlimit | default('') | length == 0
+  notify:
+    - Reload systemd
+    - Restart k3s

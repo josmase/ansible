@@ -5,6 +5,12 @@
     - kubelet
     - k3s_config
 
+- name: Manage optional K3s Go memory limit
+  ansible.builtin.import_tasks: go-memory.yml
+  tags:
+    - k3s_config
+    - memory
+
 - name: Manage inotify sysctls
   ansible.builtin.import_tasks: sysctl-inotify.yml
   tags:

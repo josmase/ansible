@@ -1,0 +1,43 @@
+---
+# Select exactly one action per run. The role refuses any implicit operation.
+# Public action input used by the scheduled K3s maintenance program.
+k3s_maintenance_action: ""
+k3s_application_maintenance_state_path: /var/lib/rancher/k3s/server/ansible-application-maintenance-state.json
+k3s_application_maintenance_flux_namespace: flux-system
+k3s_application_maintenance_flux_timeout: 15m
+
+# Capacity-maintenance plan. Keep these explicit: Flux and Kubernetes actions
+# are limited to these named resources and namespaces.
+k3s_application_maintenance_flux_kustomizations:
+  - apps-artifacts
+  - apps-gitlab
+  - apps-home
+  - apps-media-arr
+  - apps-media-configarr
+  - apps-media-download
+  - apps-media-foundation
+  - apps-media-playback
+  - apps-media-tdarr
+  - apps-observability
+  - apps-ops
+  - apps-photos
+  - apps-rustdesk
+  - apps-services
+
+k3s_application_maintenance_namespaces:
+  - artifactory
+  - cloudflare-ddns
+  - default
+  - gitlab
+  - gitlab-runners
+  - immich
+  - llm-switchboard
+  - media
+  - monitoring
+  - new-new-boplats
+  - ollama
+  - renovate-bot
+  - rustdesk
+  - searxng
+  - traefik
+  - wyoming-voice

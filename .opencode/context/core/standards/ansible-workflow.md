@@ -22,7 +22,7 @@ ssh ubuntu@ansible.local.hejsan.xyz
 
 ### 2. Navigate to the Repository
 ```bash
-cd /home/ubuntu/repo/ansible
+cd /home/ubuntu/repo/ansible/ansible
 ```
 
 ### 3. Update Repository (Handle Local Changes)
@@ -47,21 +47,21 @@ git pull origin main
 
 ### 4. Install Required Collections (If Needed)
 ```bash
-ansible-galaxy collection install -r ansible/collections/requirements.yml
+ansible-galaxy collection install -r collections/requirements.yml
 ```
 
 ### 5. Ensure Vault Password File is Available
 ```bash
-# Copy from ansible directory if needed
-cp ansible/.vault_pass .
+# The config expects the vault file in this directory.
+ls -la .vault_pass
 ```
 
 ### 6. Execute the Playbook
 ```bash
-# Set ANSIBLE_CONFIG to use the local ansible.cfg
-ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook \
-  -i ansible/inventory/production.ini \
-  ansible/playbooks/setup/base.yml \
+# Run from the directory containing ansible.cfg so its $PWD-based paths resolve.
+ansible-playbook \
+  -i inventory/production.ini \
+  playbooks/setup/base.yml \
   --limit media_services
 ```
 
@@ -93,9 +93,7 @@ ERROR! The vault password file /path/to/.vault_pass was not found
 ```
 Solution: Ensure the vault password file exists in the expected location:
 ```bash
-ls -la ansible/.vault_pass
-# If missing, copy from the ansible directory:
-cp ansible/ansible/.vault_pass ansible/
+ls -la .vault_pass
 ```
 
 #### Role Not Found Errors
@@ -104,7 +102,7 @@ ERROR! the role 'gantsign.antigen' was not found
 ```
 Solution: Ensure required roles are installed in the galaxy_role directory:
 ```bash
-ls -la ansible/galaxy_role/gantsign.antigen
+ls -la galaxy_role/gantsign.antigen
 # If missing, they should be installed via the roles_path configuration
 ```
 
@@ -114,7 +112,7 @@ ls -la ansible/galaxy_role/gantsign.antigen
 ```
 Solution: Verify you're using the correct inventory path:
 ```bash
--i ansible/inventory/production.ini
+-i inventory/production.ini
 ```
 
 #### Temporary Directory Issues
