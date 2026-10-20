@@ -48,8 +48,8 @@ Proxmox free-space reading before every apply and require at least 200 GiB to
 remain after the planned disks are allocated. Current measured free space was
 about 476.5 GiB; all three additions together leave about 236.5 GiB. The
 Ansible expansion grows each existing thin pool from 680 GiB to 740 GiB and
-reserves two 1 GiB VG metadata areas (2 GiB total) on each expansion disk and
-retains roughly 80 GiB in each VG before alignment and other overhead.
+reserves two 2 GiB VG metadata areas (4 GiB total) on each expansion disk and
+retains roughly 78 GiB in each VG before alignment and other overhead.
 
 Apply one VM instance at a time in order 204, 205, 206. For each worker, create
 and review a targeted plan for only `proxmox_virtual_environment_vm.worker["N"]`,
