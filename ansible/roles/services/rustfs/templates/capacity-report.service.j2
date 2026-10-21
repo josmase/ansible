@@ -1,0 +1,20 @@
+[Unit]
+Description=Publish RustFS filesystem capacity for the LINSTOR protection gate
+After=rustfs.service network-online.target
+Wants=network-online.target
+RequiresMountsFor={{ rustfs_required_mount }}
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+LoadCredential=access-key:{{ rustfs_secret_dir }}/backup-v2-access-key
+LoadCredential=secret-key:{{ rustfs_secret_dir }}/backup-v2-secret-key
+ExecStart=/usr/bin/python3 /usr/local/libexec/rustfs-capacity-report.py
+TimeoutStartSec=45
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX

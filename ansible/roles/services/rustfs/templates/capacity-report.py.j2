@@ -1,0 +1,45 @@
+#!/usr/bin/python3
+"""Publish fresh mount capacity using only the dedicated bucket identity."""
+import datetime
+import hashlib
+import hmac
+import json
+import os
+import pathlib
+import subprocess
+import urllib.parse
+import urllib.request
+
+mount = {{ rustfs_required_mount | to_json }}
+expected_fstype = {{ rustfs_required_fstype | to_json }}
+endpoint = "http://{{ rustfs_bind_address }}:{{ rustfs_api_port }}"
+bucket = {{ rustfs_backup_v2_bucket | to_json }}
+region = {{ rustfs_region | to_json }}
+key = {{ rustfs_capacity_report_key | to_json }}
+report = json.loads(subprocess.check_output(["findmnt", "--json", "--target", mount, "--output", "TARGET,FSTYPE,AVAIL", "--bytes"], text=True))["filesystems"]
+assert len(report) == 1 and report[0]["target"] == mount and report[0]["fstype"] == expected_fstype, "Required RustFS filesystem is not mounted"
+now = datetime.datetime.now(datetime.timezone.utc)
+payload = json.dumps({"bucket": bucket, "generation": "rustfs-linstor-backups-v2", "mountpoint": mount,
+                      "fstype": expected_fstype, "checkedAt": int(now.timestamp()), "freeBytes": int(report[0]["avail"])}, separators=(",", ":")).encode()
+credentials = pathlib.Path(os.environ["CREDENTIALS_DIRECTORY"])
+access = (credentials / "access-key").read_text().strip()
+secret = (credentials / "secret-key").read_text().strip()
+date = now.strftime("%Y%m%d")
+amzdate = now.strftime("%Y%m%dT%H%M%SZ")
+host = urllib.parse.urlsplit(endpoint).netloc
+path = "/" + bucket + "/" + urllib.parse.quote(key, safe="/-_.~")
+payload_hash = hashlib.sha256(payload).hexdigest()
+headers = "host:" + host + "\nx-amz-content-sha256:" + payload_hash + "\nx-amz-date:" + amzdate + "\n"
+signed_headers = "host;x-amz-content-sha256;x-amz-date"
+canonical = "PUT\n" + path + "\n\n" + headers + "\n" + signed_headers + "\n" + payload_hash
+scope = date + "/" + region + "/s3/aws4_request"
+string_to_sign = "AWS4-HMAC-SHA256\n" + amzdate + "\n" + scope + "\n" + hashlib.sha256(canonical.encode()).hexdigest()
+def sign(k, message):
+    return hmac.new(k, message.encode(), hashlib.sha256).digest()
+signing_key = sign(sign(sign(sign(("AWS4" + secret).encode(), date), region), "s3"), "aws4_request")
+signature = hmac.new(signing_key, string_to_sign.encode(), hashlib.sha256).hexdigest()
+auth = "AWS4-HMAC-SHA256 Credential=" + access + "/" + scope + ", SignedHeaders=" + signed_headers + ", Signature=" + signature
+request = urllib.request.Request(endpoint + path, data=payload, method="PUT", headers={"Host": host, "x-amz-date": amzdate, "x-amz-content-sha256": payload_hash, "Authorization": auth, "Content-Type": "application/json"})
+with urllib.request.urlopen(request, timeout=20) as response:
+    assert response.status in (200, 201, 204), "Capacity report upload failed"
+print("Published fresh RustFS capacity report")

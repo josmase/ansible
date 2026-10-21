@@ -25,3 +25,6 @@ rustfs_backup_access_key: ""
 rustfs_backup_secret_key: ""
 rustfs_backup_v2_access_key: ""
 rustfs_backup_v2_secret_key: ""
+
+rustfs_capacity_report_key: __protection/capacity.json
+rustfs_capacity_report_interval: 5min

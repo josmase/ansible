@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh RustFS filesystem capacity for LINSTOR
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec={{ rustfs_capacity_report_interval }}
+AccuracySec=15s
+Unit=rustfs-capacity-report.service
+
+[Install]
+WantedBy=timers.target

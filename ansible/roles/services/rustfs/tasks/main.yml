@@ -206,3 +206,47 @@
   changed_when: false
   no_log: true
   when: not ansible_check_mode
+
+
+- name: Create the capacity reporter script directory
+  ansible.builtin.file:
+    path: /usr/local/libexec
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the bucket-scoped capacity reporter
+  ansible.builtin.template:
+    src: capacity-report.py.j2
+    dest: /usr/local/libexec/rustfs-capacity-report.py
+    owner: root
+    group: root
+    mode: "0555"
+
+- name: Install the RustFS capacity report service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/rustfs-{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - capacity-report.service
+    - capacity-report.timer
+  notify: Reload systemd
+
+- name: Enable periodic RustFS capacity reports
+  ansible.builtin.systemd_service:
+    name: rustfs-capacity-report.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: not ansible_check_mode
+
+- name: Publish and verify the initial RustFS capacity report
+  ansible.builtin.systemd_service:
+    name: rustfs-capacity-report.service
+    state: started
+  changed_when: false
+  when: not ansible_check_mode
