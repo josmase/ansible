@@ -29,3 +29,8 @@ rustfs_backup_secret_key: "{{ vault_rustfs_backup_secret_key | default('') }}"
 
 rustfs_backup_v2_access_key: "{{ vault_rustfs_backup_v2_access_key | default('') }}"
 rustfs_backup_v2_secret_key: "{{ vault_rustfs_backup_v2_secret_key | default('') }}"
+
+# Measured v2 retention plus growth allowance is 1,114,580,737,280 bytes.
+# The 2T quota accommodates this on existing hardware; live filesystem gating
+# separately reserves at least 1 TiB free on the mergerfs mount.
+rustfs_backup_v2_bucket_quota: 2T
