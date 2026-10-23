@@ -50,7 +50,11 @@ that `ubuntu@192.168.1.214` is reachable over SSH and has working sudo access.
    `storage.josmase.io/linstor-disabled=true` label, and has no Piraeus/LINSTOR
    pods or replicas. Do not opt in workloads until this check passes.
 
-Workloads that qualify are stateless services, disposable caches, and retryable
-batch jobs. Each must explicitly tolerate the low-risk taint and select the
-`workload.josmase.io/low-risk-only=true` label. No workloads are opted in by
-this onboarding.
+Workloads that qualify are stateless services and retryable batch jobs with
+resource requests that fit the worker. Each must explicitly tolerate the
+`workload=low-risk-only:NoSchedule` taint. Do not add a node selector: the
+toleration only makes the worker eligible, and leaves the workload schedulable
+on every other node. Kubernetes then places it using its resource requests and
+current node capacity. Keep persistent workloads off this worker when they
+depend on LINSTOR-backed volumes, and do not opt in migration-sensitive or
+resource-heavy services.
