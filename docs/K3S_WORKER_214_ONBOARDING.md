@@ -25,7 +25,9 @@ that `ubuntu@192.168.1.214` is reachable over SSH and has working sudo access.
 
    Docker-specific setup is skipped because K3s uses containerd and this
    worker does not run a Docker daemon. Its network interface is `enp2s0`,
-   which is also configured as the host-specific Flannel interface.
+   which is also configured as the host-specific Flannel interface. The
+   worker onboarding play sets the same DNS resolvers used by existing workers
+   so registry image pulls do not use the DHCP-provided blocking resolver.
 
 3. Join the worker using the dedicated agent-only playbook. Its host override
    pins K3s to the live control-plane version (`v1.31.14+k3s1`); the cluster-wide
