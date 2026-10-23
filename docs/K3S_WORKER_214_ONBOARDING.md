@@ -22,9 +22,11 @@ that `ubuntu@192.168.1.214` is reachable over SSH and has working sudo access.
      --tags general,shell
    ```
 
-3. Join the worker using the dedicated agent-only playbook. This uses the
-   existing vaulted K3s token and cluster version without running the retired
-   cluster installer or its server-side add-on configuration.
+3. Join the worker using the dedicated agent-only playbook. Its host override
+   pins K3s to the live control-plane version (`v1.31.14+k3s1`); the cluster-wide
+   upgrade target remains `v1.32.13`. The playbook uses the existing vaulted
+   token without running the retired cluster installer or its server-side
+   add-on configuration.
 
    ```sh
    ansible-playbook playbooks/setup/kubernetes-worker-onboarding.yml
