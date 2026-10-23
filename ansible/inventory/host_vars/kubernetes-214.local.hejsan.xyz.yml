@@ -4,6 +4,7 @@
 # Match the live control-plane version; the cluster-wide upgrade target is
 # v1.32.13 but production currently runs v1.31.14.
 k3s_version: v1.31.14+k3s1
+flannel_iface: enp2s0
 extra_agent_args: >-
   {{ extra_args }}
   --node-name=kubernetes-node-214
