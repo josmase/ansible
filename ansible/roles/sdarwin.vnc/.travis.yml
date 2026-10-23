@@ -1,0 +1,54 @@
+---
+dist: bionic
+language: python
+services: docker
+
+env:
+  global:
+    - ROLE_NAME: VNC
+  matrix:
+    - MOLECULE_DISTRO: centos8
+      MOLECULE_DOCKER_COMMAND: /usr/sbin/init
+    - MOLECULE_DISTRO: centos7
+      MOLECULE_DOCKER_COMMAND: /usr/lib/systemd/systemd
+    - MOLECULE_DISTRO: ubuntu2004
+      MOLECULE_DOCKER_COMMAND: /usr/sbin/init
+    - MOLECULE_DISTRO: ubuntu1804
+      MOLECULE_DOCKER_COMMAND: /lib/systemd/systemd
+    - MOLECULE_DISTRO: ubuntu1604
+      MOLECULE_DOCKER_COMMAND: /lib/systemd/systemd
+    - MOLECULE_DISTRO: debian10
+      MOLECULE_DOCKER_COMMAND: /lib/systemd/systemd
+    - MOLECULE_DISTRO: debian9
+      MOLECULE_DOCKER_COMMAND: /lib/systemd/systemd
+
+install:
+  # Install test dependencies.
+  - sudo apt-get install -y python3-pip python3-setuptools
+  - sudo pip3 install ansible docker molecule[docker] yamllint ansible-lint
+
+before_script:
+  # Use actual Ansible Galaxy role name for the project directory.
+  - cd ../
+  - mv Ansible-${ROLE_NAME} sdarwin.$ROLE_NAME
+  - cd sdarwin.$ROLE_NAME
+
+script:
+  # Run tests.
+  - molecule --debug dependency
+  - molecule --debug lint
+  - molecule --debug cleanup
+  - molecule --debug destroy
+  - molecule --debug syntax
+  - molecule --debug create
+  - molecule --debug prepare
+  - travis_wait 30 molecule --debug converge
+  - molecule --debug idempotence
+  # molecule side_effect does not exist
+  # - molecule --debug side_effect
+  - molecule --debug verify
+  - molecule --debug cleanup
+  - molecule --debug destroy
+
+notifications:
+  webhooks: https://galaxy.ansible.com/api/v1/notifications/

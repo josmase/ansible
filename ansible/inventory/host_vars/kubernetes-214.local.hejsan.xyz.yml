@@ -1,0 +1,9 @@
+---
+# This worker accepts only explicitly opted-in low-risk workloads. The storage
+# exclusion label prevents all Piraeus/LINSTOR node components from scheduling.
+extra_agent_args: >-
+  {{ extra_args }}
+  --node-name=kubernetes-node-214
+  --node-label=workload.josmase.io/low-risk-only=true
+  --node-label=storage.josmase.io/linstor-disabled=true
+  --node-taint=workload=low-risk-only:NoSchedule

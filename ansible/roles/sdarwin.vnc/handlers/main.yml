@@ -1,0 +1,19 @@
+---
+- name: Reboot message
+  ansible.builtin.debug:
+    msg:
+      - "***********************"
+      - " "
+      - You should reboot this server {{ inventory_hostname }}, as a one-time action, if it hasn't ever been rebooted.
+      - " "
+      - "***********************"
+  when:
+    - vnc_reboot_once is not defined or not vnc_reboot_once
+
+- name: Reboot once
+  ansible.builtin.shell: reboot  # noqa command-instead-of-shell
+  changed_when: true
+  args:
+    chdir: /
+  when:
+    - vnc_reboot_once is defined and vnc_reboot_once

@@ -1,0 +1,35 @@
+---
+dependencies: []
+
+galaxy_info:
+  role_name: samba
+  author: geerlingguy
+  description: "Samba for RHEL/CentOS."
+  company: "Midwestern Mac, LLC"
+  license: "license (BSD, MIT)"
+  min_ansible_version: 2.10
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: SLES
+      versions:
+        - all
+    - name: openSUSE
+      versions:
+        - all
+  galaxy_tags:
+    - networking
+    - system
+    - samba
+    - windows
+    - filesystem
+    - fileshare
+    - sharing
+    - files

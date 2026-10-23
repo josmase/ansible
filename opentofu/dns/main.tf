@@ -33,6 +33,7 @@ resource "cloudflare_record" "local" {
     "kubernetes-204.local" = "192.168.1.204"
     "kubernetes-205.local" = "192.168.1.205"
     "kubernetes-206.local" = "192.168.1.206"
+    "kubernetes-214.local" = "192.168.1.214"
     # Optional: uniform name for the GPU node (also reachable as gpu.local)
     # "kubernetes-119.local" = "192.168.1.119"
   }

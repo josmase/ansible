@@ -1,0 +1,119 @@
+---
+- name: set default shell for users
+  become: yes
+  user:
+    name: '{{ user.username }}'
+    shell: /bin/zsh
+  when: (user.antigen_libraries is defined) or (user.antigen_theme is defined) or (user.antigen_bundles is defined)
+  loop: '{{ users }}'
+  loop_control:
+    loop_var: user
+    label: '{{ user.username }}'
+
+- name: write .antigenrc for users
+  become: yes
+  become_user: '{{ user.username }}'
+  template:
+    src: antigenrc.j2
+    dest: '~{{ user.username }}/.antigenrc'
+    backup: yes
+    mode: 'u=rw,go=r'
+  when: (user.antigen_libraries is defined) or (user.antigen_theme is defined) or (user.antigen_bundles is defined)
+  loop: '{{ users }}'
+  loop_control:
+    loop_var: user
+    label: '{{ user.username }}'
+
+- name: create library config directories for users
+  become: yes
+  become_user: '{{ user.username }}'
+  file:
+    path: '~/.antigen-etc/use.d'
+    state: directory
+    mode: 'u=rwx,go=rx'
+  when: (user.antigen_libraries is defined) or (user.antigen_theme is defined) or (user.antigen_bundles is defined)
+  loop: '{{ users }}'
+  loop_control:
+    loop_var: user
+    label: '{{ user.username }}'
+
+- name: write library config for users
+  become: yes
+  become_user: '{{ item.0.username }}'
+  template:
+    src: use.zsh.j2
+    dest: '~/.antigen-etc/use.d/{{ item.1.name }}.zsh'
+    backup: yes
+    mode: 'u=rw,go=r'
+  vars:
+    antigen_library: '{{ item.1 }}'
+  with_subelements:
+    - '{{ users }}'
+    - antigen_libraries
+    - skip_missing: yes
+  loop_control:
+    label: '{{ item.0.username }}: {{ item.1.name }}'
+
+- name: create bundle config directories for users
+  become: yes
+  become_user: '{{ user.username }}'
+  file:
+    path: '~/.antigen-etc/bundle.d'
+    state: directory
+    mode: 'u=rwx,go=rx'
+  when: (user.antigen_libraries is defined) or (user.antigen_theme is defined) or (user.antigen_bundles is defined)
+  loop: '{{ users }}'
+  loop_control:
+    loop_var: user
+    label: '{{ user.username }}'
+
+- name: write bundle config for users
+  become: yes
+  become_user: '{{ item.0.username }}'
+  template:
+    src: bundle.zsh.j2
+    dest: '~/.antigen-etc/bundle.d/{{ item.1.name }}.zsh'
+    backup: yes
+    mode: 'u=rw,go=r'
+  vars:
+    antigen_bundle: '{{ item.1 }}'
+  with_subelements:
+    - '{{ users }}'
+    - antigen_bundles
+    - skip_missing: yes
+  loop_control:
+    label: '{{ item.0.username }}: {{ item.1.name }}'
+
+- name: write theme config for users
+  become: yes
+  become_user: '{{ user.username }}'
+  template:
+    src: theme.zsh.j2
+    dest: '~{{ user.username }}/.antigen-etc/theme.zsh'
+    backup: yes
+    mode: 'u=rw,go=r'
+  vars:
+    antigen_theme: '{{ user.antigen_theme }}'
+  when: user.antigen_theme is defined
+  loop: '{{ users }}'
+  loop_control:
+    loop_var: user
+    label: '{{ user.username }}'
+
+- name: add .antigenrc to .zshrc
+  become: yes
+  become_user: '{{ user.username }}'
+  lineinfile:
+    path: '~/.zshrc'
+    line: 'source ~/.antigenrc'
+    create: yes
+    mode: 'u=rw,go=r'
+  when: (user.antigen_libraries is defined) or (user.antigen_theme is defined) or (user.antigen_bundles is defined)
+  loop: '{{ users }}'
+  loop_control:
+    loop_var: user
+    label: '{{ user.username }}'
+
+- name: configure console for Debian family distributions
+  include_tasks: configure-debian-console.yml
+  when: ansible_os_family == 'Debian'

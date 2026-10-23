@@ -1,0 +1,23 @@
+---
+default_vnc_general_packages:
+  - https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+  - htop
+  - nload
+  - net-tools
+
+default_vnc_desktop_packages:
+  gnome:
+    - "@Server with GUI"
+    # - gnome-desktop
+    # - gnome-panel
+    - gnome-settings-daemon
+    - metacity
+    - nautilus
+    - gnome-terminal
+    - xterm
+  xfce4:
+    - "@Xfce"
+    # - gnome-icon-theme
+    # - gnome-terminal
+    # - firefox
+    - xterm

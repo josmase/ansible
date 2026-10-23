@@ -1,0 +1,28 @@
+---
+galaxy_info:
+  role_name: vnc
+  author: sdarwin
+  description: VNC Installer
+  license: GPLv2
+  min_ansible_version: "2.4"
+  platforms:
+    - name: EL
+      versions:
+        - "7"
+        - "8"
+    - name: Ubuntu
+      versions:
+        - bionic
+        - xenial
+        - zesty
+        - focal
+        - jammy
+    - name: Debian
+      versions:
+        - jessie
+    - name: Amazon
+  galaxy_tags:
+    - vnc
+    - system
+    - development
+dependencies: []

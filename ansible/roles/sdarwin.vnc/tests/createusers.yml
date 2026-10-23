@@ -1,0 +1,33 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: create ubuntu
+      ansible.builtin.user:
+        name: ubuntu
+      when: ansible_distribution == 'Ubuntu'
+    - name: create admin
+      ansible.builtin.user:
+        name: admin
+      when: ansible_distribution == 'Debian'
+    - name: create centos
+      ansible.builtin.user:
+        name: centos
+      when: ansible_distribution == 'CentOS'
+    - name: create rocky
+      ansible.builtin.user:
+        name: rocky
+      when: ansible_distribution == 'Rocky'
+    - name: create ec2-user
+      ansible.builtin.user:
+        name: ec2-user
+      when: ansible_distribution == 'Amazon'
+    - name: create john
+      ansible.builtin.user:
+        name: john
+    - name: debug info
+      ansible.builtin.debug:
+        msg: "desktop is {{ vnc_desktop }}"
+    - name: debug info 2
+      ansible.builtin.debug:
+        msg: "server is {{ vnc_server }}"

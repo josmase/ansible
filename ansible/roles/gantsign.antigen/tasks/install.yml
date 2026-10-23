@@ -1,0 +1,53 @@
+---
+- name: install dependencies
+  become: yes
+  package:
+    name:
+      - git
+      - zsh
+      - tar
+      - gzip
+    state: present
+
+- name: create download directory
+  file:
+    path: '{{ antigen_download_dir }}'
+    state: directory
+    mode: 'u=rwx,go=rx'
+
+- name: download Antigen
+  get_url:
+    url: '{{ antigen_redis_mirror }}/{{ antigen_redis_filename }}'
+    dest: '{{ antigen_download_dir }}/{{ antigen_local_filename }}'
+    checksum: 'sha256:{{ antigen_redis_sha256sum }}'
+    mode: 'u=rw,go=r'
+
+- name: create install directory
+  become: yes
+  become_user: '{{ username }}'
+  file:
+    path: '~{{ username }}/.antigen'
+    state: directory
+    mode: 'u=rwx,go=rx'
+  loop: "{{ users | map(attribute='username') | list }}"
+  loop_control:
+    loop_var: username
+
+- name: install Antigen
+  become: yes
+  unarchive:
+    src: '{{ antigen_download_dir }}/{{ antigen_local_filename }}'
+    remote_src: yes
+    dest: '~{{ username }}/.antigen'
+    extra_opts:
+      - '--strip-components=1'
+    creates: '~{{ username }}/.antigen/antigen.zsh'
+    owner: '{{ username }}'
+    mode: 'go-w'
+  loop: "{{ users | map(attribute='username') | list }}"
+  loop_control:
+    loop_var: username
+
+- name: install oh-my-zsh
+  include_tasks: install-oh-my-zsh.yml
+  when: antigen_install_oh_my_zsh

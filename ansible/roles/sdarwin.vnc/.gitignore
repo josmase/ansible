@@ -1,0 +1,8 @@
+.kitchen
+*.bck
+/*.retry
+/bcks
+meta/.galaxy_install_info
+.cache
+test.txt
+output.txt

@@ -1,0 +1,23 @@
+---
+# Add the dedicated low-risk worker without running server-side cluster setup
+# or reapplying K3s static add-ons.
+- name: Set up the Kubernetes worker agent
+  hosts: kubernetes-214.local.hejsan.xyz
+  become: true
+  gather_facts: true
+  any_errors_fatal: true
+  environment: "{{ proxy_env | default({}) }}"
+  pre_tasks:
+    - name: Confirm this inventory host is configured as a worker
+      ansible.builtin.assert:
+        that:
+          - k3s_role == 'node'
+          - k8s_node_name == 'kubernetes-node-214'
+        fail_msg: This playbook is only for the configured 192.168.1.214 worker.
+  roles:
+    - role: prereq
+      become: true
+    - role: download
+      become: true
+    - role: k3s_agent
+      become: true
