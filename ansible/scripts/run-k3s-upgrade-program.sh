@@ -6,7 +6,7 @@ if [[ -n "$(git status --porcelain)" ]]; then
   echo "Refusing an upgrade from a dirty Ansible checkout." >&2
   exit 1
 fi
-kube_vip=v1.3.0
+kube_vip=v1.2.4
 targets=(v1.32.13+k3s1 v1.33.13+k3s2 v1.34.12+k3s1 v1.35.9+k3s1 v1.36.5+k3s1 v1.37.1+k3s1)
 prepared=false
 restore() {
