@@ -58,6 +58,18 @@
         recovery_source_partition: "{{ recovery_source_backing.stdout.split()[0] }}"
         recovery_source_disk: "{{ recovery_source_backing.stdout.split()[1] }}"
 
+    - name: Verify the protected source disk serial
+      ansible.builtin.command:
+        argv: [lsblk, -dnro, SERIAL, "{{ recovery_source_disk }}"]
+      register: recovery_source_disk_serial
+      changed_when: false
+
+    - name: Require the protected source disk to match its expected serial
+      ansible.builtin.assert:
+        that:
+          - recovery_source_disk_serial.stdout | trim == recovery_source_serial
+        fail_msg: The protected source mapper does not resolve to the expected source disk.
+
     - name: Require explicit isolation approval when legacy recovery branches are mounted
       ansible.builtin.assert:
         that: recovery_detach_legacy_branches | bool
@@ -141,10 +153,18 @@
 
     - name: Resolve target guest disk from the verified virtual SCSI slot
       ansible.builtin.shell:
-        cmd: >-
-          lsblk -dn -o PATH,SERIAL | grep -F drive-{{ recovery_target_scsi_slot }} | cut -d ' ' -f1
+        cmd: |
+          set -euo pipefail
+          lsblk -dnro PATH,SERIAL | awk -v expected='drive-{{ recovery_target_scsi_slot }}' '$2 == expected {print $1}'
+        executable: /bin/bash
       register: recovery_target_guest_disk_result
       changed_when: false
+
+    - name: Require exactly one guest target disk with the verified SCSI serial
+      ansible.builtin.assert:
+        that:
+          - recovery_target_guest_disk_result.stdout_lines | length == 1
+        fail_msg: The verified Proxmox target slot does not resolve to exactly one guest disk.
 
     - name: Record and verify target guest disk
       ansible.builtin.set_fact:
@@ -157,9 +177,11 @@
 
     - name: Resolve target disk on Proxmox by serial
       ansible.builtin.shell:
-        cmd: >-
-          ssh -o BatchMode=yes root@{{ recovery_proxmox_host }}
-          "lsblk -dn -o PATH,SERIAL | grep -F {{ recovery_target_serial }} | cut -d ' ' -f1"
+        cmd: |
+          set -euo pipefail
+          ssh -o BatchMode=yes root@{{ recovery_proxmox_host }} lsblk -dnro PATH,SERIAL |
+            awk -v expected={{ recovery_target_serial | quote }} '$2 == expected {print $1}'
+        executable: /bin/bash
       delegate_to: localhost
       become: false
       register: recovery_target_host_disk_result
@@ -172,7 +194,7 @@
     - name: Require exactly one Proxmox target device
       ansible.builtin.assert:
         that:
-          - recovery_target_host_disk | length > 0
+          - recovery_target_host_disk_result.stdout_lines | length == 1
         fail_msg: Unable to resolve the target disk on Proxmox by serial.
 
     - name: Capture preflight manifests without secrets
