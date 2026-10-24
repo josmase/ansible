@@ -1,0 +1,6 @@
+---
+- name: Prepare toolbox workstation host prerequisites
+  hosts: toolbox_workstations
+  become: true
+  roles:
+    - workstation/toolbox_host_prerequisites
