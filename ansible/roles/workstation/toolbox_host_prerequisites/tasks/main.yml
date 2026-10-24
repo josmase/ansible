@@ -1,0 +1,102 @@
+---
+- name: Require Ubuntu 26.04 on x86_64
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+      - ansible_distribution_version == "26.04"
+      - ansible_architecture == "x86_64"
+    fail_msg: This role currently supports Ubuntu 26.04 on x86_64 only.
+
+- name: Install Docker Engine and Compose plugin
+  become: true
+  block:
+    - name: Remove legacy Docker APT list entry
+      ansible.builtin.file:
+        path: /etc/apt/sources.list.d/docker.list
+        state: absent
+      register: toolbox_docker_legacy_source
+
+    # Do not refresh APT until the Docker sources have been reconciled below.
+    - name: Install CA certificates for HTTPS repository access
+      ansible.builtin.apt:
+        name: ca-certificates
+        state: present
+        update_cache: false
+      when: not ansible_check_mode
+
+    - name: Create APT keyrings directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Install Docker repository signing key
+      ansible.builtin.get_url:
+        url: "{{ toolbox_docker_apt_key_url }}"
+        dest: "{{ toolbox_docker_apt_key_path }}"
+        mode: "0644"
+      when: not ansible_check_mode
+      register: toolbox_docker_apt_key
+
+    - name: Configure canonical Docker deb822 source
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/docker.sources
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          Types: deb
+          URIs: https://download.docker.com/linux/ubuntu
+          Suites: {{ ansible_distribution_release }}
+          Components: stable
+          Architectures: amd64
+          Signed-By: {{ toolbox_docker_apt_key_path }}
+      register: toolbox_docker_deb822_source
+
+    - name: Refresh APT cache after Docker repository configuration changes
+      ansible.builtin.command:
+        cmd: apt-get update
+      changed_when: true
+      when: >-
+        not ansible_check_mode
+        and (
+          toolbox_docker_apt_key.changed | default(false)
+          or toolbox_docker_legacy_source.changed
+          or toolbox_docker_deb822_source.changed
+        )
+
+    # Check mode does not apply the key/source changes, so skip APT operations
+    # that could otherwise resolve packages against the old repository state.
+    - name: Install Docker Engine, CLI, and Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+        cache_valid_time: 86400
+      when: not ansible_check_mode
+
+- name: Ensure Docker group exists
+  become: true
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Grant the current Ansible user Docker access
+  become: true
+  ansible.builtin.user:
+    name: "{{ toolbox_docker_user }}"
+    groups: docker
+    append: true
+
+- name: Enable and start Docker Engine
+  become: true
+  ansible.builtin.service:
+    name: docker
+    enabled: true
+    state: started
+  when: not ansible_check_mode
