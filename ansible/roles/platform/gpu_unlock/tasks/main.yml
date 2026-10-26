@@ -1,0 +1,30 @@
+---
+- name: Initialize the GPU unlock reboot report
+  ansible.builtin.set_fact:
+    gpu_unlock_reboot_required: false
+
+- name: Remove GPU unlock when its opt-in is disabled
+  ansible.builtin.import_tasks: remove.yml
+  when: not gpu_unlock_enabled | bool
+
+- name: Discover GPU unlock eligibility when enabled
+  ansible.builtin.import_tasks: discover.yml
+  when: gpu_unlock_enabled | bool
+
+- name: Install GPU unlock on an eligible host
+  ansible.builtin.import_tasks: install.yml
+  when:
+    - gpu_unlock_enabled | bool
+    - gpu_unlock_eligible_gpus | length > 0
+
+- name: Report an ineligible host as a successful no-op
+  ansible.builtin.debug:
+    msg: "GPU unlock is enabled, but this is an Ineligible host; no role-managed state was changed."
+  when:
+    - gpu_unlock_enabled | bool
+    - gpu_unlock_eligible_gpus | length == 0
+
+- name: Report that GPU unlock requires an operator-coordinated reboot
+  ansible.builtin.debug:
+    msg: "GPU unlock boot-time state changed. Reboot this host when safe; the role never reboots automatically."
+  when: gpu_unlock_reboot_required | bool

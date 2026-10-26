@@ -1,0 +1,19 @@
+---
+- name: Check that the GPU unlock module is loaded after reboot
+  ansible.builtin.command:
+    argv: [lsmod]
+  register: gpu_unlock_loaded_modules
+  changed_when: false
+
+- name: Read current-boot GPU unlock kernel messages
+  ansible.builtin.command:
+    argv: [journalctl, -k, -b, --no-pager]
+  register: gpu_unlock_current_boot_log
+  changed_when: false
+
+- name: Verify GPU unlock ran during the current boot
+  ansible.builtin.assert:
+    that:
+      - gpu_unlock_loaded_modules.stdout is search('^gpu_unlock\\s', multiline=True)
+      - gpu_unlock_current_boot_log.stdout is search('gpu_unlock:')
+    fail_msg: "GPU unlock has not been proven on this boot; reboot, then inspect journalctl -k -b for gpu_unlock messages."

@@ -1,0 +1,30 @@
+---
+- name: Converge the GPU unlock role boundary
+  hosts: all
+  become: false
+  vars:
+    gpu_unlock_enabled: true
+    gpu_unlock_pci_devices:
+      - vendor: "0x10de"
+        device: "0x2206"
+    gpu_unlock_grub_defaults_path: /tmp/gpu-unlock-molecule/grub
+    gpu_unlock_revision_marker_path: /tmp/gpu-unlock-molecule/revision
+    gpu_unlock_source_path: /tmp/gpu-unlock-molecule/source
+    gpu_unlock_secure_boot_command: "printf 'SecureBoot disabled\\n'"
+    gpu_unlock_deb_src_command: "true"
+    gpu_unlock_nvidia_driver_command: "true"
+    gpu_unlock_kernel_headers_path: /tmp
+    gpu_unlock_build_command: "mkdir -p build/deb && touch build/deb/gpu-unlock-dkms_test_all.deb"
+    gpu_unlock_package_install_command: "true"
+    gpu_unlock_package_remove_command: "true"
+    gpu_unlock_update_grub_command: "true"
+  pre_tasks:
+    - name: Prepare controlled GRUB defaults
+      ansible.builtin.copy:
+        dest: /tmp/gpu-unlock-molecule/grub
+        content: |-
+          GRUB_CMDLINE_LINUX_DEFAULT="quiet splash net.ifnames=0"
+          GRUB_CMDLINE_LINUX="keep=this"
+        mode: "0644"
+  roles:
+    - role: platform/gpu_unlock

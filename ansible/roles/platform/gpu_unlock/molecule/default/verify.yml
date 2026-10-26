@@ -1,0 +1,160 @@
+---
+- name: Verify GPU unlock role behavior
+  hosts: all
+  become: false
+  tasks:
+    - name: Exercise an Ineligible host at the role boundary
+      ansible.builtin.include_role:
+        name: platform/gpu_unlock
+      vars:
+        gpu_unlock_enabled: true
+        gpu_unlock_pci_devices:
+          - vendor: "0x10de"
+            device: "0xffff"
+        gpu_unlock_revision_marker_path: /tmp/gpu-unlock-molecule/ineligible-revision
+
+    - name: Confirm an Ineligible host remains a no-op
+      ansible.builtin.stat:
+        path: /tmp/gpu-unlock-molecule/ineligible-revision
+      register: gpu_unlock_molecule_ineligible_marker
+
+    - name: Verify Ineligible host behavior
+      ansible.builtin.assert:
+        that:
+          - not gpu_unlock_molecule_ineligible_marker.stat.exists
+
+    - name: Exercise the Secure Boot prerequisite failure
+      block:
+        - name: Apply GPU unlock with Secure Boot enabled
+          ansible.builtin.include_role:
+            name: platform/gpu_unlock
+          vars:
+            gpu_unlock_enabled: true
+            gpu_unlock_pci_devices:
+              - vendor: "0x10de"
+                device: "0x2206"
+            gpu_unlock_grub_defaults_path: /tmp/gpu-unlock-molecule/grub
+            gpu_unlock_secure_boot_command: "printf 'SecureBoot enabled\\n'"
+        - name: Fail if Secure Boot did not stop the role
+          ansible.builtin.fail:
+            msg: GPU unlock must reject Secure Boot.
+      rescue:
+        - name: Record the expected Secure Boot rejection
+          ansible.builtin.set_fact:
+            gpu_unlock_molecule_secure_boot_rejected: true
+
+    - name: Verify Secure Boot rejection
+      ansible.builtin.assert:
+        that: gpu_unlock_molecule_secure_boot_rejected | default(false)
+
+    - name: Exercise the deb-src prerequisite failure
+      block:
+        - name: Apply GPU unlock without deb-src
+          ansible.builtin.include_role:
+            name: platform/gpu_unlock
+          vars:
+            gpu_unlock_enabled: true
+            gpu_unlock_pci_devices:
+              - vendor: "0x10de"
+                device: "0x2206"
+            gpu_unlock_grub_defaults_path: /tmp/gpu-unlock-molecule/grub
+            gpu_unlock_secure_boot_command: "printf 'SecureBoot disabled\\n'"
+            gpu_unlock_deb_src_command: "false"
+        - name: Fail if missing deb-src did not stop the role
+          ansible.builtin.fail:
+            msg: GPU unlock must require deb-src.
+      rescue:
+        - name: Record the expected deb-src rejection
+          ansible.builtin.set_fact:
+            gpu_unlock_molecule_deb_src_rejected: true
+
+    - name: Verify deb-src rejection
+      ansible.builtin.assert:
+        that: gpu_unlock_molecule_deb_src_rejected | default(false)
+
+    - name: Read the controlled GRUB defaults
+      ansible.builtin.slurp:
+        src: /tmp/gpu-unlock-molecule/grub
+      register: gpu_unlock_molecule_grub
+
+    - name: Assert the role adds only its GRUB token
+      ansible.builtin.assert:
+        that:
+          - "'GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash net.ifnames=0 gpu_unlock.targets=all\"' in (gpu_unlock_molecule_grub.content | b64decode)"
+          - "'GRUB_CMDLINE_LINUX=\"keep=this\"' in (gpu_unlock_molecule_grub.content | b64decode)"
+
+    - name: Assert the deployed revision is recorded
+      ansible.builtin.slurp:
+        src: /tmp/gpu-unlock-molecule/revision
+      register: gpu_unlock_molecule_revision
+
+    - name: Verify the configured GPU unlock revision
+      ansible.builtin.assert:
+        that:
+          - gpu_unlock_molecule_revision.content | b64decode | trim == '990a14e9b7dc8eaad8e6925133aa0e8382efe6cf'
+
+    - name: Simulate an older deployed GPU unlock revision
+      ansible.builtin.copy:
+        dest: /tmp/gpu-unlock-molecule/revision
+        content: "0000000000000000000000000000000000000000\n"
+        mode: "0644"
+
+    - name: Reconcile a changed GPU unlock revision
+      ansible.builtin.include_role:
+        name: platform/gpu_unlock
+      vars:
+        gpu_unlock_enabled: true
+        gpu_unlock_pci_devices:
+          - vendor: "0x10de"
+            device: "0x2206"
+        gpu_unlock_grub_defaults_path: /tmp/gpu-unlock-molecule/grub
+        gpu_unlock_revision_marker_path: /tmp/gpu-unlock-molecule/revision
+        gpu_unlock_source_path: /tmp/gpu-unlock-molecule/source
+        gpu_unlock_secure_boot_command: "printf 'SecureBoot disabled\\n'"
+        gpu_unlock_deb_src_command: "true"
+        gpu_unlock_nvidia_driver_command: "true"
+        gpu_unlock_kernel_headers_path: /tmp
+        gpu_unlock_build_command: "mkdir -p build/deb && touch build/deb/gpu-unlock-dkms_test_all.deb"
+        gpu_unlock_package_install_command: "true"
+        gpu_unlock_update_grub_command: "true"
+
+    - name: Read the reconciled GPU unlock revision
+      ansible.builtin.slurp:
+        src: /tmp/gpu-unlock-molecule/revision
+      register: gpu_unlock_molecule_reconciled_revision
+
+    - name: Verify a revision change is deployed despite package-version reuse
+      ansible.builtin.assert:
+        that:
+          - gpu_unlock_molecule_reconciled_revision.content | b64decode | trim == '990a14e9b7dc8eaad8e6925133aa0e8382efe6cf'
+
+    - name: Remove GPU unlock through its public opt-in
+      ansible.builtin.include_role:
+        name: platform/gpu_unlock
+      vars:
+        gpu_unlock_enabled: false
+        gpu_unlock_grub_defaults_path: /tmp/gpu-unlock-molecule/grub
+        gpu_unlock_revision_marker_path: /tmp/gpu-unlock-molecule/revision
+        gpu_unlock_package_remove_command: "true"
+        gpu_unlock_update_grub_command: "true"
+
+    - name: Read GRUB defaults after removal
+      ansible.builtin.slurp:
+        src: /tmp/gpu-unlock-molecule/grub
+      register: gpu_unlock_molecule_removed_grub
+
+    - name: Assert removal preserves unrelated GRUB configuration
+      ansible.builtin.assert:
+        that:
+          - "'GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash net.ifnames=0\"' in (gpu_unlock_molecule_removed_grub.content | b64decode)"
+          - "'gpu_unlock.targets=all' not in (gpu_unlock_molecule_removed_grub.content | b64decode)"
+
+    - name: Assert removal deletes the deployed revision record
+      ansible.builtin.stat:
+        path: /tmp/gpu-unlock-molecule/revision
+      register: gpu_unlock_molecule_removed_revision
+
+    - name: Verify revision record removal
+      ansible.builtin.assert:
+        that:
+          - not gpu_unlock_molecule_removed_revision.stat.exists
