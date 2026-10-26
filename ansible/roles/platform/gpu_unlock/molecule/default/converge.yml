@@ -1,7 +1,7 @@
 ---
 - name: Converge the GPU unlock role boundary
   hosts: all
-  become: false
+  become: true
   vars:
     gpu_unlock_enabled: true
     gpu_unlock_pci_devices:
@@ -10,21 +10,64 @@
     gpu_unlock_grub_defaults_path: /tmp/gpu-unlock-molecule/grub
     gpu_unlock_revision_marker_path: /tmp/gpu-unlock-molecule/revision
     gpu_unlock_source_path: /tmp/gpu-unlock-molecule/source
+    gpu_unlock_repository_url: file:///tmp/gpu-unlock-molecule/upstream
     gpu_unlock_secure_boot_command: "printf 'SecureBoot disabled\\n'"
     gpu_unlock_deb_src_command: "true"
     gpu_unlock_nvidia_driver_command: "true"
+    gpu_unlock_build_command: >-
+      mkdir -p build/deb package/DEBIAN &&
+      printf 'Package: gpu-unlock-dkms\nVersion: 1.0.0\nArchitecture: all\nMaintainer: Molecule <molecule@example.invalid>\nDescription: test package\n' > package/DEBIAN/control &&
+      dpkg-deb --build package build/deb/gpu-unlock-dkms_1.0.0_all.deb
     gpu_unlock_kernel_headers_path: /tmp
-    gpu_unlock_build_command: "mkdir -p build/deb && touch build/deb/gpu-unlock-dkms_test_all.deb"
-    gpu_unlock_package_install_command: "true"
-    gpu_unlock_package_remove_command: "true"
-    gpu_unlock_update_grub_command: "true"
   pre_tasks:
+    - name: Install the source-control tool used by the role
+      ansible.builtin.apt:
+        name: git
+        state: present
+        update_cache: true
+
+    - name: Prepare a local pinned source fixture
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          rm -rf /tmp/gpu-unlock-molecule/upstream
+          mkdir -p /tmp/gpu-unlock-molecule/upstream
+          cd /tmp/gpu-unlock-molecule/upstream
+          git init
+          git config user.email molecule@example.invalid
+          git config user.name Molecule
+          printf '%s\n' fixture > README.md
+          git add README.md
+          git commit -m fixture
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Read the fixture revision
+      ansible.builtin.command:
+        argv: [git, -C, /tmp/gpu-unlock-molecule/upstream, rev-parse, HEAD]
+      register: gpu_unlock_molecule_revision
+      changed_when: false
+
     - name: Prepare controlled GRUB defaults
       ansible.builtin.copy:
         dest: /tmp/gpu-unlock-molecule/grub
         content: |-
           GRUB_CMDLINE_LINUX_DEFAULT="quiet splash net.ifnames=0"
-          GRUB_CMDLINE_LINUX="keep=this"
+          GRUB_CMDLINE_LINUX="keep=this gpu_unlock.targets=all"
         mode: "0644"
+
+    - name: Provide a harmless GRUB rebuild command
+      ansible.builtin.copy:
+        dest: /usr/local/bin/update-grub
+        content: |-
+          #!/bin/sh
+          exit 0
+        mode: "0755"
   roles:
     - role: platform/gpu_unlock
+      vars:
+        gpu_unlock_revision: "{{ gpu_unlock_molecule_revision.stdout | trim }}"
+  post_tasks:
+    - name: Report that initial boot-time configuration requires a reboot
+      ansible.builtin.assert:
+        that: gpu_unlock_reboot_required | bool
