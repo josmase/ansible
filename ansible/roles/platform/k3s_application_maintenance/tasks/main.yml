@@ -17,19 +17,54 @@
       Use prepare or restore and retain the protected system namespaces outside
       the application-maintenance plan.
 
-- name: Run application maintenance preparation
-  when: k3s_maintenance_action == 'prepare'
+# A failed acquisition must not release another invocation's lock.
+- name: Acquire the application-maintenance action lock
+  ansible.builtin.command:
+    argv: [mkdir, '-m', '0700', '--', '{{ k3s_application_maintenance_lock_path }}']
+  changed_when: true
+
+- name: Run one exclusive application-maintenance action
   block:
-    - name: Suspend application capacity
-      ansible.builtin.include_tasks: prepare.yml
-  rescue:
-    - name: Restore captured state after failed preparation
+    # These guards are outside preparation recovery: an existing state record
+    # belongs to another window and must never be consumed by a new prepare.
+    - name: Check for an existing maintenance-state record
+      ansible.builtin.stat:
+        path: "{{ k3s_application_maintenance_state_path }}"
+      register: k3s_application_maintenance_existing_state
+      when: k3s_maintenance_action == 'prepare'
+
+    - name: Require restoration of the previous maintenance state first
+      ansible.builtin.assert:
+        that:
+          - not k3s_application_maintenance_existing_state.stat.exists
+        fail_msg: >-
+          {{ k3s_application_maintenance_state_path }} already exists.
+          Run restore explicitly after investigating the previous window.
+      when: k3s_maintenance_action == 'prepare'
+
+    - name: Reset state ownership for this invocation
+      ansible.builtin.set_fact:
+        k3s_application_maintenance_state_created: false
+
+    - name: Run application maintenance preparation
+      when: k3s_maintenance_action == 'prepare'
+      block:
+        - name: Suspend application capacity
+          ansible.builtin.include_tasks: prepare.yml
+      rescue:
+        - name: Restore only the state created by this preparation
+          ansible.builtin.include_tasks: restore.yml
+          when: k3s_application_maintenance_state_created | bool
+
+        - name: Fail after preparation recovery
+          ansible.builtin.fail:
+            msg: "Application maintenance preparation failed; any state owned by this invocation was offered for restoration."
+
+    - name: Restore application capacity and Flux reconciliation
       ansible.builtin.include_tasks: restore.yml
-
-    - name: Fail after restoration attempt
-      ansible.builtin.fail:
-        msg: "Application maintenance preparation failed; captured state restoration was attempted."
-
-- name: Restore application capacity and Flux reconciliation
-  ansible.builtin.include_tasks: restore.yml
-  when: k3s_maintenance_action == 'restore'
+      when: k3s_maintenance_action == 'restore'
+  always:
+    - name: Release the application-maintenance action lock
+      ansible.builtin.file:
+        path: "{{ k3s_application_maintenance_lock_path }}"
+        state: absent

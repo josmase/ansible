@@ -3,8 +3,12 @@
 # Public action input used by the scheduled K3s maintenance program.
 k3s_maintenance_action: ""
 k3s_application_maintenance_state_path: /var/lib/rancher/k3s/server/ansible-application-maintenance-state.json
+k3s_application_maintenance_lock_path: "{{ k3s_application_maintenance_state_path }}.lock"
+k3s_application_maintenance_api: /usr/local/bin/k3s
 k3s_application_maintenance_flux_namespace: flux-system
 k3s_application_maintenance_flux_timeout: 15m
+k3s_application_maintenance_capacity_retries: 120
+k3s_application_maintenance_capacity_delay: 5
 
 # Capacity-maintenance plan. Keep these explicit: Flux and Kubernetes actions
 # are limited to these named resources and namespaces.
