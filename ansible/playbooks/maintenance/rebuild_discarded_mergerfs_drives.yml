@@ -1,0 +1,263 @@
+---
+# Destructively rebuild two explicitly discarded MergerFS branches.
+- name: Rebuild discarded MergerFS disks
+  hosts: storage_servers
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+  vars:
+    rebuild_window_confirmed: false
+    rebuild_window_id: ""
+    rebuild_accept_full_data_loss: false
+    rebuild_execute: false
+    rebuild_proxmox_host: 192.168.1.100
+    rebuild_vmid: "101"
+    rebuild_source_serial: JEHB7ZBN
+    rebuild_target_serial: ZL2PM4XC
+    rebuild_source_mapper: automapped_bd869be1
+    rebuild_target_mapper: automapped_f98dff21
+    rebuild_source_slot: scsi8
+    rebuild_target_slot: scsi9
+    rebuild_keyfile: /home/ubuntu/keyfile
+    rebuild_audit_dir: /root/drive-rebuild-JEHB7ZBN-ZL2PM4XC
+
+  pre_tasks:
+    - name: Require explicit authorization
+      ansible.builtin.assert:
+        that:
+          - rebuild_window_confirmed | bool
+          - rebuild_window_id | length > 0
+          - rebuild_accept_full_data_loss | bool
+          - rebuild_execute | bool
+
+    - name: Read VM disk assignments
+      ansible.builtin.command:
+        argv: [ssh, -o, BatchMode=yes, "root@{{ rebuild_proxmox_host }}", qm, config, "{{ rebuild_vmid }}"]
+      delegate_to: localhost
+      become: false
+      register: rebuild_vm_config
+      changed_when: false
+
+    - name: Require approved serial and slot mapping
+      ansible.builtin.assert:
+        that:
+          - rebuild_vm_config.stdout is search('^scsi8: .*JEHB7ZBN', multiline=True)
+          - rebuild_vm_config.stdout is search('^scsi9: .*ZL2PM4XC', multiline=True)
+
+    - name: Resolve guest devices by SCSI slot
+      ansible.builtin.shell:
+        cmd: "lsblk -dn -o PATH,SERIAL | awk '$2 == \"drive-{{ item }}\" {print $1}'"
+      loop: [scsi8, scsi9]
+      register: rebuild_guest_disks
+      changed_when: false
+
+    - name: Record guest devices
+      ansible.builtin.set_fact:
+        rebuild_source_disk: "{{ rebuild_guest_disks.results[0].stdout | trim }}"
+        rebuild_target_disk: "{{ rebuild_guest_disks.results[1].stdout | trim }}"
+
+    - name: Require distinct guest devices
+      ansible.builtin.assert:
+        that:
+          - rebuild_source_disk | length > 0
+          - rebuild_target_disk | length > 0
+          - rebuild_source_disk != rebuild_target_disk
+
+    - name: Resolve host devices by serial
+      ansible.builtin.shell:
+        cmd: >-
+          ssh -o BatchMode=yes root@{{ rebuild_proxmox_host }}
+          "lsblk -dn -o PATH,SERIAL | awk '$2 == \"{{ item }}\" {print $1}'"
+      delegate_to: localhost
+      become: false
+      loop: [JEHB7ZBN, ZL2PM4XC]
+      register: rebuild_host_disks
+      changed_when: false
+
+    - name: Require unique host devices
+      ansible.builtin.assert:
+        that:
+          - rebuild_host_disks.results[0].stdout | trim | length > 0
+          - rebuild_host_disks.results[1].stdout | trim | length > 0
+          - rebuild_host_disks.results[0].stdout | trim != rebuild_host_disks.results[1].stdout | trim
+
+    - name: Save audit and protect the source
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          install -d -m 0700 {{ rebuild_audit_dir | quote }}
+          cp -a /etc/fstab {{ rebuild_audit_dir | quote }}/fstab.before
+          cp -a /etc/crypttab {{ rebuild_audit_dir | quote }}/crypttab.before
+          lsblk -o NAME,PATH,SERIAL,SIZE,FSTYPE,UUID,MOUNTPOINTS > {{ rebuild_audit_dir | quote }}/lsblk.before
+          blockdev --setro {{ rebuild_source_disk | quote }}
+          blockdev --setro /dev/mapper/{{ rebuild_source_mapper | quote }}
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Require discarded mappers outside MergerFS
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          ! findmnt -rn -S /dev/mapper/{{ rebuild_source_mapper }} | grep -q .
+          ! findmnt -rn -S /dev/mapper/{{ rebuild_target_mapper }} | grep -q .
+          ! findmnt -rn -T /mnt/storage -o SOURCE | grep -Eq '{{ rebuild_source_mapper }}|{{ rebuild_target_mapper }}'
+        executable: /bin/bash
+      changed_when: false
+
+  tasks:
+    - name: Stop storage services
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        state: stopped
+      loop: [nfs-server, rustfs]
+
+    - name: Remove discarded disks from automatic mounts
+      ansible.builtin.shell:
+        cmd: |
+          sed -i '\\|/dev/mapper/{{ rebuild_source_mapper }}|d;\\|/dev/mapper/{{ rebuild_target_mapper }}|d' /etc/fstab
+          sed -i '\\|^{{ rebuild_source_mapper }}[[:space:]]|d;\\|^{{ rebuild_target_mapper }}[[:space:]]|d' /etc/crypttab
+          systemctl daemon-reload
+        executable: /bin/bash
+
+    - name: Gracefully shut down VM 101
+      ansible.builtin.command:
+        argv: [ssh, -o, BatchMode=yes, "root@{{ rebuild_proxmox_host }}", qm, shutdown, "{{ rebuild_vmid }}"]
+      delegate_to: localhost
+      become: false
+
+    - name: Wait for VM 101 to stop without force
+      ansible.builtin.command:
+        argv: [ssh, -o, BatchMode=yes, "root@{{ rebuild_proxmox_host }}", qm, status, "{{ rebuild_vmid }}"]
+      delegate_to: localhost
+      become: false
+      register: rebuild_status
+      until: "'status: stopped' in rebuild_status.stdout"
+      retries: 60
+      delay: 10
+      changed_when: false
+
+    - name: Start VM 101 and wait for SSH
+      ansible.builtin.command:
+        argv: [ssh, -o, BatchMode=yes, "root@{{ rebuild_proxmox_host }}", qm, start, "{{ rebuild_vmid }}"]
+      delegate_to: localhost
+      become: false
+
+    - ansible.builtin.wait_for_connection:
+        timeout: 600
+        sleep: 10
+
+    - name: Reconfirm slot mapping after reboot
+      ansible.builtin.shell:
+        cmd: |
+          test "$(lsblk -dn -o PATH,SERIAL | awk '$2 == "drive-scsi8" {print $1}')" = {{ rebuild_source_disk | quote }}
+          test "$(lsblk -dn -o PATH,SERIAL | awk '$2 == "drive-scsi9" {print $1}')" = {{ rebuild_target_disk | quote }}
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Require target SMART health and clean counters
+      ansible.builtin.command:
+        argv: [ssh, -o, BatchMode=yes, "root@{{ rebuild_proxmox_host }}", smartctl, -H, -A, -l, error, "{{ rebuild_host_disks.results[1].stdout | trim }}"]
+      delegate_to: localhost
+      become: false
+      register: target_smart
+      changed_when: false
+      failed_when: >-
+        not (target_smart.stdout is search('PASSED') or target_smart.stdout is search('SMART Health Status: OK')) or
+        not (target_smart.stdout is search('Reallocated_Sector_Ct.*\\s+0\\s*$', multiline=True)) or
+        not (target_smart.stdout is search('Current_Pending_Sector.*\\s+0\\s*$', multiline=True)) or
+        not (target_smart.stdout is search('Offline_Uncorrectable.*\\s+0\\s*$', multiline=True)) or
+        not (target_smart.stdout is search('UDMA_CRC_Error_Count.*\\s+0\\s*$', multiline=True))
+
+    - name: Start source extended SMART test
+      ansible.builtin.command:
+        argv: [ssh, -o, BatchMode=yes, "root@{{ rebuild_proxmox_host }}", smartctl, -t, long, "{{ rebuild_host_disks.results[0].stdout | trim }}"]
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: Wait for source extended SMART test
+      ansible.builtin.command:
+        argv: [ssh, -o, BatchMode=yes, "root@{{ rebuild_proxmox_host }}", smartctl, -l, selftest, "{{ rebuild_host_disks.results[0].stdout | trim }}"]
+      delegate_to: localhost
+      become: false
+      register: source_selftest
+      until: "'Self-test routine in progress' not in source_selftest.stdout"
+      retries: 2880
+      delay: 60
+      changed_when: false
+
+    - name: Require source SMART success
+      ansible.builtin.command:
+        argv: [ssh, -o, BatchMode=yes, "root@{{ rebuild_proxmox_host }}", smartctl, -H, -A, -l, error, "{{ rebuild_host_disks.results[0].stdout | trim }}"]
+      delegate_to: localhost
+      become: false
+      register: source_smart
+      changed_when: false
+      failed_when: >-
+        ('Completed without error' not in source_selftest.stdout) or
+        not (source_smart.stdout is search('PASSED') or source_smart.stdout is search('SMART Health Status: OK')) or
+        not (source_smart.stdout is search('Reallocated_Sector_Ct.*\\s+0\\s*$', multiline=True)) or
+        not (source_smart.stdout is search('Current_Pending_Sector.*\\s+0\\s*$', multiline=True)) or
+        not (source_smart.stdout is search('Offline_Uncorrectable.*\\s+0\\s*$', multiline=True)) or
+        not (source_smart.stdout is search('UDMA_CRC_Error_Count.*\\s+0\\s*$', multiline=True))
+
+    - name: Wipe and repartition both approved disks
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          for disk in {{ rebuild_source_disk | quote }} {{ rebuild_target_disk | quote }}; do
+            umount /mnt/drives/{{ rebuild_source_mapper }} 2>/dev/null || true
+            umount /mnt/drives/{{ rebuild_target_mapper }} 2>/dev/null || true
+            wipefs --all --force "$disk"
+            sgdisk --zap-all "$disk"
+            sgdisk --clear --new=1:2048:0 --typecode=1:8309 --change-name=1:MERGERFS_DATA "$disk"
+            partprobe "$disk"
+          done
+          cryptsetup close {{ rebuild_source_mapper }} 2>/dev/null || true
+          cryptsetup close {{ rebuild_target_mapper }} 2>/dev/null || true
+          udevadm settle
+        executable: /bin/bash
+
+    - name: Create new encrypted ext4 branches
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          cryptsetup luksFormat --type luks2 --batch-mode --key-file {{ rebuild_keyfile | quote }} "{{ item.disk }}1"
+          cryptsetup open --key-file {{ rebuild_keyfile | quote }} "{{ item.disk }}1" "{{ item.mapper }}"
+          mkfs.ext4 -F -m 0 -L MERGERFS_DATA "/dev/mapper/{{ item.mapper }}"
+          mkdir -p "/mnt/drives/{{ item.mapper }}"
+          mount "/dev/mapper/{{ item.mapper }}" "/mnt/drives/{{ item.mapper }}"
+          printf '%s\n' rebuild-check > "/mnt/drives/{{ item.mapper }}/.rebuild-check"
+          test "$(cat "/mnt/drives/{{ item.mapper }}/.rebuild-check")" = rebuild-check
+          rm -f "/mnt/drives/{{ item.mapper }}/.rebuild-check"
+        executable: /bin/bash
+      loop:
+        - {disk: "{{ rebuild_source_disk }}", mapper: rebuild_jehb7zbn}
+        - {disk: "{{ rebuild_target_disk }}", mapper: rebuild_zl2pm4xc}
+
+    - name: Persist rebuilt crypttab and fstab entries
+      ansible.builtin.shell:
+        cmd: |
+          set -eu
+          for item in jehb7zbn zl2pm4xc; do
+            mapper=rebuild_$item
+            printf '%s UUID=%s %s luks,discard\n' "$mapper" "$(blkid -s UUID -o value /dev/mapper/$mapper)" {{ rebuild_keyfile }} >> /etc/crypttab
+            printf '/dev/mapper/%s /mnt/drives/%s ext4 defaults,noatime 0 0\n' "$mapper" "$mapper" >> /etc/fstab
+          done
+          systemctl daemon-reload
+        executable: /bin/bash
+
+    - name: Validate MergerFS and restart storage services
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          mountpoint -q /mnt/storage || mount /mnt/storage
+          findmnt -rn -T /mnt/storage -o SOURCE | grep -q rebuild_jehb7zbn
+          findmnt -rn -T /mnt/storage -o SOURCE | grep -q rebuild_zl2pm4xc
+        executable: /bin/bash
+
+    - name: Start storage services
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        state: started
+      loop: [nfs-server, rustfs]
