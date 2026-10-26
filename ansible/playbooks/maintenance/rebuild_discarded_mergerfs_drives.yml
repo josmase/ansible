@@ -67,7 +67,7 @@
       ansible.builtin.shell:
         cmd: >-
           ssh -o BatchMode=yes root@{{ rebuild_proxmox_host }}
-          "lsblk -dn -o PATH,SERIAL | awk '$2 == \"{{ item }}\" {print $1}'"
+          "lsblk -dn -o PATH,SERIAL | grep -F '{{ item }}' | cut -d ' ' -f1"
       delegate_to: localhost
       become: false
       loop: [JEHB7ZBN, ZL2PM4XC]
