@@ -1,0 +1,25 @@
+---
+- name: Read PCI IDs from sysfs
+  ansible.builtin.shell:
+    cmd: |
+      set -eu
+      for pci_device in /sys/bus/pci/devices/*; do
+        test -r "$pci_device/vendor" && test -r "$pci_device/device" || continue
+        printf '%s %s %s\n' "$(basename "$pci_device")" "$(cat "$pci_device/vendor")" "$(cat "$pci_device/device")"
+      done
+    executable: /bin/sh
+  register: gpu_unlock_sysfs_pci_devices
+  changed_when: false
+  when: gpu_unlock_pci_devices is not defined
+
+- name: Select Eligible GPUs from PCI IDs
+  ansible.builtin.set_fact:
+    gpu_unlock_eligible_gpus: >-
+      {{ gpu_unlock_pci_devices | default([]) | selectattr('vendor', 'equalto', '0x10de') | selectattr('device', 'match', '^0x(' + (gpu_unlock_eligible_device_ids | join('|')) + ')$') | list }}
+  when: gpu_unlock_pci_devices is defined
+
+- name: Select Eligible GPUs discovered from sysfs
+  ansible.builtin.set_fact:
+    gpu_unlock_eligible_gpus: >-
+      {{ gpu_unlock_sysfs_pci_devices.stdout_lines | select('search', '^.+ 0x10de 0x(' + (gpu_unlock_eligible_device_ids | join('|')) + ')$') | list }}
+  when: gpu_unlock_pci_devices is not defined
