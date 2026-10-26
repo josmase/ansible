@@ -34,3 +34,10 @@ rustfs_backup_v2_secret_key: "{{ vault_rustfs_backup_v2_secret_key | default('')
 # The 2T quota accommodates this on existing hardware; live filesystem gating
 # separately reserves at least 1 TiB free on the mergerfs mount.
 rustfs_backup_v2_bucket_quota: 2T
+
+# Preserve the recovered OpenTofu backend and GitLab CI/package storage.
+rustfs_gitlab_storage_enabled: true
+rustfs_gitlab_access_key: "{{ vault_rustfs_gitlab_access_key }}"
+rustfs_gitlab_secret_key: "{{ vault_rustfs_gitlab_secret_key }}"
+rustfs_tofu_access_key: "{{ vault_rustfs_tofu_access_key }}"
+rustfs_tofu_secret_key: "{{ vault_rustfs_tofu_secret_key }}"

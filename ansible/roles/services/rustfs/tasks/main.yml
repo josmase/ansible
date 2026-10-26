@@ -153,6 +153,14 @@
     group: root
     mode: "0644"
 
+- name: Manage GitLab and OpenTofu storage
+  ansible.builtin.include_tasks:
+    file: gitlab_storage.yml
+    apply:
+      tags: [rustfs_gitlab_storage]
+  when: rustfs_gitlab_storage_enabled | bool
+  tags: [rustfs_gitlab_storage]
+
 - name: Install the RustFS bootstrap script
   ansible.builtin.template:
     src: bootstrap.sh.j2

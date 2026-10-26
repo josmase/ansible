@@ -1,0 +1,98 @@
+---
+- name: Validate GitLab and OpenTofu scoped identities
+  ansible.builtin.assert:
+    that:
+      - rustfs_gitlab_access_key | length >= 3
+      - rustfs_gitlab_secret_key | length >= 32
+      - rustfs_tofu_access_key | length >= 3
+      - rustfs_tofu_secret_key | length >= 32
+      - rustfs_gitlab_access_key != rustfs_root_access_key
+      - rustfs_tofu_access_key != rustfs_root_access_key
+      - rustfs_gitlab_access_key != rustfs_tofu_access_key
+      - rustfs_gitlab_buckets | length > 0
+    fail_msg: "Configure separate encrypted GitLab and state-bucket credentials."
+  no_log: true
+
+- name: Install existing GitLab and OpenTofu credential files
+  ansible.builtin.copy:
+    content: "{{ item.value }}\n"
+    dest: "{{ rustfs_secret_dir }}/{{ item.name }}"
+    owner: "{{ rustfs_uid }}"
+    group: "{{ rustfs_gid }}"
+    mode: "0400"
+  loop:
+    - {name: gitlab-access-key, value: "{{ rustfs_gitlab_access_key }}"}
+    - {name: gitlab-secret-key, value: "{{ rustfs_gitlab_secret_key }}"}
+    - {name: tofu-state-access-key, value: "{{ rustfs_tofu_access_key }}"}
+    - {name: tofu-state-secret-key, value: "{{ rustfs_tofu_secret_key }}"}
+  no_log: true
+
+- name: Install GitLab and OpenTofu bucket policies
+  ansible.builtin.template:
+    src: scoped-storage-policy.json.j2
+    dest: "{{ rustfs_secret_dir }}/{{ item.name }}.json"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/bin/python3 -m json.tool %s
+  loop:
+    - name: gitlab-storage-policy
+      buckets: "{{ rustfs_gitlab_buckets }}"
+    - name: tofu-state-policy
+      buckets: ["{{ rustfs_tofu_state_bucket }}"]
+  register: rustfs_gitlab_policy_files
+
+- name: Install GitLab and OpenTofu reconciliation script
+  ansible.builtin.template:
+    src: gitlab-storage.sh.j2
+    dest: "{{ rustfs_secret_dir }}/gitlab-storage.sh"
+    owner: "{{ rustfs_uid }}"
+    group: "{{ rustfs_gid }}"
+    mode: "0500"
+    validate: /bin/sh -n %s
+
+- name: Reconcile GitLab and OpenTofu buckets and access
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - --rm
+      - --user
+      - "0:0"
+      - --network
+      - host
+      - --entrypoint
+      - /bin/sh
+      - --volume
+      - "{{ rustfs_secret_dir }}:/bootstrap:ro"
+      - "{{ rustfs_cli_image }}"
+      - /bootstrap/gitlab-storage.sh
+  register: rustfs_gitlab_reconciliation
+  changed_when: "'CREATED:' in rustfs_gitlab_reconciliation.stdout or rustfs_gitlab_policy_files.changed"
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Verify GitLab and OpenTofu scoped bucket access
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - --rm
+      - --user
+      - "0:0"
+      - --network
+      - host
+      - --entrypoint
+      - /bin/sh
+      - --volume
+      - "{{ rustfs_secret_dir }}:/bootstrap:ro"
+      - "{{ rustfs_cli_image }}"
+      - /bootstrap/gitlab-storage.sh
+      - verify
+  register: rustfs_gitlab_verification
+  retries: 6
+  delay: 2
+  until: rustfs_gitlab_verification.rc == 0
+  changed_when: false
+  no_log: true
+  when: not ansible_check_mode

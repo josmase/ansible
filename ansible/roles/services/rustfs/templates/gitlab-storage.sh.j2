@@ -1,0 +1,51 @@
+#!/bin/sh
+set -eu
+
+root_access="$(tr -d '\r\n' < /bootstrap/root-access-key)"
+root_secret="$(tr -d '\r\n' < /bootstrap/root-secret-key)"
+gitlab_access="$(tr -d '\r\n' < /bootstrap/gitlab-access-key)"
+gitlab_secret="$(tr -d '\r\n' < /bootstrap/gitlab-secret-key)"
+tofu_access="$(tr -d '\r\n' < /bootstrap/tofu-state-access-key)"
+tofu_secret="$(tr -d '\r\n' < /bootstrap/tofu-state-secret-key)"
+endpoint="http://{{ rustfs_bind_address }}:{{ rustfs_api_port }}"
+
+rc alias set root "$endpoint" "$root_access" "$root_secret" \
+  --region "{{ rustfs_region }}" --bucket-lookup path >/dev/null
+
+if [ "${1:-reconcile}" = "verify" ]; then
+  rc admin user info root "$gitlab_access" >/dev/null
+  rc admin user info root "$tofu_access" >/dev/null
+  rc admin policy info root "{{ rustfs_gitlab_policy }}" >/dev/null
+  rc admin policy info root "{{ rustfs_tofu_policy }}" >/dev/null
+  rc alias set gitlab "$endpoint" "$gitlab_access" "$gitlab_secret" \
+    --region "{{ rustfs_region }}" --bucket-lookup path >/dev/null
+{% for bucket in rustfs_gitlab_buckets %}
+  rc bucket list "gitlab/{{ bucket }}" >/dev/null
+{% endfor %}
+  rc alias set tofu "$endpoint" "$tofu_access" "$tofu_secret" \
+    --region "{{ rustfs_region }}" --bucket-lookup path >/dev/null
+  rc bucket list "tofu/{{ rustfs_tofu_state_bucket }}" >/dev/null
+  exit 0
+fi
+
+{% for bucket in rustfs_gitlab_buckets + [rustfs_tofu_state_bucket] %}
+if ! rc bucket list "root/{{ bucket }}" >/dev/null 2>&1; then
+  rc bucket create "root/{{ bucket }}" --ignore-existing >/dev/null
+  echo "CREATED:bucket"
+fi
+{% endfor %}
+
+if ! rc admin user info root "$gitlab_access" >/dev/null 2>&1; then
+  rc admin user add root "$gitlab_access" "$gitlab_secret" >/dev/null
+  echo "CREATED:gitlab-user"
+fi
+if ! rc admin user info root "$tofu_access" >/dev/null 2>&1; then
+  rc admin user add root "$tofu_access" "$tofu_secret" >/dev/null
+  echo "CREATED:tofu-user"
+fi
+
+# Upsert desired permissions; never remove buckets, objects, or other users.
+rc admin policy create root "{{ rustfs_gitlab_policy }}" /bootstrap/gitlab-storage-policy.json >/dev/null
+rc admin policy attach root "{{ rustfs_gitlab_policy }}" --user "$gitlab_access" >/dev/null
+rc admin policy create root "{{ rustfs_tofu_policy }}" /bootstrap/tofu-state-policy.json >/dev/null
+rc admin policy attach root "{{ rustfs_tofu_policy }}" --user "$tofu_access" >/dev/null
