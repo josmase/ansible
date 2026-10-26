@@ -53,7 +53,7 @@ kube_vip_bgp_routerid: "127.0.0.1"
 kube_vip_bgp_as: "64513"
 kube_vip_bgp_peeraddress: 192.168.1.1
 kube_vip_bgp_peeras: "64512"
-kube_vip_tag_version: v1.2.4
+kube_vip_tag_version: v1.3.0
 
 metal_lb_type: native
 metal_lb_mode: layer2

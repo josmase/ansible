@@ -1,0 +1,19 @@
+---
+# Read-only validation across the complete inventory before application downtime.
+- name: Validate every node before opening a K3s maintenance window
+  hosts: k3s_cluster
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+  pre_tasks:
+    - name: Require the committed kube-vip target
+      ansible.builtin.assert:
+        that:
+          - kube_vip_upgrade_target_version | default('') == kube_vip_tag_version
+          - kube_vip_upgrade_target_version is match('^v[0-9]+\.[0-9]+\.[0-9]+$')
+        fail_msg: "The explicit kube-vip target must match committed inventory."
+  tasks:
+    - name: Validate the installed K3s version against the requested transition
+      ansible.builtin.import_role:
+        name: platform/k3s_rolling_upgrade
+        tasks_from: version_preflight

@@ -31,14 +31,8 @@
   changed_when: false
   check_mode: false
 
-- name: Read the installed K3s version
-  ansible.builtin.command:
-    argv:
-      - /usr/local/bin/k3s
-      - --version
-  register: k3s_upgrade_installed_version
-  changed_when: false
-  check_mode: false
+- name: Validate the version transition again before touching this node
+  ansible.builtin.import_tasks: version_preflight.yml
 
 - name: Determine whether this node requires an upgrade
   ansible.builtin.set_fact:
