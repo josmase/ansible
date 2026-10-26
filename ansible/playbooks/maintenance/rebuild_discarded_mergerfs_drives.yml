@@ -90,7 +90,9 @@
           cp -a /etc/crypttab {{ rebuild_audit_dir | quote }}/crypttab.before
           lsblk -o NAME,PATH,SERIAL,SIZE,FSTYPE,UUID,MOUNTPOINTS > {{ rebuild_audit_dir | quote }}/lsblk.before
           blockdev --setro {{ rebuild_source_disk | quote }}
-          blockdev --setro /dev/mapper/{{ rebuild_source_mapper | quote }}
+          if [ -e /dev/mapper/{{ rebuild_source_mapper | quote }} ]; then
+            blockdev --setro /dev/mapper/{{ rebuild_source_mapper | quote }}
+          fi
         executable: /bin/bash
       changed_when: false
 
