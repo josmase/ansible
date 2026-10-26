@@ -72,6 +72,6 @@ gpu_unlock_secure_boot_command: "mokutil --sb-state"
 gpu_unlock_deb_src_command: "apt-get indextargets --format '$(IDENTIFIER)' | grep -qx Sources"
 gpu_unlock_nvidia_driver_command: "modinfo nvidia"
 gpu_unlock_build_command: "apt-get build-dep -y . && make deb"
-gpu_unlock_package_install_command: "apt-get install --reinstall -y ./build/deb/gpu-unlock-dkms_*.deb ./build/deb/gpu-unlock-firmware_*.deb"
-gpu_unlock_package_remove_command: "apt-get remove -y gpu-unlock-dkms gpu-unlock-firmware"
-gpu_unlock_update_grub_command: update-grub
+gpu_unlock_package_names:
+  - gpu-unlock-dkms
+  - gpu-unlock-firmware

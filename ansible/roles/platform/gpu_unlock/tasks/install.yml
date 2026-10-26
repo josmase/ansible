@@ -103,11 +103,27 @@
     executable: /bin/bash
   when: gpu_unlock_revision_changed | bool
 
+- name: Find the built GPU unlock Debian packages
+  ansible.builtin.find:
+    paths: "{{ gpu_unlock_source_path }}/build/deb"
+    patterns: "*.deb"
+    file_type: file
+  register: gpu_unlock_built_packages
+  when: gpu_unlock_revision_changed | bool
+
+- name: Require GPU unlock Debian packages from the local build
+  ansible.builtin.assert:
+    that: gpu_unlock_built_packages.matched | int > 0
+    fail_msg: "GPU unlock's local Debian package build produced no .deb packages."
+  when: gpu_unlock_revision_changed | bool
+
 - name: Install the pinned GPU unlock Debian packages
-  ansible.builtin.shell:
-    cmd: "{{ gpu_unlock_package_install_command }}"
-    chdir: "{{ gpu_unlock_source_path }}"
-    executable: /bin/bash
+  ansible.builtin.apt:
+    deb: "{{ item.path }}"
+    state: present
+  loop: "{{ gpu_unlock_built_packages.files }}"
+  loop_control:
+    label: "{{ item.path }}"
   when: gpu_unlock_revision_changed | bool
 
 - name: Record the deployed GPU unlock revision
@@ -140,10 +156,12 @@
     line: '\1 gpu_unlock.targets=all"'
     backrefs: true
   register: gpu_unlock_grub_token
-  when: "'gpu_unlock.targets=all' not in (gpu_unlock_grub_defaults.content | b64decode)"
+  when: >-
+    not ((gpu_unlock_grub_defaults.content | b64decode) is
+    search('(?m)^GRUB_CMDLINE_LINUX_DEFAULT=\"(?:\\S+\\s+)*gpu_unlock\\.targets=all(?=\\s|\")'))
 
 - name: Rebuild GRUB after adding the GPU unlock target-set token
-  ansible.builtin.command: "{{ gpu_unlock_update_grub_command }}"
+  ansible.builtin.command: update-grub
   when: gpu_unlock_grub_token.changed | default(false)
 
 - name: Record boot-time changes that require a reboot

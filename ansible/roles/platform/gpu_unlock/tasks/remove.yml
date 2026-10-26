@@ -1,10 +1,10 @@
 ---
 - name: Remove role-managed GPU unlock Debian packages
-  ansible.builtin.shell:
-    cmd: "{{ gpu_unlock_package_remove_command }}"
-    executable: /bin/bash
+  ansible.builtin.apt:
+    name: "{{ gpu_unlock_package_names }}"
+    state: absent
+    purge: true
   register: gpu_unlock_package_removal
-  changed_when: "'0 newly installed, 0 to remove' not in gpu_unlock_package_removal.stdout"
 
 - name: Remove the deployed GPU unlock revision record
   ansible.builtin.file:
@@ -22,15 +22,17 @@
 - name: Remove only the role-managed GPU unlock target-set token
   ansible.builtin.replace:
     path: "{{ gpu_unlock_grub_defaults_path }}"
-    regexp: '^(GRUB_CMDLINE_LINUX_DEFAULT=".*) gpu_unlock\.targets=all"$'
-    replace: '\1"'
+    regexp: '(?m)^(GRUB_CMDLINE_LINUX_DEFAULT="[^"]*?)(?:(?<=")|\s+)gpu_unlock\.targets=all(?=\s|")'
+    replace: '\1'
   register: gpu_unlock_grub_token_removal
   when:
     - not gpu_unlock_grub_defaults_removal.failed | default(false)
-    - "'gpu_unlock.targets=all' in (gpu_unlock_grub_defaults_removal.content | b64decode)"
+    - >-
+      (gpu_unlock_grub_defaults_removal.content | b64decode) is
+      search('(?m)^GRUB_CMDLINE_LINUX_DEFAULT=\"(?:\\S+\\s+)*gpu_unlock\\.targets=all(?=\\s|\")')
 
 - name: Rebuild GRUB after removing the GPU unlock target-set token
-  ansible.builtin.command: "{{ gpu_unlock_update_grub_command }}"
+  ansible.builtin.command: update-grub
   when: gpu_unlock_grub_token_removal.changed | default(false)
 
 - name: Record boot-time removal that requires a reboot
