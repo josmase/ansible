@@ -53,3 +53,55 @@ identities in place.
 ## Live protection capacity
 
 A restricted DynamicUser systemd service publishes `__protection/capacity.json` in the dedicated v2 bucket every five minutes. It verifies the required mergerfs mount and reports available bytes and a timestamp. Systemd supplies only the v2 bucket credentials through `LoadCredential`; no root S3 identity is used. The protection gate must reject missing or stale reports and subtract the measured additional retained-backup forecast before applying the absolute free-space floor. This report is a monitoring object, outside LINSTOR backup retention.
+
+## Dedicated GitLab Toolbox backup identity
+
+`rustfs_gitlab_backup_identity_enabled` provisions a separate user and the
+`gitlab-application-backups` policy scoped to `rustfs_gitlab_backup_buckets`.
+The role creates missing buckets additively and never resets an existing user's
+secret. Credentials must be stored in encrypted inventory and must match the
+Flux-managed `gitlab-backup-object-storage` Secret. The assertion rejects
+reused access keys, policy names, and overlapping workload or LINSTOR buckets.
+The role verifies the new identity can list each backup bucket. Verify denied
+access and the absence of additional policy attachments separately.
+
+Deploy the Ansible change first, including the encrypted inventory variables,
+and verify access before reconciling the corresponding Flux Secret. Keep the
+old Secret available for rollback, and do not enable a backup schedule until
+issue #5's recovery and operational checks pass. Disabling this feature leaves
+the created identity, policy, and buckets in place; it does not revoke access.
+
+The reconciliation uses the pinned `rustfs/rc` image's `jq` and JSON admin
+user and policy listings. Existing users must be enabled, have no group
+memberships, and have exactly the backup policy; an existing policy must match
+the rendered document. A mismatch stops reconciliation before attaching
+permissions. If creation succeeds but policy attachment fails, the next run
+stops on the unassigned user. An operator must inspect that user's identity,
+policy attachments and group memberships and confirm it is the intended new
+backup user before attaching the reviewed backup policy using the RustFS admin
+client. Re-run verification afterward; never adopt an unknown pre-existing user.
+
+## Dedicated Registry identity and cutover
+
+`rustfs_registry_dedicated_identity_enabled` provisions a distinct identity
+using encrypted inventory credentials and the existing prefix-scoped Registry
+policy. Existing users must already have exactly that policy and no group
+memberships; unexpected accounts are not adopted. The workload identity keeps
+its existing Registry policy while `rustfs_registry_shared_access_enabled` is
+true. Provision and verify the new identity before applying the separately
+reviewed Flux Registry Secret; its bucket and prefix remain unchanged.
+
+After the Secret is active and Registry pulls and a test push succeed, remove
+shared access in a separate reviewed change by setting
+`rustfs_registry_shared_access_enabled: false`. The role requires the dedicated
+identity, validates its policy and prefix listing before detaching the legacy
+policy, and refuses to alter a workload identity with unexpected policies or
+group membership. Check actual denied access after the change. To roll back,
+restore the shared flag and reconcile before restoring the old Secret. Preserve
+both identities and all Registry objects during the rollback window.
+
+If user creation succeeds but policy attachment fails, the next run stops on
+the unassigned user. Inspect the account and confirm ownership before manually
+attaching the reviewed policy, then rerun verification; never adopt an unknown
+user. The separate bucket migration remains a later operation and requires the
+write freeze and final sync documented in the Flux repository.

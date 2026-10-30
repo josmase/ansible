@@ -7,8 +7,17 @@ gitlab_access="$(tr -d '\r\n' < /bootstrap/gitlab-access-key)"
 gitlab_secret="$(tr -d '\r\n' < /bootstrap/gitlab-secret-key)"
 tofu_access="$(tr -d '\r\n' < /bootstrap/tofu-state-access-key)"
 tofu_secret="$(tr -d '\r\n' < /bootstrap/tofu-state-secret-key)"
+{% if rustfs_gitlab_backup_identity_enabled | bool %}
+backup_access="$(tr -d '\r\n' < /bootstrap/gitlab-backup-access-key)"
+backup_secret="$(tr -d '\r\n' < /bootstrap/gitlab-backup-secret-key)"
+{% endif %}
+{% if rustfs_registry_dedicated_identity_enabled | bool %}
+registry_access="$(tr -d '\r\n' < /bootstrap/registry-access-key)"
+registry_secret="$(tr -d '\r\n' < /bootstrap/registry-secret-key)"
+{% else %}
 registry_access="$gitlab_access"
 registry_secret="$gitlab_secret"
+{% endif %}
 endpoint="http://{{ rustfs_bind_address }}:{{ rustfs_api_port }}"
 
 rc alias set root "$endpoint" "$root_access" "$root_secret" \
@@ -17,7 +26,25 @@ rc alias set root "$endpoint" "$root_access" "$root_secret" \
 if [ "${1:-reconcile}" = "verify" ]; then
   rc admin user info root "$gitlab_access" >/dev/null
   rc admin user info root "$tofu_access" >/dev/null
+{% if rustfs_registry_dedicated_identity_enabled | bool %}
+  registry_info="$(rc admin user info root "$registry_access" --json)"
+  printf '%s' "$registry_info" | jq -e --arg policy "{{ rustfs_registry_policy }}" \
+    '.status == "enabled" and .policies == [$policy] and .memberOf == []' >/dev/null
+{% else %}
   rc admin user info root "$registry_access" >/dev/null
+{% endif %}
+{% if rustfs_gitlab_backup_identity_enabled | bool %}
+  backup_info="$(rc admin user info root "$backup_access" --json)"
+  printf '%s' "$backup_info" | jq -e --arg policy "{{ rustfs_gitlab_backup_policy }}" \
+    '.status == "enabled" and .policies == [$policy] and .memberOf == []' >/dev/null
+  backup_policy="$(rc admin policy info root "{{ rustfs_gitlab_backup_policy }}" --json)"
+  printf '%s' "$backup_policy" | jq -e --slurpfile desired /bootstrap/gitlab-backup-policy.json '.policy.policy == $desired[0]' >/dev/null
+  rc alias set gitlabbackup "$endpoint" "$backup_access" "$backup_secret" \
+    --region "{{ rustfs_region }}" --bucket-lookup path >/dev/null
+{% for bucket in rustfs_gitlab_backup_buckets %}
+  rc bucket list "gitlabbackup/{{ bucket }}" >/dev/null
+{% endfor %}
+{% endif %}
   rc admin policy info root "{{ rustfs_gitlab_policy }}" >/dev/null
   rc admin policy info root "{{ rustfs_tofu_policy }}" >/dev/null
   rc admin policy info root "{{ rustfs_registry_policy }}" >/dev/null
@@ -72,14 +99,85 @@ if ! rc admin user info root "$tofu_access" >/dev/null 2>&1; then
   echo "CREATED:tofu-user"
 fi
 
+{% if rustfs_gitlab_backup_identity_enabled | bool %}
+# Fail closed on unreadable inventories, policy collisions, and unexpected
+# existing users. Never attach backup permissions to an unrelated account.
+users="$(rc admin user list root --json)"
+printf '%s' "$users" | jq -e '.users | type == "array"' >/dev/null
+policies="$(rc admin policy list root --json)"
+printf '%s' "$policies" | jq -e '.policies | type == "array"' >/dev/null
+if printf '%s' "$policies" | jq -e --arg policy "{{ rustfs_gitlab_backup_policy }}" '.policies | index($policy) != null' >/dev/null; then
+  policy_info="$(rc admin policy info root "{{ rustfs_gitlab_backup_policy }}" --json)"
+  printf '%s' "$policy_info" | jq -e --slurpfile desired /bootstrap/gitlab-backup-policy.json '.policy.policy == $desired[0]' >/dev/null || {
+    echo "ERROR: existing GitLab backup policy differs from desired policy" >&2; exit 1;
+  }
+else
+  rc admin policy create root "{{ rustfs_gitlab_backup_policy }}" /bootstrap/gitlab-backup-policy.json >/dev/null
+  echo "CREATED:gitlab-backup-policy"
+fi
+if printf '%s' "$users" | jq -e --arg key "$backup_access" '.users | any(.accessKey == $key)' >/dev/null; then
+  printf '%s' "$users" | jq -e --arg key "$backup_access" --arg policy "{{ rustfs_gitlab_backup_policy }}" \
+    '[.users[] | select(.accessKey == $key) | select(.status == "enabled" and .policies == [$policy] and .memberOf == [])] | length == 1' >/dev/null || {
+      echo "ERROR: existing GitLab backup user has unexpected status or permissions" >&2; exit 1;
+    }
+else
+  rc admin user add root "$backup_access" "$backup_secret" >/dev/null
+  rc admin policy attach root "{{ rustfs_gitlab_backup_policy }}" --user "$backup_access" >/dev/null
+  echo "CREATED:gitlab-backup-user"
+fi
+{% endif %}
+
 # Upsert desired policies; never remove buckets, objects, or other users.
 rc admin policy create root "{{ rustfs_gitlab_policy }}" /bootstrap/gitlab-storage-policy.json >/dev/null
 rc admin policy create root "{{ rustfs_tofu_policy }}" /bootstrap/tofu-state-policy.json >/dev/null
-rc admin user info root "$registry_access" >/dev/null
-if ! rc admin policy info root "{{ rustfs_registry_policy }}" >/dev/null 2>&1; then
+registry_policies="$(rc admin policy list root --json)"
+printf '%s' "$registry_policies" | jq -e '.policies | type == "array"' >/dev/null
+if printf '%s' "$registry_policies" | jq -e --arg policy "{{ rustfs_registry_policy }}" '.policies | index($policy) != null' >/dev/null; then
+  registry_policy_info="$(rc admin policy info root "{{ rustfs_registry_policy }}" --json)"
+  printf '%s' "$registry_policy_info" | jq -e --slurpfile desired /bootstrap/registry-storage-policy.json '.policy.policy == $desired[0]' >/dev/null || {
+    echo "ERROR: existing Registry policy differs from desired policy" >&2; exit 1;
+  }
+else
+  rc admin policy create root "{{ rustfs_registry_policy }}" /bootstrap/registry-storage-policy.json >/dev/null
   echo "CREATED:registry-policy"
 fi
-rc admin policy create root "{{ rustfs_registry_policy }}" /bootstrap/registry-storage-policy.json >/dev/null
+{% if rustfs_registry_shared_access_enabled | bool %}
 rc admin policy attach root "{{ rustfs_gitlab_policy }},{{ rustfs_registry_policy }}" \
   --user "$gitlab_access" >/dev/null
+{% else %}
+rc admin policy attach root "{{ rustfs_gitlab_policy }}" --user "$gitlab_access" >/dev/null
+{% endif %}
 rc admin policy attach root "{{ rustfs_tofu_policy }}" --user "$tofu_access" >/dev/null
+{% if rustfs_registry_dedicated_identity_enabled | bool %}
+# A separate identity is added while the old shared policy remains for rollback.
+registry_users="$(rc admin user list root --json)"
+printf '%s' "$registry_users" | jq -e '.users | type == "array"' >/dev/null
+if printf '%s' "$registry_users" | jq -e --arg key "$registry_access" '.users | any(.accessKey == $key)' >/dev/null; then
+  printf '%s' "$registry_users" | jq -e --arg key "$registry_access" --arg policy "{{ rustfs_registry_policy }}" \
+    '[.users[] | select(.accessKey == $key) | select(.status == "enabled" and .policies == [$policy] and .memberOf == [])] | length == 1' >/dev/null || {
+      echo "ERROR: existing Registry user has unexpected status or permissions" >&2; exit 1;
+    }
+else
+  rc admin user add root "$registry_access" "$registry_secret" >/dev/null
+  rc admin policy attach root "{{ rustfs_registry_policy }}" --user "$registry_access" >/dev/null
+  echo "CREATED:registry-user"
+fi
+{% endif %}
+
+{% if not (rustfs_registry_shared_access_enabled | bool) %}
+# This is a separately authorized post-cutover step. Validate the dedicated
+# user and its access before removing the workload user's legacy policy.
+registry_info="$(rc admin user info root "$registry_access" --json)"
+printf '%s' "$registry_info" | jq -e --arg policy "{{ rustfs_registry_policy }}" \
+  '.status == "enabled" and .policies == [$policy] and .memberOf == []' >/dev/null
+rc alias set registry "$endpoint" "$registry_access" "$registry_secret" \
+  --region "{{ rustfs_region }}" --bucket-lookup path >/dev/null
+rc bucket list "registry/{{ rustfs_registry_bucket }}{{ rustfs_registry_rootdirectory }}" >/dev/null
+workload_info="$(rc admin user info root "$gitlab_access" --json)"
+printf '%s' "$workload_info" | jq -e --arg workload "{{ rustfs_gitlab_policy }}" --arg registry "{{ rustfs_registry_policy }}" \
+  '.status == "enabled" and .memberOf == [] and (.policies | all(. == $workload or . == $registry)) and (.policies | index($workload) != null)' >/dev/null
+if printf '%s' "$workload_info" | jq -e --arg policy "{{ rustfs_registry_policy }}" '.policies | index($policy) != null' >/dev/null; then
+  rc admin policy detach root "{{ rustfs_registry_policy }}" --user "$gitlab_access" >/dev/null
+  echo "REMOVED:shared-registry-policy"
+fi
+{% endif %}
