@@ -12,6 +12,11 @@
       - gpu_unlock_grub_defaults_file.stat.isreg | default(false)
     fail_msg: "GPU unlock supports only Debian or Ubuntu hosts using GRUB."
 
+- name: Detect UEFI firmware support
+  ansible.builtin.stat:
+    path: /sys/firmware/efi
+  register: gpu_unlock_efi_firmware
+
 - name: Detect Secure Boot state before changing GPU unlock state
   ansible.builtin.shell:
     cmd: "{{ gpu_unlock_secure_boot_command }}"
@@ -19,12 +24,35 @@
   register: gpu_unlock_secure_boot_state
   changed_when: false
   failed_when: false
+  when: gpu_unlock_efi_firmware.stat.isdir | default(false)
+
+- name: Locate standard Debian source definitions
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ gpu_unlock_deb_src_sources_paths }}"
+  register: gpu_unlock_deb_src_source_files
+
+- name: Enable Debian source indexes for GPU unlock package builds
+  ansible.builtin.replace:
+    path: "{{ item.item }}"
+    regexp: '^Types: deb$'
+    replace: 'Types: deb deb-src'
+  loop: "{{ gpu_unlock_deb_src_source_files.results }}"
+  register: gpu_unlock_deb_src_sources
+  when: item.stat.isreg | default(false)
+
+- name: Refresh APT metadata after enabling Debian source indexes
+  ansible.builtin.apt:
+    update_cache: true
+  when: gpu_unlock_deb_src_sources.changed | default(false)
 
 - name: Refuse unsigned GPU unlock installation under Secure Boot
   ansible.builtin.assert:
     that:
-      - gpu_unlock_secure_boot_state.rc == 0
-      - "'enabled' not in (gpu_unlock_secure_boot_state.stdout | lower)"
+      - >-
+        not (gpu_unlock_efi_firmware.stat.isdir | default(false))
+        or (gpu_unlock_secure_boot_state.rc == 0
+        and 'enabled' not in (gpu_unlock_secure_boot_state.stdout | lower))
     fail_msg: "GPU unlock cannot be installed while Secure Boot is enabled or unverifiable; signing and MOK enrollment are out of scope."
 
 - name: Require configured Debian source repositories
@@ -43,6 +71,7 @@
 - name: Check for matching kernel headers
   ansible.builtin.stat:
     path: "{{ gpu_unlock_kernel_headers_path }}"
+    follow: true
   register: gpu_unlock_kernel_headers
 
 - name: Require matching kernel headers

@@ -66,6 +66,9 @@ gpu_unlock_source_path: /var/tmp/gpu-unlock
 gpu_unlock_revision_marker_path: /var/lib/gpu-unlock/revision
 gpu_unlock_grub_defaults_path: /etc/default/grub
 gpu_unlock_kernel_headers_path: "/lib/modules/{{ ansible_kernel }}/build"
+gpu_unlock_deb_src_sources_paths:
+  - /etc/apt/sources.list.d/ubuntu.sources
+  - /etc/apt/sources.list.d/debian.sources
 
 # Command adapters let the dedicated Molecule boundary scenario mock host tools.
 gpu_unlock_secure_boot_command: "mokutil --sb-state"
