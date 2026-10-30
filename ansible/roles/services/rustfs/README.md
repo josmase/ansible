@@ -13,19 +13,36 @@ bytes) free on the live mergerfs mount before applying configuration.
 
 ## GitLab CI and OpenTofu storage
 
-Production enables `rustfs_gitlab_storage_enabled` to preserve the recovered
-`gitlab-terraform-state` backend and the `gitlab-artifacts` and `gitlab-packages`
-buckets. Separate identities restrict OpenTofu to its state bucket and GitLab
-to artifacts/packages. The role creates missing buckets/users and upserts the
-desired policies without deleting existing objects or resetting user secrets.
-Verification authenticates as each scoped identity and lists its buckets.
+Production enables `rustfs_gitlab_storage_enabled`. The GitLab chart uses the
+`gitlab-object-storage` connection for artifacts, LFS, uploads, packages, and
+Terraform state, so its identity is scoped to those five buckets. The
+`gitlab-backup-object-storage` connection is separate; its temporary and archive
+buckets are `gitlab-backups-tmp` and `gitlab-backups`. The role creates missing
+GitLab and backup buckets additively, without deleting existing objects.
 
-The existing credentials are encrypted in the all-group vault, alongside the
-root and backup credentials needed by the role. The OpenTofu identity matches
-the project's masked AWS CI variables; the GitLab identity matches its existing
-object-storage connection secret. Preserve those consumers if credentials are
-deliberately rotated. The role does not restore state or historical artifacts;
-normal reconciliation never replaces the current state object.
+OpenTofu CI has a separate identity restricted to `gitlab-terraform-state`.
+The role upserts the GitLab and OpenTofu policies without resetting user
+secrets. Verification authenticates as each identity, lists its assigned
+buckets, confirms both identities cannot list each other's unrelated buckets,
+and checks that all configured buckets exist. Backup identity authorization
+remains tied to the separate Flux-managed Secret and is not changed by this
+role; verify it against the live RustFS policy before relying on backups.
+
+The GitLab Container Registry currently uses the same key pair as the GitLab
+object-storage identity. The role attaches an additional
+`gitlab-container-registry` policy restricted to the configured registry
+prefix within `linstor-backups`; it preserves the workload policy because the
+identity is shared. As a result, both GitLab workload and registry permissions
+are available to that shared identity. OpenTofu remains separate. The role
+never removes or rewrites registry objects.
+
+The existing GitLab and OpenTofu credentials are encrypted in the all-group
+vault, alongside the root and backup credentials needed by the role. The
+OpenTofu identity matches the project's masked AWS CI variables; the GitLab
+identity matches the chart's object-storage connection secret. Preserve those
+consumers if credentials are deliberately rotated. The role does not restore
+state or historical artifacts; normal reconciliation never replaces the
+current state object.
 
 From the Ansible directory, run `ansible-playbook playbooks/setup/rustfs.yml
 --limit storage.local.hejsan.xyz --tags rustfs_gitlab_storage` to reconcile only

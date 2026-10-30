@@ -48,6 +48,14 @@
 #      - mergerfs-git
 #      - mergerfs-tools-git
     
+- name: Validate explicit mergerfs branch allowlist
+  ansible.builtin.assert:
+    that:
+      - merger_fs_mnt_branches | length > 0
+      - merger_fs_mnt_branches | unique | length == merger_fs_mnt_branches | length
+      - merger_fs_mnt_branches | select('search', '[*?]') | list | length == 0
+    fail_msg: "Set a non-empty, unique mergerfs branch allowlist without glob patterns."
+
 - name: Mount mapped decrypted devices
   become: true
   ansible.posix.mount:

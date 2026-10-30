@@ -16,6 +16,18 @@ mount:
     default: "defaults,noatime"
     encrypted: "defaults,noatime,discard"
 
+# Explicit mergerfs allowlist. Keep rebuild_zl2pm4xc excluded while its
+# backing filesystem is investigated.
+merger_fs_mnt_branches:
+  - /mnt/drives/automapped_46735ec9
+  - /mnt/drives/automapped_6738a1a4
+  - /mnt/drives/automapped_7075cbde
+  - /mnt/drives/automapped_b06291e1
+  - /mnt/drives/automapped_cd5c9477
+  - /mnt/drives/automapped_ce3735fb
+  - /mnt/drives/automapped_dcade560
+  - /mnt/drives/rebuild_jehb7zbn
+
 # RustFS S3 backup target. Secrets remain in the encrypted all-group vault.
 rustfs_bind_address: 192.168.1.102
 rustfs_data_dir: /mnt/storage/kubernetes/rustfs

@@ -26,16 +26,27 @@ rustfs_backup_secret_key: ""
 rustfs_backup_v2_access_key: ""
 rustfs_backup_v2_secret_key: ""
 
-# Optional GitLab CI artifacts/packages and dedicated OpenTofu state storage.
+# Optional GitLab object storage and dedicated OpenTofu state storage.
 rustfs_gitlab_storage_enabled: false
 rustfs_gitlab_access_key: ""
 rustfs_gitlab_secret_key: ""
 rustfs_tofu_access_key: ""
 rustfs_tofu_secret_key: ""
-rustfs_gitlab_buckets: [gitlab-artifacts, gitlab-packages]
+rustfs_gitlab_buckets:
+  - gitlab-artifacts
+  - gitlab-lfs
+  - gitlab-uploads
+  - gitlab-packages
+  - gitlab-terraform-state
+rustfs_gitlab_backup_buckets: [gitlab-backups-tmp, gitlab-backups]
 rustfs_gitlab_policy: gitlab-ci-artifacts-packages
 rustfs_tofu_state_bucket: gitlab-terraform-state
 rustfs_tofu_policy: gitlab-terraform-state
+rustfs_registry_access_key: "{{ rustfs_gitlab_access_key }}"
+rustfs_registry_secret_key: "{{ rustfs_gitlab_secret_key }}"
+rustfs_registry_bucket: linstor-backups
+rustfs_registry_rootdirectory: /gitlab-registry
+rustfs_registry_policy: gitlab-container-registry
 
 rustfs_capacity_report_key: __protection/capacity.json
 rustfs_capacity_report_interval: 5min

@@ -1,0 +1,39 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetBucketLocation"],
+      "Resource": ["arn:aws:s3:::{{ rustfs_registry_bucket }}"]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket", "s3:ListBucketMultipartUploads"],
+      "Resource": ["arn:aws:s3:::{{ rustfs_registry_bucket }}"],
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "gitlab-registry",
+            "gitlab-registry/*",
+            "/gitlab-registry",
+            "/gitlab-registry/*"
+          ]
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:AbortMultipartUpload",
+        "s3:DeleteObject",
+        "s3:GetObject",
+        "s3:ListMultipartUploadParts",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::{{ rustfs_registry_bucket }}/gitlab-registry/*",
+        "arn:aws:s3:::{{ rustfs_registry_bucket }}//gitlab-registry/*"
+      ]
+    }
+  ]
+}

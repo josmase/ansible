@@ -9,8 +9,12 @@
       - rustfs_gitlab_access_key != rustfs_root_access_key
       - rustfs_tofu_access_key != rustfs_root_access_key
       - rustfs_gitlab_access_key != rustfs_tofu_access_key
+      - rustfs_registry_access_key | length >= 3
+      - rustfs_registry_secret_key | length >= 32
+      - rustfs_registry_access_key == rustfs_gitlab_access_key
+      - rustfs_registry_secret_key == rustfs_gitlab_secret_key
       - rustfs_gitlab_buckets | length > 0
-    fail_msg: "Configure separate encrypted GitLab and state-bucket credentials."
+    fail_msg: "Configure the shared GitLab workload/registry identity and separate OpenTofu state credentials."
   no_log: true
 
 - name: Install existing GitLab and OpenTofu credential files
@@ -42,6 +46,16 @@
       buckets: ["{{ rustfs_tofu_state_bucket }}"]
   register: rustfs_gitlab_policy_files
 
+- name: Install GitLab Container Registry bucket policy
+  ansible.builtin.template:
+    src: registry-storage-policy.json.j2
+    dest: "{{ rustfs_secret_dir }}/registry-storage-policy.json"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/bin/python3 -m json.tool %s
+  register: rustfs_registry_policy_file
+
 - name: Install GitLab and OpenTofu reconciliation script
   ansible.builtin.template:
     src: gitlab-storage.sh.j2
@@ -68,7 +82,10 @@
       - "{{ rustfs_cli_image }}"
       - /bootstrap/gitlab-storage.sh
   register: rustfs_gitlab_reconciliation
-  changed_when: "'CREATED:' in rustfs_gitlab_reconciliation.stdout or rustfs_gitlab_policy_files.changed"
+  changed_when: >-
+    'CREATED:' in rustfs_gitlab_reconciliation.stdout
+    or rustfs_gitlab_policy_files.changed
+    or rustfs_registry_policy_file.changed
   no_log: true
   when: not ansible_check_mode
 
