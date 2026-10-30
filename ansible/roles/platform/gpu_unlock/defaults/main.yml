@@ -1,0 +1,80 @@
+---
+gpu_unlock_enabled: false
+
+# Pinned by Renovate; the comment is the human-readable upstream release.
+# renovate: datasource=git-refs depName=Zagitta/gpu-unlock
+gpu_unlock_revision: "990a14e9b7dc8eaad8e6925133aa0e8382efe6cf" # gpu-unlock 1.0.0
+gpu_unlock_repository_url: https://github.com/Zagitta/gpu-unlock.git
+
+# Copied from kernel/gpu_unlock/main.c at gpu_unlock_revision.
+gpu_unlock_eligible_device_ids:
+  - "2200"
+  - "2203"
+  - "2204"
+  - "2205"
+  - "2206"
+  - "2207"
+  - "2208"
+  - "220a"
+  - "220d"
+  - "2216"
+  - "222b"
+  - "222f"
+  - "2480"
+  - "2482"
+  - "2483"
+  - "2484"
+  - "2486"
+  - "2487"
+  - "2488"
+  - "2489"
+  - "248a"
+  - "248c"
+  - "248d"
+  - "248e"
+  - "249c"
+  - "249d"
+  - "249f"
+  - "24a0"
+  - "24a4"
+  - "24ac"
+  - "24ad"
+  - "24af"
+  - "24bf"
+  - "24c0"
+  - "24c7"
+  - "24c8"
+  - "24c9"
+  - "24dc"
+  - "24dd"
+  - "24df"
+  - "24e0"
+  - "2414"
+  - "2501"
+  - "2503"
+  - "2504"
+  - "2505"
+  - "2507"
+  - "2508"
+  - "2509"
+  - "252f"
+  - "2544"
+  - "2520"
+  - "2560"
+
+gpu_unlock_source_path: /var/tmp/gpu-unlock
+gpu_unlock_revision_marker_path: /var/lib/gpu-unlock/revision
+gpu_unlock_grub_defaults_path: /etc/default/grub
+gpu_unlock_kernel_headers_path: "/lib/modules/{{ ansible_kernel }}/build"
+gpu_unlock_deb_src_sources_paths:
+  - /etc/apt/sources.list.d/ubuntu.sources
+  - /etc/apt/sources.list.d/debian.sources
+
+# Command adapters let the dedicated Molecule boundary scenario mock host tools.
+gpu_unlock_secure_boot_command: "mokutil --sb-state"
+gpu_unlock_deb_src_command: "apt-get indextargets --format '$(IDENTIFIER)' | grep -qx Sources"
+gpu_unlock_nvidia_driver_command: "modinfo nvidia"
+gpu_unlock_build_command: "apt-get build-dep -y . && make deb"
+gpu_unlock_package_names:
+  - gpu-unlock-dkms
+  - gpu-unlock-firmware

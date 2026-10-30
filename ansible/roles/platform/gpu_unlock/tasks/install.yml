@@ -1,0 +1,199 @@
+---
+- name: Check for a GRUB defaults file
+  ansible.builtin.stat:
+    path: "{{ gpu_unlock_grub_defaults_path }}"
+  register: gpu_unlock_grub_defaults_file
+
+- name: Require Debian or Ubuntu with GRUB for GPU unlock
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == 'Debian'
+      - ansible_distribution in ['Debian', 'Ubuntu']
+      - gpu_unlock_grub_defaults_file.stat.isreg | default(false)
+    fail_msg: "GPU unlock supports only Debian or Ubuntu hosts using GRUB."
+
+- name: Detect UEFI firmware support
+  ansible.builtin.stat:
+    path: /sys/firmware/efi
+  register: gpu_unlock_efi_firmware
+
+- name: Detect Secure Boot state before changing GPU unlock state
+  ansible.builtin.shell:
+    cmd: "{{ gpu_unlock_secure_boot_command }}"
+    executable: /bin/sh
+  register: gpu_unlock_secure_boot_state
+  changed_when: false
+  failed_when: false
+  when: gpu_unlock_efi_firmware.stat.isdir | default(false)
+
+- name: Locate standard Debian source definitions
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ gpu_unlock_deb_src_sources_paths }}"
+  register: gpu_unlock_deb_src_source_files
+
+- name: Enable Debian source indexes for GPU unlock package builds
+  ansible.builtin.replace:
+    path: "{{ item.item }}"
+    regexp: '^Types: deb$'
+    replace: 'Types: deb deb-src'
+  loop: "{{ gpu_unlock_deb_src_source_files.results }}"
+  register: gpu_unlock_deb_src_sources
+  when: item.stat.isreg | default(false)
+
+- name: Refresh APT metadata after enabling Debian source indexes
+  ansible.builtin.apt:
+    update_cache: true
+  when: gpu_unlock_deb_src_sources.changed | default(false)
+
+- name: Refuse unsigned GPU unlock installation under Secure Boot
+  ansible.builtin.assert:
+    that:
+      - >-
+        not (gpu_unlock_efi_firmware.stat.isdir | default(false))
+        or (gpu_unlock_secure_boot_state.rc == 0
+        and 'enabled' not in (gpu_unlock_secure_boot_state.stdout | lower))
+    fail_msg: "GPU unlock cannot be installed while Secure Boot is enabled or unverifiable; signing and MOK enrollment are out of scope."
+
+- name: Require configured Debian source repositories
+  ansible.builtin.shell:
+    cmd: "{{ gpu_unlock_deb_src_command }}"
+    executable: /bin/sh
+  register: gpu_unlock_deb_src
+  changed_when: false
+  failed_when: false
+
+- name: Fail when deb-src repositories are unavailable
+  ansible.builtin.assert:
+    that: gpu_unlock_deb_src.rc == 0
+    fail_msg: "GPU unlock builds a Debian package locally and requires a configured deb-src repository."
+
+- name: Check for matching kernel headers
+  ansible.builtin.stat:
+    path: "{{ gpu_unlock_kernel_headers_path }}"
+    follow: true
+  register: gpu_unlock_kernel_headers
+
+- name: Require matching kernel headers
+  ansible.builtin.assert:
+    that: gpu_unlock_kernel_headers.stat.isdir | default(false)
+    fail_msg: "GPU unlock requires matching kernel headers; driver and kernel ownership remain outside this role."
+
+- name: Require an existing NVIDIA driver setup
+  ansible.builtin.shell:
+    cmd: "{{ gpu_unlock_nvidia_driver_command }}"
+    executable: /bin/sh
+  register: gpu_unlock_nvidia_driver
+  changed_when: false
+  failed_when: false
+
+- name: Fail when the NVIDIA driver prerequisite is missing
+  ansible.builtin.assert:
+    that: gpu_unlock_nvidia_driver.rc == 0
+    fail_msg: "GPU unlock requires an existing NVIDIA driver setup; this role does not install drivers."
+
+- name: Read the deployed GPU unlock revision
+  ansible.builtin.slurp:
+    src: "{{ gpu_unlock_revision_marker_path }}"
+  register: gpu_unlock_deployed_revision
+  failed_when: false
+  changed_when: false
+
+- name: Determine whether the GPU unlock revision must be installed
+  ansible.builtin.set_fact:
+    gpu_unlock_revision_changed: "{{ gpu_unlock_deployed_revision.failed | default(false) or (gpu_unlock_deployed_revision.content | default('') | b64decode | trim != gpu_unlock_revision) }}"
+
+- name: Fetch the pinned GPU unlock source revision
+  ansible.builtin.git:
+    repo: "{{ gpu_unlock_repository_url }}"
+    dest: "{{ gpu_unlock_source_path }}"
+    version: "{{ gpu_unlock_revision }}"
+    depth: 1
+    force: true
+  when: gpu_unlock_revision_changed | bool
+
+- name: Verify the fetched GPU unlock revision
+  ansible.builtin.command:
+    argv: [git, -C, "{{ gpu_unlock_source_path }}", rev-parse, HEAD]
+  register: gpu_unlock_fetched_revision
+  changed_when: false
+  when: gpu_unlock_revision_changed | bool
+
+- name: Require the exact pinned GPU unlock revision
+  ansible.builtin.assert:
+    that: gpu_unlock_fetched_revision.stdout | trim == gpu_unlock_revision
+    fail_msg: "GPU unlock source checkout did not resolve to the requested full commit SHA."
+  when: gpu_unlock_revision_changed | bool
+
+- name: Build the pinned GPU unlock Debian packages
+  ansible.builtin.shell:
+    cmd: "{{ gpu_unlock_build_command }}"
+    chdir: "{{ gpu_unlock_source_path }}"
+    executable: /bin/bash
+  when: gpu_unlock_revision_changed | bool
+
+- name: Find the built GPU unlock Debian packages
+  ansible.builtin.find:
+    paths: "{{ gpu_unlock_source_path }}/build/deb"
+    patterns: "*.deb"
+    file_type: file
+  register: gpu_unlock_built_packages
+  when: gpu_unlock_revision_changed | bool
+
+- name: Require GPU unlock Debian packages from the local build
+  ansible.builtin.assert:
+    that: gpu_unlock_built_packages.matched | int > 0
+    fail_msg: "GPU unlock's local Debian package build produced no .deb packages."
+  when: gpu_unlock_revision_changed | bool
+
+- name: Install the pinned GPU unlock Debian packages
+  ansible.builtin.apt:
+    deb: "{{ item.path }}"
+    state: present
+  loop: "{{ gpu_unlock_built_packages.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when: gpu_unlock_revision_changed | bool
+
+- name: Record the deployed GPU unlock revision
+  ansible.builtin.file:
+    path: "{{ gpu_unlock_revision_marker_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: gpu_unlock_revision_changed | bool
+
+- name: Write the deployed GPU unlock revision record
+  ansible.builtin.copy:
+    dest: "{{ gpu_unlock_revision_marker_path }}"
+    content: "{{ gpu_unlock_revision }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+  when: gpu_unlock_revision_changed | bool
+
+- name: Read GRUB defaults before configuring the GPU unlock target set
+  ansible.builtin.slurp:
+    src: "{{ gpu_unlock_grub_defaults_path }}"
+  register: gpu_unlock_grub_defaults
+
+- name: Add the GPU unlock target-set token to GRUB defaults
+  ansible.builtin.lineinfile:
+    path: "{{ gpu_unlock_grub_defaults_path }}"
+    regexp: '^(GRUB_CMDLINE_LINUX_DEFAULT=".*)"$'
+    line: '\1 gpu_unlock.targets=all"'
+    backrefs: true
+  register: gpu_unlock_grub_token
+  when: >-
+    not ((gpu_unlock_grub_defaults.content | b64decode) is
+    search('(?m)^GRUB_CMDLINE_LINUX_DEFAULT=\"(?:\\S+\\s+)*gpu_unlock\\.targets=all(?=\\s|\")'))
+
+- name: Rebuild GRUB after adding the GPU unlock target-set token
+  ansible.builtin.command: update-grub
+  when: gpu_unlock_grub_token.changed | default(false)
+
+- name: Record boot-time changes that require a reboot
+  ansible.builtin.set_fact:
+    gpu_unlock_reboot_required: true
+  when: gpu_unlock_revision_changed | bool or gpu_unlock_grub_token.changed | default(false)

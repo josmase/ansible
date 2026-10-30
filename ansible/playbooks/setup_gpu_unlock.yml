@@ -1,0 +1,9 @@
+---
+- name: Enable GPU unlock on intentionally selected hosts
+  hosts: gpu_unlock_hosts
+  become: true
+  gather_facts: true
+  roles:
+    - role: platform/gpu_unlock
+      vars:
+        gpu_unlock_enabled: true

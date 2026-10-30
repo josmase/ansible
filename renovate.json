@@ -1,3 +1,12 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^ansible\\/roles\\/platform\\/gpu_unlock\\/defaults\\/main\\.yml$/"],
+      "matchStrings": ["# renovate: datasource=git-refs depName=(?<depName>[^\\s]+)\\s+gpu_unlock_revision: \\\"(?<currentDigest>[a-f0-9]{40})\\\" # gpu-unlock (?<currentValue>[^\\s]+)"],
+      "datasourceTemplate": "git-refs",
+      "versioningTemplate": "git"
+    }
+  ]
 }
