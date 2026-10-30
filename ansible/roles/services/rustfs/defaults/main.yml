@@ -39,9 +39,18 @@ rustfs_gitlab_buckets:
   - gitlab-packages
   - gitlab-terraform-state
 rustfs_gitlab_backup_buckets: [gitlab-backups-tmp, gitlab-backups]
+# Opt in only after supplying new, distinct credentials in encrypted inventory.
+rustfs_gitlab_backup_identity_enabled: false
+rustfs_gitlab_backup_access_key: ""
+rustfs_gitlab_backup_secret_key: ""
+rustfs_gitlab_backup_policy: gitlab-application-backups
 rustfs_gitlab_policy: gitlab-ci-artifacts-packages
 rustfs_tofu_state_bucket: gitlab-terraform-state
 rustfs_tofu_policy: gitlab-terraform-state
+# Keep shared access until the new Registry identity is verified and cut over.
+rustfs_registry_dedicated_identity_enabled: false
+# Set false only after Registry Secret cutover and verified pulls/pushes.
+rustfs_registry_shared_access_enabled: true
 rustfs_registry_access_key: "{{ rustfs_gitlab_access_key }}"
 rustfs_registry_secret_key: "{{ rustfs_gitlab_secret_key }}"
 rustfs_registry_bucket: linstor-backups

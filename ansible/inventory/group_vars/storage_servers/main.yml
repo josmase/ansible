@@ -53,3 +53,13 @@ rustfs_gitlab_access_key: "{{ vault_rustfs_gitlab_access_key }}"
 rustfs_gitlab_secret_key: "{{ vault_rustfs_gitlab_secret_key }}"
 rustfs_tofu_access_key: "{{ vault_rustfs_tofu_access_key }}"
 rustfs_tofu_secret_key: "{{ vault_rustfs_tofu_secret_key }}"
+
+# Dedicated GitLab Toolbox backup identity; provision before updating Flux Secret.
+rustfs_gitlab_backup_identity_enabled: true
+rustfs_gitlab_backup_access_key: "{{ vault_rustfs_gitlab_backup_access_key }}"
+rustfs_gitlab_backup_secret_key: "{{ vault_rustfs_gitlab_backup_secret_key }}"
+
+# Provision Registry identity before applying the Flux Registry Secret.
+rustfs_registry_dedicated_identity_enabled: true
+rustfs_registry_access_key: "{{ vault_rustfs_registry_access_key }}"
+rustfs_registry_secret_key: "{{ vault_rustfs_registry_secret_key }}"

@@ -11,9 +11,11 @@
       - rustfs_gitlab_access_key != rustfs_tofu_access_key
       - rustfs_registry_access_key | length >= 3
       - rustfs_registry_secret_key | length >= 32
-      - rustfs_registry_access_key == rustfs_gitlab_access_key
-      - rustfs_registry_secret_key == rustfs_gitlab_secret_key
+      - (rustfs_registry_dedicated_identity_enabled | bool) or (rustfs_registry_access_key == rustfs_gitlab_access_key and rustfs_registry_secret_key == rustfs_gitlab_secret_key)
       - rustfs_gitlab_buckets | length > 0
+      - rustfs_registry_rootdirectory == '/gitlab-registry'
+      - rustfs_registry_policy not in [rustfs_gitlab_policy, rustfs_tofu_policy, rustfs_backup_policy, rustfs_backup_v2_policy, rustfs_gitlab_backup_policy]
+      - (rustfs_registry_shared_access_enabled | bool) or (rustfs_registry_dedicated_identity_enabled | bool)
     fail_msg: "Configure the shared GitLab workload/registry identity and separate OpenTofu state credentials."
   no_log: true
 
@@ -30,6 +32,67 @@
     - {name: tofu-state-access-key, value: "{{ rustfs_tofu_access_key }}"}
     - {name: tofu-state-secret-key, value: "{{ rustfs_tofu_secret_key }}"}
   no_log: true
+
+- name: Validate dedicated GitLab backup identity
+  ansible.builtin.assert:
+    that:
+      - rustfs_gitlab_backup_access_key | length >= 3
+      - rustfs_gitlab_backup_secret_key | length >= 32
+      - rustfs_gitlab_backup_access_key not in [rustfs_root_access_key, rustfs_gitlab_access_key, rustfs_tofu_access_key, rustfs_backup_access_key, rustfs_backup_v2_access_key]
+      - rustfs_gitlab_backup_buckets | length > 0
+      - (rustfs_gitlab_backup_buckets | intersect(rustfs_gitlab_buckets + [rustfs_tofu_state_bucket, rustfs_backup_bucket, rustfs_backup_v2_bucket, rustfs_registry_bucket])) | length == 0
+      - rustfs_gitlab_backup_policy not in [rustfs_gitlab_policy, rustfs_tofu_policy, rustfs_registry_policy, rustfs_backup_policy, rustfs_backup_v2_policy]
+    fail_msg: "Configure a distinct GitLab backup identity, policy, and buckets."
+  no_log: true
+  when: rustfs_gitlab_backup_identity_enabled | bool
+
+- name: Install GitLab backup credential files
+  ansible.builtin.copy:
+    content: "{{ item.value }}\n"
+    dest: "{{ rustfs_secret_dir }}/{{ item.name }}"
+    owner: "{{ rustfs_uid }}"
+    group: "{{ rustfs_gid }}"
+    mode: "0400"
+  loop:
+    - {name: gitlab-backup-access-key, value: "{{ rustfs_gitlab_backup_access_key }}"}
+    - {name: gitlab-backup-secret-key, value: "{{ rustfs_gitlab_backup_secret_key }}"}
+  no_log: true
+  when: rustfs_gitlab_backup_identity_enabled | bool
+
+- name: Install GitLab backup bucket policy
+  ansible.builtin.template:
+    src: scoped-storage-policy.json.j2
+    dest: "{{ rustfs_secret_dir }}/gitlab-backup-policy.json"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/bin/python3 -m json.tool %s
+  vars:
+    item:
+      buckets: "{{ rustfs_gitlab_backup_buckets }}"
+  register: rustfs_gitlab_backup_policy_file
+  when: rustfs_gitlab_backup_identity_enabled | bool
+
+- name: Validate dedicated Registry identity
+  ansible.builtin.assert:
+    that:
+      - rustfs_registry_access_key not in [rustfs_root_access_key, rustfs_gitlab_access_key, rustfs_tofu_access_key, rustfs_backup_access_key, rustfs_backup_v2_access_key, rustfs_gitlab_backup_access_key]
+    fail_msg: "Configure a distinct Registry identity."
+  no_log: true
+  when: rustfs_registry_dedicated_identity_enabled | bool
+
+- name: Install dedicated Registry credential files
+  ansible.builtin.copy:
+    content: "{{ item.value }}\n"
+    dest: "{{ rustfs_secret_dir }}/{{ item.name }}"
+    owner: "{{ rustfs_uid }}"
+    group: "{{ rustfs_gid }}"
+    mode: "0400"
+  loop:
+    - {name: registry-access-key, value: "{{ rustfs_registry_access_key }}"}
+    - {name: registry-secret-key, value: "{{ rustfs_registry_secret_key }}"}
+  no_log: true
+  when: rustfs_registry_dedicated_identity_enabled | bool
 
 - name: Install GitLab and OpenTofu bucket policies
   ansible.builtin.template:
@@ -84,8 +147,10 @@
   register: rustfs_gitlab_reconciliation
   changed_when: >-
     'CREATED:' in rustfs_gitlab_reconciliation.stdout
+    or 'REMOVED:' in rustfs_gitlab_reconciliation.stdout
     or rustfs_gitlab_policy_files.changed
     or rustfs_registry_policy_file.changed
+    or (rustfs_gitlab_backup_policy_file.changed | default(false))
   no_log: true
   when: not ansible_check_mode
 
