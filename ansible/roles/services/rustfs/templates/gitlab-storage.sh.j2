@@ -38,7 +38,12 @@ if [ "${1:-reconcile}" = "verify" ]; then
   printf '%s' "$backup_info" | jq -e --arg policy "{{ rustfs_gitlab_backup_policy }}" \
     '.status == "enabled" and .policies == [$policy] and .memberOf == []' >/dev/null
   backup_policy="$(rc admin policy info root "{{ rustfs_gitlab_backup_policy }}" --json)"
-  printf '%s' "$backup_policy" | jq -e --slurpfile desired /bootstrap/gitlab-backup-policy.json '.policy.policy == $desired[0]' >/dev/null
+  printf '%s' "$backup_policy" | jq -e --slurpfile desired /bootstrap/gitlab-backup-policy.json '
+    def normalize:
+      if type == "object" then with_entries(.value |= normalize)
+      elif type == "array" then map(normalize) | sort_by(tojson)
+      else . end;
+    (.policy.policy | normalize) == ($desired[0] | normalize)' >/dev/null
   rc alias set gitlabbackup "$endpoint" "$backup_access" "$backup_secret" \
     --region "{{ rustfs_region }}" --bucket-lookup path >/dev/null
 {% for bucket in rustfs_gitlab_backup_buckets %}
@@ -108,7 +113,12 @@ policies="$(rc admin policy list root --json)"
 printf '%s' "$policies" | jq -e '.policies | type == "array"' >/dev/null
 if printf '%s' "$policies" | jq -e --arg policy "{{ rustfs_gitlab_backup_policy }}" '.policies | index($policy) != null' >/dev/null; then
   policy_info="$(rc admin policy info root "{{ rustfs_gitlab_backup_policy }}" --json)"
-  printf '%s' "$policy_info" | jq -e --slurpfile desired /bootstrap/gitlab-backup-policy.json '.policy.policy == $desired[0]' >/dev/null || {
+  printf '%s' "$policy_info" | jq -e --slurpfile desired /bootstrap/gitlab-backup-policy.json '
+    def normalize:
+      if type == "object" then with_entries(.value |= normalize)
+      elif type == "array" then map(normalize) | sort_by(tojson)
+      else . end;
+    (.policy.policy | normalize) == ($desired[0] | normalize)' >/dev/null || {
     echo "ERROR: existing GitLab backup policy differs from desired policy" >&2; exit 1;
   }
 else
@@ -134,7 +144,12 @@ registry_policies="$(rc admin policy list root --json)"
 printf '%s' "$registry_policies" | jq -e '.policies | type == "array"' >/dev/null
 if printf '%s' "$registry_policies" | jq -e --arg policy "{{ rustfs_registry_policy }}" '.policies | index($policy) != null' >/dev/null; then
   registry_policy_info="$(rc admin policy info root "{{ rustfs_registry_policy }}" --json)"
-  printf '%s' "$registry_policy_info" | jq -e --slurpfile desired /bootstrap/registry-storage-policy.json '.policy.policy == $desired[0]' >/dev/null || {
+  printf '%s' "$registry_policy_info" | jq -e --slurpfile desired /bootstrap/registry-storage-policy.json '
+    def normalize:
+      if type == "object" then with_entries(.value |= normalize)
+      elif type == "array" then map(normalize) | sort_by(tojson)
+      else . end;
+    (.policy.policy | normalize) == ($desired[0] | normalize)' >/dev/null || {
     echo "ERROR: existing Registry policy differs from desired policy" >&2; exit 1;
   }
 else
