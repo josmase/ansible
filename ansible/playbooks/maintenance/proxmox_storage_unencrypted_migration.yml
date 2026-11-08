@@ -1,0 +1,272 @@
+---
+# Securely stage the existing LUKS key on Proxmox and control VM 101's
+# maintenance lifecycle. The disk migration itself runs locally on Proxmox via
+# proxmox_storage_unencrypted_migration.sh, staging one candidate at a time on
+# one other filesystem. No mergerfs package or temporary union mount is used.
+- name: Prepare and control the Proxmox-host storage migration
+  hosts: storage_servers
+  become: true
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    proxmox_mergerfs_migration_phase: status
+    proxmox_mergerfs_proxmox_host: 192.168.1.100
+    proxmox_mergerfs_vmid: '101'
+    proxmox_mergerfs_ssh_config: "{{ lookup('env', 'HOME') }}/.ssh/config"
+    proxmox_mergerfs_keyfile_source: /home/ubuntu/keyfile
+    proxmox_mergerfs_keyfile_target: /run/mergerfs-unencrypted-migration/luks.key
+    proxmox_mergerfs_remote_script: /usr/local/sbin/proxmox_storage_unencrypted_migration.sh
+    proxmox_mergerfs_local_script: "{{ playbook_dir }}/proxmox_storage_unencrypted_migration.sh"
+
+  pre_tasks:
+    - name: Validate requested migration control phase
+      ansible.builtin.assert:
+        that:
+          - proxmox_mergerfs_migration_phase in ['status', 'prepare', 'stage-vault-key', 'stop', 'start']
+        fail_msg: >-
+          Choose status, prepare, stage-vault-key, stop, or start. Disk formatting is available
+          only through the Proxmox host script after its copy verification gate.
+
+  tasks:
+    - name: Read the root-only keyfile from the storage VM
+      ansible.builtin.slurp:
+        src: "{{ proxmox_mergerfs_keyfile_source }}"
+      register: proxmox_mergerfs_keyfile
+      no_log: true
+      when: proxmox_mergerfs_migration_phase == 'prepare'
+
+    - name: Confirm the VM key matches the encrypted inventory value
+      ansible.builtin.assert:
+        that:
+          - (proxmox_mergerfs_keyfile.content | b64decode | trim) == (vault_keyfile | trim)
+        fail_msg: The storage VM keyfile does not match the Ansible vault value.
+      no_log: true
+      when: proxmox_mergerfs_migration_phase == 'prepare'
+
+    - name: Copy the host migration tool to Proxmox
+      ansible.builtin.command:
+        argv:
+          - scp
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "{{ proxmox_mergerfs_local_script }}"
+          - "root@{{ proxmox_mergerfs_proxmox_host }}:{{ proxmox_mergerfs_remote_script }}"
+      delegate_to: localhost
+      become: false
+      changed_when: true
+      when: proxmox_mergerfs_migration_phase == 'prepare'
+
+    - name: Make the host migration tool executable
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "root@{{ proxmox_mergerfs_proxmox_host }}"
+          - chmod
+          - '0700'
+          - "{{ proxmox_mergerfs_remote_script }}"
+      delegate_to: localhost
+      become: false
+      changed_when: true
+      when: proxmox_mergerfs_migration_phase == 'prepare'
+
+    - name: Stream the keyfile into Proxmox tmpfs without storing it on the controller
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "root@{{ proxmox_mergerfs_proxmox_host }}"
+          - "install -d -m 0700 /run/mergerfs-unencrypted-migration && cat > {{ proxmox_mergerfs_keyfile_target }} && chmod 0600 {{ proxmox_mergerfs_keyfile_target }}"
+        stdin: "{{ proxmox_mergerfs_keyfile.content | b64decode }}"
+        stdin_add_newline: false
+      delegate_to: localhost
+      become: false
+      no_log: true
+      changed_when: true
+      when: proxmox_mergerfs_migration_phase == 'prepare'
+
+    - name: Stream the previously verified vaulted key into Proxmox tmpfs
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "root@{{ proxmox_mergerfs_proxmox_host }}"
+          - "install -d -m 0700 /run/mergerfs-unencrypted-migration && cat > {{ proxmox_mergerfs_keyfile_target }} && chmod 0600 {{ proxmox_mergerfs_keyfile_target }}"
+        stdin: "{{ vault_keyfile }}"
+        # Match the trailing newline in the previously verified guest keyfile.
+        stdin_add_newline: true
+      delegate_to: localhost
+      become: false
+      no_log: true
+      changed_when: true
+      when: proxmox_mergerfs_migration_phase == 'stage-vault-key'
+
+    - name: Verify vaulted keyfile is root-only in Proxmox tmpfs
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "root@{{ proxmox_mergerfs_proxmox_host }}"
+          - "test -s {{ proxmox_mergerfs_keyfile_target }} && test \"$(stat -c %u:%a {{ proxmox_mergerfs_keyfile_target }})\" = 0:600"
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      when: proxmox_mergerfs_migration_phase == 'stage-vault-key'
+
+    - name: Verify the staged keyfile has safe ownership and permissions
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "root@{{ proxmox_mergerfs_proxmox_host }}"
+          - test
+          - "$(stat -c %u:%a {{ proxmox_mergerfs_keyfile_target }})"
+          - '='
+          - 0:600
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      when: proxmox_mergerfs_migration_phase == 'prepare'
+
+    - name: Check current VM status and disk inventory on Proxmox
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "root@{{ proxmox_mergerfs_proxmox_host }}"
+          - "{{ proxmox_mergerfs_remote_script }}"
+          - inventory
+      delegate_to: localhost
+      become: false
+      register: proxmox_mergerfs_inventory
+      changed_when: false
+      when: proxmox_mergerfs_migration_phase in ['prepare', 'stage-vault-key', 'stop']
+
+    - name: Report inventory without secret material
+      ansible.builtin.debug:
+        var: proxmox_mergerfs_inventory.stdout_lines
+      when: proxmox_mergerfs_migration_phase in ['prepare', 'stage-vault-key', 'stop']
+
+    - name: Read VM status without requiring the installed migration helper
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "root@{{ proxmox_mergerfs_proxmox_host }}"
+          - qm
+          - status
+          - "{{ proxmox_mergerfs_vmid }}"
+      delegate_to: localhost
+      become: false
+      register: proxmox_mergerfs_inventory
+      changed_when: false
+      when: proxmox_mergerfs_migration_phase == 'status'
+
+    - name: Show VM status
+      ansible.builtin.debug:
+        var: proxmox_mergerfs_inventory.stdout_lines
+      when: proxmox_mergerfs_migration_phase == 'status'
+
+    - name: Confirm VM 101 is running with verified disk mappings
+      ansible.builtin.assert:
+        that:
+          - proxmox_mergerfs_inventory.stdout is search('VM 101: running')
+        fail_msg: VM 101 must be running with the verified raw-disk mapping before shutdown.
+      when: proxmox_mergerfs_migration_phase == 'stop'
+
+    - name: Verify key and host tool are staged before shutdown
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "root@{{ proxmox_mergerfs_proxmox_host }}"
+          - "test -s {{ proxmox_mergerfs_keyfile_target }} && test \"$(stat -c %u:%a {{ proxmox_mergerfs_keyfile_target }})\" = 0:600 && test -x {{ proxmox_mergerfs_remote_script }}"
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      when: proxmox_mergerfs_migration_phase == 'stop'
+
+    - name: Request a clean shutdown of VM 101
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "root@{{ proxmox_mergerfs_proxmox_host }}"
+          - qm
+          - shutdown
+          - "{{ proxmox_mergerfs_vmid }}"
+          - --timeout
+          - '180'
+      delegate_to: localhost
+      become: false
+      register: proxmox_mergerfs_shutdown
+      changed_when: true
+      when: proxmox_mergerfs_migration_phase == 'stop'
+
+    - name: Wait for VM 101 to stop cleanly
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "root@{{ proxmox_mergerfs_proxmox_host }}"
+          - qm
+          - status
+          - "{{ proxmox_mergerfs_vmid }}"
+      delegate_to: localhost
+      become: false
+      register: proxmox_mergerfs_vm_status
+      changed_when: false
+      retries: 36
+      delay: 5
+      until: "'status: stopped' in proxmox_mergerfs_vm_status.stdout"
+      when: proxmox_mergerfs_migration_phase == 'stop'
+
+    - name: Finalize host mounts and start VM 101 after migration
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -F
+          - "{{ proxmox_mergerfs_ssh_config }}"
+          - -o
+          - HostKeyAlgorithms=ssh-ed25519
+          - "root@{{ proxmox_mergerfs_proxmox_host }}"
+          - "{{ proxmox_mergerfs_remote_script }}"
+          - start-vm
+      delegate_to: localhost
+      become: false
+      register: proxmox_mergerfs_start
+      changed_when: true
+      when: proxmox_mergerfs_migration_phase == 'start'
