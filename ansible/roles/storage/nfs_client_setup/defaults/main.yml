@@ -9,4 +9,4 @@
 #   - actimeo=5        : short attribute cache to avoid stale handles
 #   - lookupcache=none : no positive dentry cache -> re-fetch from server
 # Override per-host/group by setting nfs_client_mount_opts.
-nfs_client_mount_opts: "soft,bg,intr,nfsvers=4.1,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none,noatime,nodiratime"
+nfs_client_mount_opts: "soft,bg,intr,nfsvers=4.2,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none,noatime,nodiratime"

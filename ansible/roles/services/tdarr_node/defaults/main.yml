@@ -13,7 +13,7 @@ tdarr_compose_file: "{{ tdarr_compose_dir }}/tdarr-node.yml"
 tdarr_media_mount_point: /mnt/storage/files
 tdarr_media_container_mount_point: /media/files
 tdarr_nfs_source: "storage.local.hejsan.xyz:/MergerFS/files"
-tdarr_nfs_mount_options: "soft,bg,intr,nfsvers=4.1,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none,noatime,nodiratime"
+tdarr_nfs_mount_options: "soft,bg,intr,nfsvers=4.2,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none,noatime,nodiratime"
 tdarr_transcode_cpu_workers: 2
 tdarr_transcode_gpu_workers: 0
 tdarr_healthcheck_cpu_workers: 1
