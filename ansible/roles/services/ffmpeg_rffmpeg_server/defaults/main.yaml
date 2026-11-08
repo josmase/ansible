@@ -6,7 +6,7 @@ ffmpeg_enable_nvenc: "{{ ffmpeg_enable_hardware_accel and ffmpeg_hw_accel_type =
 
 # NFS Configuration
 nfs_mount_point: /mnt/jellyfin-cache
-nfs_mount_src: "storage.local.hejsan.xyz:/kubernetes/jellyfin-cache"
+nfs_mount_src: "storage.local.hejsan.xyz:/MergerFS/kubernetes/jellyfin-cache"
 nfs_mount_opts: "soft,lock,vers=4"
 
 # Jellyfin User

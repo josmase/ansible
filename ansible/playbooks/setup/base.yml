@@ -81,6 +81,6 @@
     - nfs
   vars:
     nfs_mount_point: "{{ system.storage_dir }}"
-    nfs_mount_src: "storage.local.hejsan.xyz:/"
+    nfs_mount_src: "storage.local.hejsan.xyz:/MergerFS"
   roles:
     - storage/nfs_client_setup

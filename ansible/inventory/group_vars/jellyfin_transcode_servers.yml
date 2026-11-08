@@ -11,10 +11,10 @@ nvidia_driver_version: "535"
 # soft,bg,intr,nfsvers=4.1,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none
 nfs_mounts:
   - mount_point: /mnt/jellyfin-cache
-    nfs_src: "storage.local.hejsan.xyz:/kubernetes/jellyfin-cache"
+    nfs_src: "storage.local.hejsan.xyz:/MergerFS/kubernetes/jellyfin-cache"
     opts: "soft,bg,intr,nfsvers=4.1,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none,noatime,nodiratime"
   - mount_point: /mnt/storage/files
-    nfs_src: "storage.local.hejsan.xyz:/files"
+    nfs_src: "storage.local.hejsan.xyz:/MergerFS/files"
     opts: "soft,bg,intr,nfsvers=4.1,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none,noatime,nodiratime"
 
 # Jellyfin User Configuration
