@@ -19,7 +19,7 @@ resource "cloudflare_record" "local" {
     "*.local"             = "192.168.1.181"
     "media.local"         = "192.168.1.105"
     "proxmox.local"       = "192.168.1.100"
-    "storage.local"       = "192.168.1.102"
+    "storage.local"       = "192.168.1.198"
     "ansible.local"       = "192.168.1.101"
     "gpu.local"           = "192.168.1.119"
     "*.staging.local"     = "192.168.1.182"

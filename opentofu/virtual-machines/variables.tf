@@ -55,3 +55,44 @@ variable "media_vm" {
   type    = object({ ip = string, name = string, memory = number, cores = number })
   default = { ip = "192.168.1.105", name = "media", memory = 4096, cores = 5 }
 }
+
+variable "storage_vm_id" {
+  description = "Proxmox VM ID retained from the legacy storage server."
+  type        = number
+  default     = 101
+}
+
+variable "storage_vm_name" {
+  type    = string
+  default = "storage"
+}
+
+variable "storage_vm_memory" {
+  description = "Dedicated memory for OMV, in MiB."
+  type        = number
+  default     = 8192
+}
+
+variable "storage_vm_cores" {
+  type    = number
+  default = 4
+}
+
+variable "storage_vm_os_disk_datastore" {
+  description = "SSD/NVMe-backed Proxmox datastore for the OMV system disk."
+  type        = string
+  default     = null
+  validation {
+    condition     = var.storage_vm_os_disk_datastore != null
+    error_message = "Set storage_vm_os_disk_datastore for the OMV system disk."
+  }
+}
+
+variable "storage_vm_os_disk_gib" {
+  type    = number
+  default = 64
+  validation {
+    condition     = var.storage_vm_os_disk_gib >= 32
+    error_message = "Allocate at least 32 GiB for the OMV system disk."
+  }
+}

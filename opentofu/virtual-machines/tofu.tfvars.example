@@ -4,3 +4,6 @@ proxmox_password = "REPLACE_ME"
 ubuntu_image_sha256 = "612b2c0cc1bc413a6cb8c38fd611794caf0f2b436c50013d8b3794db12ad7354"
 image_storage = "local"
 ssh_public_key = "ssh-rsa REPLACE_ME"
+
+# OMV storage VM system disk datastore.
+storage_vm_os_disk_datastore   = "REPLACE_WITH_SSD_NVME_DATASTORE"

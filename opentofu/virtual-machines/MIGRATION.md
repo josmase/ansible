@@ -5,6 +5,9 @@ They manage masters 201–203, workers 204–206, and media VM 105.
 Workers 204, 205, and 206 share the 250 GiB boot / 750 GiB LINSTOR data layout.
 The masters are allocated 7 GiB each; workers are allocated 13 GiB each.
 
+The OMV replacement for storage VM 101 and its HBA passthrough are documented
+in [STORAGE_OMV_MIGRATION.md](STORAGE_OMV_MIGRATION.md).
+
 ## Provisioning model
 
 The configuration imports the current Ubuntu Noble cloud image directly into

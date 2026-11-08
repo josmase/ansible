@@ -130,3 +130,65 @@ resource "proxmox_virtual_environment_vm" "media" {
     ]
   }
 }
+
+# The two SAS controllers expose the storage drives directly to OMV.
+resource "proxmox_virtual_environment_vm" "storage" {
+  node_name = var.proxmox_node
+  vm_id     = var.storage_vm_id
+  name      = var.storage_vm_name
+  machine   = "q35"
+
+  memory { dedicated = var.storage_vm_memory }
+
+  cpu {
+    cores = var.storage_vm_cores
+    type  = "host"
+  }
+
+  scsi_hardware = "virtio-scsi-pci"
+  boot_order    = ["scsi0"]
+  operating_system { type = "l26" }
+
+  # OMV system disk; the data drives are attached through the HBAs below.
+  disk {
+    interface    = "scsi0"
+    datastore_id = var.storage_vm_os_disk_datastore
+    size         = var.storage_vm_os_disk_gib
+    file_format  = "raw"
+    backup       = true
+    ssd          = true
+    discard      = "on"
+  }
+
+  # SeaBIOS cannot load the Avago option ROM; the guest does not boot from it.
+  hostpci {
+    device = "hostpci0"
+    id     = "0000:0b:00.0"
+    pcie   = true
+    rombar = false
+  }
+
+  hostpci {
+    device = "hostpci1"
+    id     = "0000:0d:00.0"
+    pcie   = true
+    rombar = false
+  }
+
+  network_device {
+    bridge = "vmbr0"
+    model  = "virtio"
+  }
+
+  serial_device { device = "socket" }
+  on_boot = true
+  started = true
+
+  startup {
+    order      = "1"
+    up_delay   = "10"
+    down_delay = "10"
+  }
+
+  lifecycle { prevent_destroy = true }
+}

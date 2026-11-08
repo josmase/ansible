@@ -29,7 +29,7 @@ merger_fs_mnt_branches:
   - /mnt/drives/rebuild_jehb7zbn
 
 # RustFS S3 backup target. Secrets remain in the encrypted all-group vault.
-rustfs_bind_address: 192.168.1.102
+rustfs_bind_address: 192.168.1.198
 rustfs_data_dir: /mnt/storage/kubernetes/rustfs
 rustfs_backup_bucket: linstor-backups
 rustfs_backup_bucket_quota: 1T
