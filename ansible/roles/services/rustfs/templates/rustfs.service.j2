@@ -4,8 +4,8 @@ Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target
 RequiresMountsFor={{ rustfs_required_mount }}
-BindsTo=mnt-storage.mount
-After=mnt-storage.mount
+BindsTo={{ rustfs_mount_unit }}
+After={{ rustfs_mount_unit }}
 
 [Service]
 Type=simple

@@ -5,11 +5,13 @@ rustfs_compose_dir: /opt/rustfs
 rustfs_secret_dir: /etc/rustfs
 rustfs_data_dir: /mnt/storage/kubernetes/rustfs
 rustfs_bind_address: 127.0.0.1
+rustfs_bind_hostname: ""
 rustfs_api_port: 9000
 rustfs_console_port: 9001
 rustfs_uid: 10001
 rustfs_gid: 10001
 rustfs_required_mount: /mnt/storage
+rustfs_mount_unit: mnt-storage.mount
 rustfs_required_fstype: fuse.mergerfs
 rustfs_minimum_free_bytes: 1099511627776
 rustfs_region: us-east-1

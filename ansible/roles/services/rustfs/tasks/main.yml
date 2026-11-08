@@ -1,4 +1,34 @@
 ---
+- name: Resolve RustFS bind hostname on the storage host
+  ansible.builtin.command:
+    argv: [getent, ahostsv4, "{{ rustfs_bind_hostname }}"]
+  register: rustfs_hostname_lookup
+  changed_when: false
+  check_mode: false
+  when: rustfs_bind_hostname | length > 0
+
+- name: Read the storage host's local addresses
+  ansible.builtin.command:
+    argv: [hostname, -I]
+  register: rustfs_local_addresses
+  changed_when: false
+  check_mode: false
+  when: rustfs_bind_hostname | length > 0
+
+- name: Bind RustFS to a local address resolved from the hostname
+  ansible.builtin.set_fact:
+    rustfs_bind_address: >-
+      {{ (rustfs_hostname_lookup.stdout_lines | map('split') | map('first') | unique | list
+          | intersect(rustfs_local_addresses.stdout.split()) | first) | default('') }}
+  when: rustfs_bind_hostname | length > 0
+
+- name: Check that the RustFS hostname resolves to a local address
+  ansible.builtin.assert:
+    that:
+      - rustfs_bind_address | length > 0
+    fail_msg: "RustFS bind hostname must resolve to an IPv4 address assigned to this host."
+  when: rustfs_bind_hostname | length > 0
+
 - name: Validate required RustFS configuration
   ansible.builtin.assert:
     that:
