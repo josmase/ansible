@@ -16,24 +16,26 @@ provider "cloudflare" {
 
 resource "cloudflare_record" "local" {
   for_each = {
-    "*.local"             = "192.168.1.181"
-    "media.local"         = "192.168.1.105"
-    "proxmox.local"       = "192.168.1.100"
-    "storage.local"       = "192.168.1.198"
-    "ansible.local"       = "192.168.1.101"
-    "gpu.local"           = "192.168.1.119"
-    "*.staging.local"     = "192.168.1.182"
-    "rustdesk.local"      = "192.168.1.181"
-    "homeassistant.local" = "192.168.1.45"
+    "*.local"                  = "192.168.1.181"
+    # Canonical LAN target for the Felis Kind trial on the developer workstation.
+    "felis-trial-origin.local" = "192.168.1.7"
+    "media.local"              = "192.168.1.105"
+    "proxmox.local"            = "192.168.1.100"
+    "storage.local"            = "192.168.1.198"
+    "ansible.local"            = "192.168.1.101"
+    "gpu.local"                = "192.168.1.119"
+    "*.staging.local"          = "192.168.1.182"
+    "rustdesk.local"           = "192.168.1.181"
+    "homeassistant.local"      = "192.168.1.45"
 
     # Kubernetes nodes (k3s cluster members)
-    "kubernetes-201.local" = "192.168.1.201"
-    "kubernetes-202.local" = "192.168.1.202"
-    "kubernetes-203.local" = "192.168.1.203"
-    "kubernetes-204.local" = "192.168.1.204"
-    "kubernetes-205.local" = "192.168.1.205"
-    "kubernetes-206.local" = "192.168.1.206"
-    "kubernetes-214.local" = "192.168.1.214"
+    "kubernetes-201.local"     = "192.168.1.201"
+    "kubernetes-202.local"     = "192.168.1.202"
+    "kubernetes-203.local"     = "192.168.1.203"
+    "kubernetes-204.local"     = "192.168.1.204"
+    "kubernetes-205.local"     = "192.168.1.205"
+    "kubernetes-206.local"     = "192.168.1.206"
+    "kubernetes-214.local"     = "192.168.1.214"
     # Optional: uniform name for the GPU node (also reachable as gpu.local)
     # "kubernetes-119.local" = "192.168.1.119"
   }
@@ -41,6 +43,23 @@ resource "cloudflare_record" "local" {
   name    = each.key
   type    = "A"
   content = each.value
+  proxied = false
+}
+
+# DNS-only CNAMEs for the Felis development trial, including dynamic server
+# subdomains under the wildcard.
+resource "cloudflare_record" "felis_trial_cnames" {
+  for_each = toset([
+    "*.development.local",
+    "development.local",
+    "console.development.local",
+    "op.console.development.local",
+    "trial.development.local",
+  ])
+  zone_id = var.zone_id
+  name    = each.key
+  type    = "CNAME"
+  content = "felis-trial-origin.local.hejsan.xyz"
   proxied = false
 }
 
