@@ -19,8 +19,10 @@ external 3080 host in `inventory/group_vars/tdarr_external_nodes.yml`.
 
 ## Media mount
 
-The role mounts the OMV NFS export `storage.local.hejsan.xyz:/files` at
-`/mnt/storage/files` and exposes it to the container at `/media/files`.
+The role mounts `storage.local.hejsan.xyz:/MergerFS/files` at
+`/mnt/storage/files` and exposes it to the container at `/media/files`. OMV's
+NFSv4 root export contains `MergerFS/files`; it does not export `/files` at the
+NFS root. The default uses NFSv4.1, matching the working OMV export.
 Override `tdarr_nfs_source` if another host uses a different export.
 
 ## Paths and credentials
