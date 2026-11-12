@@ -76,6 +76,20 @@
   register: rustfs_gitlab_backup_policy_file
   when: rustfs_gitlab_backup_identity_enabled | bool
 
+- name: Render the previous GitLab backup policy for a safe one-step upgrade
+  ansible.builtin.template:
+    src: scoped-storage-policy.json.j2
+    dest: "{{ rustfs_secret_dir }}/gitlab-backup-policy-previous.json"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/bin/python3 -m json.tool %s
+  vars:
+    item:
+      buckets: "{{ rustfs_gitlab_backup_buckets }}"
+  register: rustfs_gitlab_backup_previous_policy_file
+  when: rustfs_gitlab_backup_identity_enabled | bool
+
 - name: Validate dedicated Registry identity
   ansible.builtin.assert:
     that:
@@ -154,6 +168,7 @@
     or rustfs_gitlab_policy_files.changed
     or rustfs_registry_policy_file.changed
     or (rustfs_gitlab_backup_policy_file.changed | default(false))
+    or (rustfs_gitlab_backup_previous_policy_file.changed | default(false))
   no_log: true
   when: not ansible_check_mode
 

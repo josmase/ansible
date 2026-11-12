@@ -114,6 +114,14 @@ users="$(rc admin user list root --json)"
 printf '%s' "$users" | jq -e '.users | type == "array"' >/dev/null
 policies="$(rc admin policy list root --json)"
 printf '%s' "$policies" | jq -e '.policies | type == "array"' >/dev/null
+backup_user_exists=false
+if printf '%s' "$users" | jq -e --arg key "$backup_access" '.users | any(.accessKey == $key)' >/dev/null; then
+  printf '%s' "$users" | jq -e --arg key "$backup_access" --arg policy "{{ rustfs_gitlab_backup_policy }}" \
+    '[.users[] | select(.accessKey == $key) | select(.status == "enabled" and .policies == [$policy] and .memberOf == [])] | length == 1' >/dev/null || {
+      echo "ERROR: existing GitLab backup user has unexpected status or permissions" >&2; exit 1;
+    }
+  backup_user_exists=true
+fi
 if printf '%s' "$policies" | jq -e --arg policy "{{ rustfs_gitlab_backup_policy }}" '.policies | index($policy) != null' >/dev/null; then
   policy_info="$(rc admin policy info root "{{ rustfs_gitlab_backup_policy }}" --json)"
   printf '%s' "$policy_info" | jq -e --slurpfile desired /bootstrap/gitlab-backup-policy.json '
@@ -122,18 +130,22 @@ if printf '%s' "$policies" | jq -e --arg policy "{{ rustfs_gitlab_backup_policy 
       elif type == "array" then map(normalize) | sort_by(tojson)
       else . end;
     (.policy.policy | normalize) == ($desired[0] | normalize)' >/dev/null || {
-    echo "ERROR: existing GitLab backup policy differs from desired policy" >&2; exit 1;
+    printf '%s' "$policy_info" | jq -e --slurpfile previous /bootstrap/gitlab-backup-policy-previous.json '
+      def normalize:
+        if type == "object" then with_entries(.value |= normalize)
+        elif type == "array" then map(normalize) | sort_by(tojson)
+        else . end;
+      (.policy.policy | normalize) == ($previous[0] | normalize)' >/dev/null || {
+      echo "ERROR: existing GitLab backup policy matches neither the approved previous nor desired policy" >&2; exit 1;
+    }
+    rc admin policy create root "{{ rustfs_gitlab_backup_policy }}" /bootstrap/gitlab-backup-policy.json >/dev/null
+    echo "UPDATED:gitlab-backup-policy"
   }
 else
   rc admin policy create root "{{ rustfs_gitlab_backup_policy }}" /bootstrap/gitlab-backup-policy.json >/dev/null
   echo "CREATED:gitlab-backup-policy"
 fi
-if printf '%s' "$users" | jq -e --arg key "$backup_access" '.users | any(.accessKey == $key)' >/dev/null; then
-  printf '%s' "$users" | jq -e --arg key "$backup_access" --arg policy "{{ rustfs_gitlab_backup_policy }}" \
-    '[.users[] | select(.accessKey == $key) | select(.status == "enabled" and .policies == [$policy] and .memberOf == [])] | length == 1' >/dev/null || {
-      echo "ERROR: existing GitLab backup user has unexpected status or permissions" >&2; exit 1;
-    }
-else
+if [ "$backup_user_exists" = false ]; then
   rc admin user add root "$backup_access" "$backup_secret" >/dev/null
   rc admin policy attach root "{{ rustfs_gitlab_backup_policy }}" --user "$backup_access" >/dev/null
   echo "CREATED:gitlab-backup-user"
