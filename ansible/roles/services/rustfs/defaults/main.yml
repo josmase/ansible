@@ -41,6 +41,9 @@ rustfs_gitlab_buckets:
   - gitlab-packages
   - gitlab-terraform-state
 rustfs_gitlab_backup_buckets: [gitlab-backups-tmp, gitlab-backups]
+# GitLab's supported backup utility reads object data into the archive but
+# writes archives only to the dedicated backup buckets.
+rustfs_gitlab_backup_source_buckets: "{{ rustfs_gitlab_buckets }}"
 # Opt in only after supplying new, distinct credentials in encrypted inventory.
 rustfs_gitlab_backup_identity_enabled: false
 rustfs_gitlab_backup_access_key: ""

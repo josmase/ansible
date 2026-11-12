@@ -41,6 +41,8 @@
       - rustfs_gitlab_backup_access_key not in [rustfs_root_access_key, rustfs_gitlab_access_key, rustfs_tofu_access_key, rustfs_backup_access_key, rustfs_backup_v2_access_key]
       - rustfs_gitlab_backup_buckets | length > 0
       - (rustfs_gitlab_backup_buckets | intersect(rustfs_gitlab_buckets + [rustfs_tofu_state_bucket, rustfs_backup_bucket, rustfs_backup_v2_bucket, rustfs_registry_bucket])) | length == 0
+      - rustfs_gitlab_backup_source_buckets | length > 0
+      - (rustfs_gitlab_backup_source_buckets | difference(rustfs_gitlab_buckets)) | length == 0
       - rustfs_gitlab_backup_policy not in [rustfs_gitlab_policy, rustfs_tofu_policy, rustfs_registry_policy, rustfs_backup_policy, rustfs_backup_v2_policy]
     fail_msg: "Configure a distinct GitLab backup identity, policy, and buckets."
   no_log: true
@@ -61,7 +63,7 @@
 
 - name: Install GitLab backup bucket policy
   ansible.builtin.template:
-    src: scoped-storage-policy.json.j2
+    src: gitlab-backup-policy.json.j2
     dest: "{{ rustfs_secret_dir }}/gitlab-backup-policy.json"
     owner: root
     group: root
@@ -70,6 +72,7 @@
   vars:
     item:
       buckets: "{{ rustfs_gitlab_backup_buckets }}"
+      read_buckets: "{{ rustfs_gitlab_backup_source_buckets }}"
   register: rustfs_gitlab_backup_policy_file
   when: rustfs_gitlab_backup_identity_enabled | bool
 

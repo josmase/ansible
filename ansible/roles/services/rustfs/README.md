@@ -57,19 +57,23 @@ A restricted DynamicUser systemd service publishes `__protection/capacity.json` 
 ## Dedicated GitLab Toolbox backup identity
 
 `rustfs_gitlab_backup_identity_enabled` provisions a separate user and the
-`gitlab-application-backups` policy scoped to `rustfs_gitlab_backup_buckets`.
+`gitlab-application-backups` policy. It has full backup operations only on
+`rustfs_gitlab_backup_buckets` and read/list access only on
+`rustfs_gitlab_backup_source_buckets` (the five Rails object buckets by
+default). It cannot write or delete source objects.
 The role creates missing buckets additively and never resets an existing user's
 secret. Credentials must be stored in encrypted inventory and must match the
 Flux-managed `gitlab-backup-object-storage` Secret. The assertion rejects
 reused access keys, policy names, and overlapping workload or LINSTOR buckets.
-The role verifies the new identity can list each backup bucket. Verify denied
-access and the absence of additional policy attachments separately.
+The role verifies the identity can list each backup and source bucket, and
+checks for the exact single-policy attachment. The rendered policy is compared
+to the live RustFS policy before reconciliation completes.
 
-Deploy the Ansible change first, including the encrypted inventory variables,
-and verify access before reconciling the corresponding Flux Secret. Keep the
-old Secret available for rollback, and do not enable a backup schedule until
-issue #5's recovery and operational checks pass. Disabling this feature leaves
-the created identity, policy, and buckets in place; it does not revoke access.
+Apply and verify the additive Ansible policy before relying on GitLab backups;
+the existing Secret and credentials remain unchanged. Do not enable a backup
+schedule until issue #5's recovery and operational checks pass. Disabling this
+feature leaves the created identity, policy, and buckets in place; it does not
+revoke access.
 
 The reconciliation uses the pinned `rustfs/rc` image's `jq` and JSON admin
 user and policy listings. Existing users must be enabled, have no group

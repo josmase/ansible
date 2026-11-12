@@ -49,6 +49,9 @@ if [ "${1:-reconcile}" = "verify" ]; then
 {% for bucket in rustfs_gitlab_backup_buckets %}
   rc bucket list "gitlabbackup/{{ bucket }}" >/dev/null
 {% endfor %}
+{% for bucket in rustfs_gitlab_backup_source_buckets %}
+  rc bucket list "gitlabbackup/{{ bucket }}" >/dev/null
+{% endfor %}
 {% endif %}
   rc admin policy info root "{{ rustfs_gitlab_policy }}" >/dev/null
   rc admin policy info root "{{ rustfs_tofu_policy }}" >/dev/null
