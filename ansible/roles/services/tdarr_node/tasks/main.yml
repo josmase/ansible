@@ -5,8 +5,60 @@
       - tdarr_server_url | length > 0
       - tdarr_node_name | length > 0
       - tdarr_api_key | length > 0
+      - tdarr_docker_mode in ['rootful', 'rootless']
       - tdarr_media_mount_point == '/mnt/storage/files'
-    fail_msg: "Tdarr Node variables are incomplete; provide tdarr_api_key via Ansible Vault and keep the media mount path unchanged."
+    fail_msg: "Tdarr Node variables are incomplete or tdarr_docker_mode is invalid; provide tdarr_api_key via Ansible Vault, select rootful or rootless Docker, and keep the media mount path unchanged."
+
+- name: Check whether the rootless Docker user should persist across reboots
+  ansible.builtin.command:
+    argv:
+      - loginctl
+      - show-user
+      - "{{ tdarr_docker_user }}"
+      - --property=Linger
+      - --value
+  register: tdarr_rootless_linger
+  changed_when: false
+  when: tdarr_docker_mode == 'rootless'
+
+- name: Enable lingering for the rootless Docker user
+  ansible.builtin.command:
+    argv:
+      - loginctl
+      - enable-linger
+      - "{{ tdarr_docker_user }}"
+  when:
+    - tdarr_docker_mode == 'rootless'
+    - tdarr_rootless_linger.stdout | trim != 'yes'
+
+- name: Ensure the rootless Docker user service is enabled and running
+  ansible.builtin.systemd_service:
+    name: docker.service
+    scope: user
+    enabled: true
+    state: started
+  become: "{{ tdarr_docker_user != (ansible_user | default(tdarr_docker_user)) }}"
+  become_user: "{{ tdarr_docker_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ tdarr_docker_uid }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ tdarr_docker_uid }}/bus"
+  when: tdarr_docker_mode == 'rootless'
+
+- name: Check the rootless Docker socket
+  ansible.builtin.stat:
+    path: "{{ tdarr_docker_socket }}"
+  become: "{{ tdarr_docker_user != (ansible_user | default(tdarr_docker_user)) }}"
+  become_user: "{{ tdarr_docker_user }}"
+  register: tdarr_rootless_docker_socket
+  when: tdarr_docker_mode == 'rootless'
+
+- name: Require an available rootless Docker socket
+  ansible.builtin.assert:
+    that:
+      - tdarr_rootless_docker_socket.stat.exists
+      - tdarr_rootless_docker_socket.stat.issock
+    fail_msg: "Rootless Docker socket is unavailable at {{ tdarr_docker_socket }}."
+  when: tdarr_docker_mode == 'rootless'
 
 - name: Install NFS client prerequisite
   ansible.builtin.package:
@@ -25,7 +77,14 @@
     - "{{ tdarr_data_dir }}/configs"
     - "{{ tdarr_data_dir }}/logs"
     - "{{ tdarr_cache_dir }}"
-    - "{{ tdarr_compose_dir }}"
+
+- name: Ensure the Tdarr compose directory is accessible to Docker
+  ansible.builtin.file:
+    path: "{{ tdarr_compose_dir }}"
+    state: directory
+    owner: "{{ tdarr_docker_user }}"
+    group: "{{ tdarr_docker_group }}"
+    mode: '0750'
 
 - name: Mount the shared media NFS export
   ansible.posix.mount:
@@ -46,8 +105,8 @@
   ansible.builtin.template:
     src: tdarr-node.yml.j2
     dest: "{{ tdarr_compose_file }}"
-    owner: "{{ tdarr_puid }}"
-    group: "{{ tdarr_pgid }}"
+    owner: "{{ tdarr_docker_user }}"
+    group: "{{ tdarr_docker_group }}"
     mode: '0640'
   register: tdarr_compose
 
@@ -58,15 +117,25 @@
       - "{{ tdarr_compose_file | basename }}"
     state: present
     pull: missing
+    docker_host: "{{ tdarr_docker_host }}"
+  become: "{{ tdarr_docker_mode == 'rootful' or tdarr_docker_user != (ansible_user | default(tdarr_docker_user)) }}"
+  become_user: "{{ tdarr_docker_user if tdarr_docker_mode == 'rootless' else 'root' }}"
+  environment:
+    DOCKER_HOST: "{{ tdarr_docker_host }}"
 
 - name: Verify the Tdarr Node container is running
   community.docker.docker_container_info:
     name: tdarr_node
+    docker_host: "{{ tdarr_docker_host }}"
   register: tdarr_container_info
   retries: 5
   delay: 5
   until: tdarr_container_info.exists and tdarr_container_info.container.State.Running
   changed_when: false
+  become: "{{ tdarr_docker_mode == 'rootful' or tdarr_docker_user != (ansible_user | default(tdarr_docker_user)) }}"
+  become_user: "{{ tdarr_docker_user if tdarr_docker_mode == 'rootless' else 'root' }}"
+  environment:
+    DOCKER_HOST: "{{ tdarr_docker_host }}"
 
 - name: Report Tdarr Node deployment
   ansible.builtin.debug:

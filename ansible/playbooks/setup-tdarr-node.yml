@@ -4,6 +4,7 @@
   become: true
   roles:
     - role: container/docker_setup
+      when: (tdarr_docker_mode | default('rootful')) == 'rootful'
       vars:
         docker_setup_enabled: true
         docker_nfs_enabled: false
