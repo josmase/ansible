@@ -6,13 +6,22 @@ tdarr_api_key: ""
 tdarr_timezone: "{{ system.timezone | default('Europe/Stockholm') }}"
 tdarr_puid: "{{ user.uid | default(1000) }}"
 tdarr_pgid: "{{ user.gid | default(1000) }}"
-tdarr_data_dir: "{{ docker_data_dir | default('/opt/docker/data') }}/tdarr-node"
-tdarr_cache_dir: "{{ docker_storage_dir | default('/opt/docker/storage') }}/tdarr-transcode"
-tdarr_compose_dir: "{{ docker_compose_dir | default('/opt/docker/compose') }}"
+tdarr_docker_mode: rootful
+tdarr_docker_user: "{{ ansible_user | default('root') }}"
+tdarr_docker_uid: 1000
+tdarr_docker_group: "{{ tdarr_docker_user }}"
+tdarr_docker_socket: "/run/user/{{ tdarr_docker_uid }}/docker.sock"
+tdarr_docker_host: >-
+  {{ 'unix://' ~ tdarr_docker_socket
+     if tdarr_docker_mode == 'rootless'
+     else 'unix:///var/run/docker.sock' }}
+tdarr_data_dir: "{{ docker_data_dir | default('/opt/appdata') }}/tdarr-node"
+tdarr_cache_dir: "{{ docker_storage_dir | default('/mnt/storage') }}/tdarr-transcode"
+tdarr_compose_dir: "{{ docker_compose_dir | default('/opt/docker') }}"
 tdarr_compose_file: "{{ tdarr_compose_dir }}/tdarr-node.yml"
 tdarr_media_mount_point: /mnt/storage/files
 tdarr_media_container_mount_point: /media/files
-tdarr_nfs_source: "storage.local.hejsan.xyz:/MergerFS/files"
+tdarr_nfs_source: "storage.local.hejsan.xyz:/files"
 tdarr_nfs_mount_options: "soft,bg,intr,nfsvers=4.2,proto=tcp,timeo=30,retrans=3,actimeo=5,lookupcache=none,noatime,nodiratime"
 tdarr_transcode_cpu_workers: 2
 tdarr_transcode_gpu_workers: 0

@@ -1,4 +1,8 @@
 ---
+tdarr_docker_mode: rootless
+tdarr_docker_user: jonas
+tdarr_docker_uid: 1000
+
 tdarr_api_key: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           61623132636461643331346334616266653335333266616538323239663833383366346366633335
