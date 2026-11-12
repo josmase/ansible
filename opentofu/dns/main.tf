@@ -14,6 +14,11 @@ provider "cloudflare" {
   api_token = var.api_token
 }
 
+locals {
+  # Canonical IPv4 address for the OpenMediaVault storage VM and RustFS.
+  storage_vm_ipv4 = "192.168.1.198"
+}
+
 resource "cloudflare_record" "local" {
   for_each = {
     "*.local"                  = "192.168.1.181"
@@ -21,7 +26,7 @@ resource "cloudflare_record" "local" {
     "felis-trial-origin.local" = "192.168.1.7"
     "media.local"              = "192.168.1.105"
     "proxmox.local"            = "192.168.1.100"
-    "storage.local"            = "192.168.1.198"
+    "storage.local"            = local.storage_vm_ipv4
     "ansible.local"            = "192.168.1.101"
     "gpu.local"                = "192.168.1.119"
     "*.staging.local"          = "192.168.1.182"
