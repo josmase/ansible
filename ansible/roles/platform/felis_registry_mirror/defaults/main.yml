@@ -1,0 +1,9 @@
+---
+# Felis runtime images are addressed by this in-cluster name. K3s containerd
+# needs a host-reachable endpoint because it pulls images before Pod DNS exists.
+felis_registry_mirror_name: registry.felis.svc:5000
+felis_registry_mirror_endpoint: http://192.168.1.182:5000
+felis_registry_mirror_config_path: /etc/rancher/k3s/registries.yaml
+
+# Existing inventory selects k3s on servers and k3s-node on agents.
+felis_registry_mirror_service_name: "{{ k3s_service_name | default('k3s-node') }}"
