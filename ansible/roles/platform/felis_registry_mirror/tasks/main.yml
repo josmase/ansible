@@ -31,6 +31,14 @@
            recursive=True
          ) }}
 
+- name: Ensure the K3s configuration directory exists
+  ansible.builtin.file:
+    path: "{{ felis_registry_mirror_config_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Configure K3s to pull Felis images through the node-reachable registry
   ansible.builtin.copy:
     content: "{{ felis_registry_mirror_desired | to_nice_yaml(indent=2, sort_keys=False) }}"
