@@ -1,0 +1,5 @@
+---
+- name: Restart K3s for Felis registry mirror
+  ansible.builtin.systemd:
+    name: "{{ felis_registry_mirror_service_name }}"
+    state: restarted

@@ -1,0 +1,42 @@
+---
+- name: Validate the Felis registry mirror endpoint
+  ansible.builtin.assert:
+    that:
+      - felis_registry_mirror_name | length > 0
+      - felis_registry_mirror_endpoint is match('^https?://')
+    fail_msg: Set a valid Felis registry name and HTTP(S) mirror endpoint.
+
+- name: Inspect existing K3s registry configuration
+  ansible.builtin.stat:
+    path: "{{ felis_registry_mirror_config_path }}"
+  register: felis_registry_mirror_config_stat
+
+- name: Read existing K3s registry configuration
+  ansible.builtin.slurp:
+    src: "{{ felis_registry_mirror_config_path }}"
+  register: felis_registry_mirror_config_file
+  when: felis_registry_mirror_config_stat.stat.exists
+
+- name: Merge Felis mirror into existing K3s registry configuration
+  ansible.builtin.set_fact:
+    felis_registry_mirror_current: >-
+      {{ (felis_registry_mirror_config_file.content | b64decode | from_yaml | default({}, true))
+         if felis_registry_mirror_config_stat.stat.exists else {} }}
+
+- name: Build desired K3s registry configuration
+  ansible.builtin.set_fact:
+    felis_registry_mirror_desired: >-
+      {{ felis_registry_mirror_current | combine(
+           {'mirrors': {felis_registry_mirror_name: {'endpoint': [felis_registry_mirror_endpoint]}}},
+           recursive=True
+         ) }}
+
+- name: Configure K3s to pull Felis images through the node-reachable registry
+  ansible.builtin.copy:
+    content: "{{ felis_registry_mirror_desired | to_nice_yaml(indent=2, sort_keys=False) }}"
+    dest: "{{ felis_registry_mirror_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: Restart K3s for Felis registry mirror
