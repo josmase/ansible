@@ -64,3 +64,5 @@ rustfs_registry_policy: gitlab-container-registry
 
 rustfs_capacity_report_key: __protection/capacity.json
 rustfs_capacity_report_interval: 5min
+rustfs_capacity_report_request_timeout: 60
+rustfs_capacity_report_service_timeout: 120

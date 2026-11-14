@@ -54,6 +54,8 @@ identities in place.
 
 A restricted DynamicUser systemd service publishes `__protection/capacity.json` in the dedicated v2 bucket every five minutes. It verifies the required mergerfs mount and reports available bytes and a timestamp. Systemd supplies only the v2 bucket credentials through `LoadCredential`; no root S3 identity is used. The protection gate must reject missing or stale reports and subtract the measured additional retained-backup forecast before applying the absolute free-space floor. This report is a monitoring object, outside LINSTOR backup retention.
 
+Bucket-list requests use a 60-second timeout and the one-shot service allows 120 seconds for a complete report. Refresh only this producer with `ansible-playbook playbooks/setup/rustfs.yml --limit storage.local.hejsan.xyz --tags rustfs_capacity_report`; the report freshness gate remains fail-closed at ten minutes.
+
 ## Dedicated GitLab Toolbox backup identity
 
 `rustfs_gitlab_backup_identity_enabled` provisions a separate user and the

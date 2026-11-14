@@ -1,6 +1,6 @@
 ---
 - name: Resolve RustFS bind hostname on the storage host
-  tags: [rustfs_gitlab_storage]
+  tags: [rustfs_gitlab_storage, rustfs_capacity_report]
   ansible.builtin.command:
     argv: [getent, ahostsv4, "{{ rustfs_bind_hostname }}"]
   register: rustfs_hostname_lookup
@@ -9,7 +9,7 @@
   when: rustfs_bind_hostname | length > 0
 
 - name: Read the storage host's local addresses
-  tags: [rustfs_gitlab_storage]
+  tags: [rustfs_gitlab_storage, rustfs_capacity_report]
   ansible.builtin.command:
     argv: [hostname, -I]
   register: rustfs_local_addresses
@@ -18,7 +18,7 @@
   when: rustfs_bind_hostname | length > 0
 
 - name: Bind RustFS to a local address resolved from the hostname
-  tags: [rustfs_gitlab_storage]
+  tags: [rustfs_gitlab_storage, rustfs_capacity_report]
   ansible.builtin.set_fact:
     rustfs_bind_address: >-
       {{ (rustfs_hostname_lookup.stdout_lines | map('split') | map('first') | unique | list
@@ -26,7 +26,7 @@
   when: rustfs_bind_hostname | length > 0
 
 - name: Check that the RustFS hostname resolves to a local address
-  tags: [rustfs_gitlab_storage]
+  tags: [rustfs_gitlab_storage, rustfs_capacity_report]
   ansible.builtin.assert:
     that:
       - rustfs_bind_address | length > 0
@@ -260,6 +260,7 @@
     mode: "0755"
 
 - name: Install the bucket-scoped capacity reporter
+  tags: [rustfs_capacity_report]
   ansible.builtin.template:
     src: capacity-report.py.j2
     dest: /usr/local/libexec/rustfs-capacity-report.py
@@ -268,6 +269,7 @@
     mode: "0555"
 
 - name: Install the RustFS capacity report service and timer
+  tags: [rustfs_capacity_report]
   ansible.builtin.template:
     src: "{{ item }}.j2"
     dest: "/etc/systemd/system/rustfs-{{ item }}"
@@ -280,6 +282,7 @@
   notify: Reload systemd
 
 - name: Enable periodic RustFS capacity reports
+  tags: [rustfs_capacity_report]
   ansible.builtin.systemd_service:
     name: rustfs-capacity-report.timer
     enabled: true
@@ -288,6 +291,7 @@
   when: not ansible_check_mode
 
 - name: Publish and verify the initial RustFS capacity report
+  tags: [rustfs_capacity_report]
   ansible.builtin.systemd_service:
     name: rustfs-capacity-report.service
     state: started

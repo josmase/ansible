@@ -43,7 +43,7 @@ def request(method, path, query="", payload=b""):
     auth = "AWS4-HMAC-SHA256 Credential=" + access + "/" + scope + ", SignedHeaders=" + signed_headers + ", Signature=" + signature
     req = urllib.request.Request(endpoint + path + (("?" + query) if query else ""), data=payload if method == "PUT" else None, method=method,
         headers={"Host": host, "x-amz-date": amzdate, "x-amz-content-sha256": payload_hash, "Authorization": auth, "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=20) as response:
+    with urllib.request.urlopen(req, timeout={{ rustfs_capacity_report_request_timeout }}) as response:
         assert response.status in (200, 201, 204), "Capacity report S3 request failed"
         return response.read()
 
