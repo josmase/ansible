@@ -2,6 +2,8 @@
 # Playbook to setup GPU-enabled Kubernetes node
 # Installs NVIDIA drivers, container toolkit, and prepares node for GPU workloads
 # Note: This playbook assumes the node is already joined to the k3s cluster
+# The GPU node remains untainted for general scheduling. GPU consumers are
+# pinned with the gpu=true label; LINSTOR must keep it diskless-only.
 
 - name: "Setup GPU-enabled Kubernetes Node"
   hosts: "k3s_gpu_node"
@@ -85,12 +87,16 @@
       ignore_errors: true
 
     - name: "Create .kube directory on GPU node"
+      tags:
+        - gpu_node_scheduling
       file:
         path: "{{ ansible_env.HOME }}/.kube"
         state: directory
         mode: '0755'
 
     - name: "Fetch kubeconfig from master node"
+      tags:
+        - gpu_node_scheduling
       slurp:
         src: /etc/rancher/k3s/k3s.yaml
       register: kubeconfig_content
@@ -98,27 +104,47 @@
       become: true
 
     - name: "Copy kubeconfig to GPU node"
+      tags:
+        - gpu_node_scheduling
       copy:
-        content: "{{ kubeconfig_content.content | b64decode | regex_replace('127.0.0.1:6443', groups['k3s_masters'][0] + ':6443') }}"
+        content: "{{ kubeconfig_content.content | b64decode | regex_replace('127.0.0.1:6443', hostvars[groups['k3s_masters'][0]].ansible_host + ':6443') }}"
         dest: "{{ ansible_env.HOME }}/.kube/config"
         mode: '0600'
 
-    - name: "Label and taint GPU node for dedicated workload scheduling"
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: v1
-          kind: Node
-          metadata:
-            name: "{{ ansible_hostname | lower }}"
-            labels:
-              gpu: "true"
-              node.kubernetes.io/storage-tier: "low"
-          spec:
-            taints:
-              - key: "workload"
-                value: "gpu-only"
-                effect: "NoSchedule"
+    - name: "Label GPU node for pinned GPU workloads"
+      tags:
+        - gpu_node_scheduling
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - --kubeconfig
+          - "{{ ansible_env.HOME }}/.kube/config"
+          - label
+          - node
+          - "{{ ansible_hostname | lower }}"
+          - gpu=true
+          - node.kubernetes.io/storage-tier=low
+          - --overwrite
+      register: gpu_node_labels
+      changed_when: "' labeled' in gpu_node_labels.stdout and 'not labeled' not in gpu_node_labels.stdout"
+
+    - name: "Remove the obsolete GPU-only taint"
+      tags:
+        - gpu_node_scheduling
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - --kubeconfig
+          - "{{ ansible_env.HOME }}/.kube/config"
+          - taint
+          - node
+          - "{{ ansible_hostname | lower }}"
+          - workload=gpu-only:NoSchedule-
+      register: gpu_node_taint
+      failed_when: gpu_node_taint.rc != 0 and 'not found' not in gpu_node_taint.stderr
+      changed_when: "'untainted' in gpu_node_taint.stdout"
 
     - name: "Display node readiness check"
       shell: |
@@ -126,10 +152,11 @@
         systemctl status containerd || echo "Containerd status check skipped"
         echo ""
         echo "GPU Setup Complete! Next steps:"
-        echo "1. Verify GPU label: kubectl get nodes -L gpu"
-        echo "2. Wait for NVIDIA Device Plugin: kubectl get pods -n nvidia-device-plugin -w"
-        echo "3. Enable GPU for Jellyfin: uncomment deployment-gpu-patch.yaml in flux/apps/production/media/jellyfin/kustomization.yaml"
+        echo "1. Verify the GPU label and absence of the old taint: kubectl get node {{ ansible_hostname | lower }} -o yaml"
+        echo "2. Verify NVIDIA Device Plugin: kubectl get pods -n nvidia-device-plugin -o wide"
+        echo "3. GPU consumers stay pinned with nodeSelector gpu=true; ordinary workloads may schedule here too."
         echo "4. Verify GPU access: kubectl exec -n media -it <jellyfin-pod> -- nvidia-smi"
+        echo "5. Keep this node diskless-only in LINSTOR: no local pools or diskful replicas."
       register: node_status
       changed_when: false
 
