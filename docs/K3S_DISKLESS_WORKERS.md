@@ -15,7 +15,7 @@ vaulted K3s token and live release, then run the worker onboarding playbook
 with a single-host limit. Inspect node readiness, Piraeus satellite health,
 labels and taints before relying on the node.
 
-Use `playbooks/setup/kubernetes-node-scheduling.yml` to remove the retired
-low-risk taint and storage-exclusion label from node 213 and allow its diskless
-satellite to join. Use `playbooks/setup-gpu-kubernetes-node.yml` after GPU host
-setup to apply the GPU label and soft taint.
+Use `playbooks/setup/kubernetes-node-scheduling.yml` to apply the replica
+exclusion label to node 213 and allow its diskless satellite to join. Use
+`playbooks/setup-gpu-kubernetes-node.yml` after GPU host setup to apply the GPU
+label and soft taint.
