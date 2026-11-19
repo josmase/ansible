@@ -1,6 +1,5 @@
 ---
-# Safe, explicit K3s release maintenance. This intentionally does not invoke
-# vendor/k3s-ansible/site.yml: that installer reconciles every node at once.
+# Safe, explicit K3s release maintenance; see docs/K3S_ROLES.md.
 - name: Create and verify an etcd snapshot before a rolling K3s upgrade
   hosts: k3s_masters[0]
   become: true

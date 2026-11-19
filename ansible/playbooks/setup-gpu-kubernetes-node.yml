@@ -25,7 +25,7 @@
           echo "k3s is installed"
           exit 0
         else
-          echo "ERROR: k3s is not installed. Node must be joined to cluster first via k3s-ansible"
+          echo "ERROR: k3s is not installed. Node must be joined to the cluster first"
           exit 1
         fi
       changed_when: false
@@ -37,19 +37,9 @@
         msg: |
           GPU node {{ inventory_hostname }} does not have k3s installed.
           
-          Since your cluster uses k3s-ansible, please join the node first:
-          
-          1. Add to your k3s-ansible hosts.ini or inventory/hosts.yml:
-             [node]
-             gpu.local.hejsan.xyz
-          
-          2. Run from k3s-ansible directory:
-             ansible-playbook site.yml -i inventory/hosts.yml -l gpu.local.hejsan.xyz
-          
-          3. Wait for node to be Ready (may take 5-10 minutes):
-             kubectl get nodes -w
-          
-          4. Then re-run this GPU setup playbook
+          Configure the node inventory and use the K3s worker onboarding
+          playbook with a single-host limit. Verify the node is Ready, then
+          re-run this GPU setup playbook.
       when: k3s_check.rc != 0
 
     - name: "Install kubernetes Python library for node management"
@@ -125,6 +115,7 @@
           - "{{ ansible_hostname | lower }}"
           - gpu=true
           - node.kubernetes.io/storage-tier=low
+          - storage.josmase.io/replicas-disabled=true
           - --overwrite
       register: gpu_node_labels
       changed_when: "' labeled' in gpu_node_labels.stdout and 'not labeled' not in gpu_node_labels.stdout"
@@ -146,15 +137,87 @@
       failed_when: gpu_node_taint.rc != 0 and 'not found' not in gpu_node_taint.stderr
       changed_when: "'untainted' in gpu_node_taint.stdout"
 
+    - name: "Prefer ordinary workloads on other nodes while keeping GPU scheduling available"
+      tags:
+        - gpu_node_scheduling
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - --kubeconfig
+          - "{{ ansible_env.HOME }}/.kube/config"
+          - taint
+          - node
+          - "{{ ansible_hostname | lower }}"
+          - gpu.josmase.io/workload=gpu:PreferNoSchedule
+          - --overwrite
+      register: gpu_node_preferred_taint
+      changed_when: "'tainted' in gpu_node_preferred_taint.stdout and 'not tainted' not in gpu_node_preferred_taint.stdout"
+
+    - name: "Read the GPU node's advertised shared capacity"
+      tags:
+        - gpu_node_scheduling
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - --kubeconfig
+          - "{{ ansible_env.HOME }}/.kube/config"
+          - get
+          - node
+          - "{{ ansible_hostname | lower }}"
+          - -o
+          - json
+      register: gpu_node_capacity
+      changed_when: false
+
+    - name: "Refresh NVIDIA device-plugin registration when no shared GPU is advertised"
+      tags:
+        - gpu_node_scheduling
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - --kubeconfig
+          - "{{ ansible_env.HOME }}/.kube/config"
+          - rollout
+          - restart
+          - daemonset/nvidia-device-plugin
+          - -n
+          - nvidia-device-plugin
+      register: gpu_plugin_refresh
+      changed_when: "'restarted' in gpu_plugin_refresh.stdout"
+      when: (gpu_node_capacity.stdout | from_json).status.allocatable.get('nvidia.com/gpu.shared', '0') | int == 0
+
+    - name: "Wait for the GPU node to advertise a shared GPU slot"
+      tags:
+        - gpu_node_scheduling
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - --kubeconfig
+          - "{{ ansible_env.HOME }}/.kube/config"
+          - get
+          - node
+          - "{{ ansible_hostname | lower }}"
+          - -o
+          - json
+      register: gpu_node_capacity_after_refresh
+      changed_when: false
+      until: (gpu_node_capacity_after_refresh.stdout | from_json).status.allocatable.get('nvidia.com/gpu.shared', '0') | int >= 1
+      retries: 30
+      delay: 10
+
     - name: "Display node readiness check"
       shell: |
         echo "Node Status:"
         systemctl status containerd || echo "Containerd status check skipped"
         echo ""
         echo "GPU Setup Complete! Next steps:"
-        echo "1. Verify the GPU label and absence of the old taint: kubectl get node {{ ansible_hostname | lower }} -o yaml"
+        echo "1. Verify gpu=true and gpu.josmase.io/workload=gpu:PreferNoSchedule: kubectl get node {{ ansible_hostname | lower }} -o yaml"
         echo "2. Verify NVIDIA Device Plugin: kubectl get pods -n nvidia-device-plugin -o wide"
-        echo "3. GPU consumers stay pinned with nodeSelector gpu=true; ordinary workloads may schedule here too."
+        echo "3. GPU consumers select gpu=true and tolerate the soft taint; other workloads may still schedule here when needed."
         echo "4. Verify GPU access: kubectl exec -n media -it <jellyfin-pod> -- nvidia-smi"
         echo "5. Keep this node diskless-only in LINSTOR: no local pools or diskful replicas."
       register: node_status

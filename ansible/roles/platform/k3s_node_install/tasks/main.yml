@@ -1,0 +1,498 @@
+---
+- name: Validate node installation inputs
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_mode in ['server_init', 'server_join', 'agent_join']
+      - ansible_play_hosts_all | length == 1
+      - k3s_node_install_mode != 'server_init' or k3s_node_install_allow_cluster_init | bool
+      - k3s_node_install_server_settings is mapping
+      - (k3s_node_install_server_settings.keys() | list | intersect(['token', 'token-file', 'server', 'cluster-init', 'cluster-reset', 'cluster-reset-restore-path', 'node-name', 'node-ip', 'flannel-iface', 'node-label', 'node-taint', 'tls-san', 'disable', 'cluster-cidr', 'service-cidr', 'cluster-dns', 'cluster-domain'])) | length == 0
+      - k3s_node_install_version is match('^v[0-9]+[.][0-9]+[.][0-9]+[+]k3s[0-9]+$')
+      - k3s_node_install_name | length > 0
+      - k3s_node_install_ip in ansible_all_ipv4_addresses
+      - k3s_node_install_interface in ansible_interfaces
+      - ansible_service_mgr == 'systemd'
+      - ansible_architecture in k3s_node_install_architectures
+      - k3s_node_install_mode == 'server_init' or k3s_node_install_server_url is match('^https://[^/]+:[0-9]+$')
+      - k3s_node_install_mode == 'server_init' or k3s_node_install_verify_host | length > 0
+      - k3s_node_install_token | length > 0
+      - k3s_node_install_mode == 'server_init' or k3s_node_install_token is match('^K10[0-9a-f]{64}::.+$')
+      - k3s_node_install_storage_exclusion_label | length == 0 or (k3s_node_install_storage_exclusion_label ~ '=true') in k3s_node_install_labels
+      - k3s_node_install_storage_replica_exclusion_label | length == 0 or (k3s_node_install_storage_replica_exclusion_label ~ '=true') in k3s_node_install_labels
+      - not (k3s_node_install_storage_exclusion_label | length > 0 and k3s_node_install_storage_replica_exclusion_label | length > 0)
+      - k3s_node_install_storage_replica_exclusion_label | length == 0 or 'storage.josmase.io/linstor-disabled=true' not in k3s_node_install_labels
+      - k3s_node_install_mode != 'server_join' or k3s_node_install_allow_server_join | bool
+      - k3s_node_install_mode != 'server_join' or k3s_node_install_recovery_snapshot_path is match('^/')
+      - k3s_node_install_mode != 'server_join' or k3s_node_install_recovery_snapshot_sha256 is match('^[0-9a-f]{64}$')
+      - k3s_node_install_mode != 'server_join' or k3s_node_install_recovery_restore_verified_sha256 == k3s_node_install_recovery_snapshot_sha256
+    fail_msg: Provide valid mode, release, identity, interface, token, and join and verification endpoints.
+  no_log: true
+
+- name: Inspect K3s ownership marker
+  ansible.builtin.stat:
+    path: /etc/rancher/k3s/.ansible-node-install
+  register: k3s_node_install_marker
+
+- name: Inspect existing K3s paths
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /usr/local/bin/k3s
+    - /etc/systemd/system/k3s.service
+    - /etc/systemd/system/k3s-agent.service
+    - /etc/systemd/system/k3s-node.service
+    - /etc/rancher/k3s
+    - /var/lib/rancher/k3s
+    - /etc/systemd/system/k3s.service.d
+    - /etc/systemd/system/k3s-node.service.d
+    - /etc/systemd/system/k3s-agent.service.d
+    - /run/systemd/system/k3s.service
+    - /run/systemd/system/k3s-node.service
+    - /run/systemd/system/k3s-agent.service
+    - /usr/lib/systemd/system/k3s.service
+    - /usr/lib/systemd/system/k3s-node.service
+    - /usr/lib/systemd/system/k3s-agent.service
+    - /usr/bin/k3s
+    - /usr/lib/systemd/system/k3s.service.d
+    - /usr/lib/systemd/system/k3s-node.service.d
+    - /usr/lib/systemd/system/k3s-agent.service.d
+    - /run/systemd/system/k3s.service.d
+    - /run/systemd/system/k3s-node.service.d
+    - /run/systemd/system/k3s-agent.service.d
+  register: k3s_node_install_existing
+
+- name: Reject unowned K3s installations or state
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_marker.stat.exists or (k3s_node_install_existing.results | selectattr('stat.exists') | list | length == 0)
+    fail_msg: Existing K3s installation or state detected; inspect and migrate it separately. No changes were made.
+
+- name: Read installation ownership marker
+  ansible.builtin.slurp:
+    src: /etc/rancher/k3s/.ansible-node-install
+  register: k3s_node_install_marker_content
+  when: k3s_node_install_marker.stat.exists
+
+- name: Refuse changes to an established installation identity
+  ansible.builtin.assert:
+    that:
+      - (k3s_node_install_marker_content.content | b64decode | from_json) | k3s_managed_marker_matches(k3s_node_install_identity)
+    fail_msg: Existing managed installation identity or marker is invalid; inspect it before continuing.
+  vars:
+    k3s_node_install_identity:
+      mode: "{{ k3s_node_install_mode }}"
+      name: "{{ k3s_node_install_name }}"
+      ip: "{{ k3s_node_install_ip }}"
+      phase: complete
+  when: k3s_node_install_marker.stat.exists
+
+- name: Read the verification server CA
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/tls/server-ca.crt
+  delegate_to: "{{ k3s_node_install_verify_host }}"
+  become: true
+  register: k3s_node_install_server_ca
+  no_log: true
+  when: k3s_node_install_mode != 'server_init'
+
+- name: Match the secure token to the verification server CA
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_token[3:67] == (k3s_node_install_server_ca.content | b64decode | hash('sha256'))
+    fail_msg: The join token does not authenticate the verification server CA.
+  no_log: true
+  when: k3s_node_install_mode != 'server_init'
+
+- name: Verify the join endpoint TLS identity from the target
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - |
+        import base64, ssl, sys, urllib.request
+        ca = base64.b64decode(sys.argv[2]).decode('utf-8')
+        context = ssl.create_default_context(cadata=ca)
+        with urllib.request.urlopen(sys.argv[1] + '/cacerts', context=context, timeout=10) as response:
+            if response.status != 200:
+                raise SystemExit('K3s CA endpoint returned an unexpected status')
+      - "{{ k3s_node_install_server_url }}"
+      - "{{ k3s_node_install_server_ca.content }}"
+  changed_when: false
+  check_mode: false
+  no_log: true
+  when: k3s_node_install_mode != 'server_init'
+
+- name: Check the live control-plane release before joining
+  ansible.builtin.command:
+    argv:
+      - /usr/local/bin/k3s
+      - kubectl
+      - get
+      - nodes
+      - -l
+      - node-role.kubernetes.io/control-plane
+      - -o
+      - json
+  delegate_to: "{{ k3s_node_install_verify_host }}"
+  become: true
+  register: k3s_node_install_control_plane
+  changed_when: false
+  check_mode: false
+  when: k3s_node_install_mode != 'server_init'
+
+- name: Refuse a release that differs from any live control-plane node
+  ansible.builtin.assert:
+    that:
+      - (k3s_node_install_control_plane.stdout | from_json)['items'] | length > 0
+      - (k3s_node_install_control_plane.stdout | from_json)['items'] | map(attribute='status.nodeInfo.kubeletVersion') | unique | list == [k3s_node_install_version]
+    fail_msg: The requested release does not match every control-plane node; review the live cluster version.
+  when: k3s_node_install_mode != 'server_init'
+
+- name: Check etcd and recovery before a server joins
+  ansible.builtin.include_tasks: server_preflight.yml
+  vars:
+    k3s_node_install_existing_masters: "{{ groups['k3s_masters'] | difference([inventory_hostname]) }}"
+  when:
+    - k3s_node_install_mode == 'server_join'
+    - not k3s_node_install_marker.stat.exists
+
+- name: Verify storage exclusion before joining
+  ansible.builtin.include_tasks: storage_preflight.yml
+  when:
+    - k3s_node_install_mode == 'agent_join'
+    - k3s_node_install_storage_exclusion_label | length > 0
+
+- name: Verify replica exclusion before joining a diskless node
+  ansible.builtin.include_tasks: storage_replica_preflight.yml
+  when:
+    - k3s_node_install_mode == 'agent_join'
+    - k3s_node_install_storage_replica_exclusion_label | length > 0
+    - not k3s_node_install_marker.stat.exists
+
+- name: Check for a stale Piraeus satellite identity before joining
+  ansible.builtin.command:
+    argv: [/usr/local/bin/k3s, kubectl, get, linstorsatellites.piraeus.io, "{{ k3s_node_install_name }}", -n, "{{ k3s_node_install_storage_namespace }}", --ignore-not-found, -o, name]
+  delegate_to: "{{ k3s_node_install_verify_host }}"
+  become: true
+  register: k3s_node_install_existing_diskless_satellite
+  changed_when: false
+  check_mode: false
+  when:
+    - k3s_node_install_mode == 'agent_join'
+    - k3s_node_install_storage_replica_exclusion_label | length > 0
+    - not k3s_node_install_marker.stat.exists
+
+- name: Refuse to claim a stale Piraeus satellite identity
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_existing_diskless_satellite.stdout | trim | length == 0
+    fail_msg: A Piraeus satellite already claims this node name; investigate its identity before joining.
+  when:
+    - k3s_node_install_mode == 'agent_join'
+    - k3s_node_install_storage_replica_exclusion_label | length > 0
+    - not k3s_node_install_marker.stat.exists
+
+- name: Check for an existing cluster node with this name
+  ansible.builtin.command:
+    argv: [/usr/local/bin/k3s, kubectl, get, node, "{{ k3s_node_install_name }}", --ignore-not-found, -o, name]
+  delegate_to: "{{ k3s_node_install_verify_host }}"
+  become: true
+  register: k3s_node_install_existing_node
+  changed_when: false
+  check_mode: false
+  when:
+    - k3s_node_install_mode != 'server_init'
+    - not k3s_node_install_marker.stat.exists
+
+- name: Refuse to claim an existing node identity
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_existing_node.stdout | trim | length == 0
+    fail_msg: This node name already exists in the cluster; resolve its identity before joining.
+  when:
+    - k3s_node_install_mode != 'server_init'
+    - not k3s_node_install_marker.stat.exists
+
+- name: Inspect existing lifecycle configuration
+  ansible.builtin.stat:
+    path: /etc/rancher/k3s/config.yaml.d/20-ansible-node.yaml
+  register: k3s_node_install_config
+
+- name: Read existing lifecycle configuration
+  ansible.builtin.slurp:
+    src: /etc/rancher/k3s/config.yaml.d/20-ansible-node.yaml
+  register: k3s_node_install_config_content
+  no_log: true
+  when: k3s_node_install_config.stat.exists
+
+- name: Refuse implicit configuration changes to an existing node
+  ansible.builtin.assert:
+    that:
+      - (k3s_node_install_config_content.content | b64decode | from_yaml) == (lookup('ansible.builtin.template', 'config.yml.j2') | from_yaml)
+    fail_msg: Lifecycle configuration differs; review and apply changes through a controlled migration.
+  no_log: true
+  when: k3s_node_install_config.stat.exists
+
+- name: Inspect existing managed service
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ 'k3s-node' if k3s_node_install_mode == 'agent_join' else 'k3s' }}.service"
+  register: k3s_node_install_service
+
+- name: Read existing managed service
+  ansible.builtin.slurp:
+    src: "/etc/systemd/system/{{ 'k3s-node' if k3s_node_install_mode == 'agent_join' else 'k3s' }}.service"
+  register: k3s_node_install_service_content
+  when: k3s_node_install_service.stat.exists
+
+- name: Reject service drift
+  ansible.builtin.assert:
+    that:
+      - (k3s_node_install_service_content.content | b64decode | trim) == (lookup('ansible.builtin.template', 'k3s.service.j2') | trim)
+    fail_msg: Managed service differs; inspect and migrate it explicitly.
+  when: k3s_node_install_service.stat.exists
+
+- name: Verify ownership and effective configuration before a retry
+  ansible.builtin.include_tasks: retry_preflight.yml
+  when: k3s_node_install_marker.stat.exists
+
+- name: Install prerequisites
+  ansible.builtin.package:
+    name: [ca-certificates, curl]
+    state: present
+  when: not k3s_node_install_marker.stat.exists
+
+- name: Create K3s configuration directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s/config.yaml.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  when: not k3s_node_install_marker.stat.exists
+
+- name: Record installation identity before installing
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/.ansible-node-install
+    content: "{{ {'mode': k3s_node_install_mode, 'version': k3s_node_install_version, 'name': k3s_node_install_name, 'ip': k3s_node_install_ip, 'phase': 'in_progress'} | to_json }}"
+    owner: root
+    group: root
+    mode: '0600'
+    force: false
+  when:
+    - not ansible_check_mode
+    - not k3s_node_install_marker.stat.exists
+
+- name: Download the verified K3s binary if absent
+  ansible.builtin.get_url:
+    url: "https://github.com/k3s-io/k3s/releases/download/{{ k3s_node_install_version | urlencode }}/{{ k3s_node_install_architectures[ansible_architecture].binary }}"
+    checksum: "sha256:https://github.com/k3s-io/k3s/releases/download/{{ k3s_node_install_version | urlencode }}/{{ k3s_node_install_architectures[ansible_architecture].checksums }}"
+    dest: /usr/local/bin/k3s
+    owner: root
+    group: root
+    mode: '0755'
+  when:
+    - not k3s_node_install_marker.stat.exists
+    - not k3s_node_install_existing.results[0].stat.exists
+
+- name: Check installed K3s release
+  ansible.builtin.command:
+    argv: [/usr/local/bin/k3s, --version]
+  register: k3s_node_install_installed_version
+  changed_when: false
+  check_mode: false
+  failed_when: k3s_node_install_installed_version.rc != 0 or k3s_node_install_installed_version.stdout_lines[0].split()[2] != k3s_node_install_version
+  when: not ansible_check_mode or k3s_node_install_existing.results[0].stat.exists
+
+- name: Write initial lifecycle configuration
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: /etc/rancher/k3s/config.yaml.d/20-ansible-node.yaml
+    owner: root
+    group: root
+    mode: '0600'
+    force: false
+  no_log: true
+  diff: false
+  when:
+    - not ansible_check_mode
+    - not k3s_node_install_marker.stat.exists
+
+- name: Install K3s systemd service
+  ansible.builtin.template:
+    src: k3s.service.j2
+    dest: "/etc/systemd/system/{{ 'k3s-node' if k3s_node_install_mode == 'agent_join' else 'k3s' }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+    force: false
+  when:
+    - not ansible_check_mode
+    - not k3s_node_install_marker.stat.exists
+
+- name: Recheck storage exclusion immediately before service start
+  ansible.builtin.include_tasks: storage_preflight.yml
+  when:
+    - not ansible_check_mode
+    - not k3s_node_install_marker.stat.exists
+    - k3s_node_install_mode == 'agent_join'
+    - k3s_node_install_storage_exclusion_label | length > 0
+
+- name: Recheck replica exclusion immediately before service start
+  ansible.builtin.include_tasks: storage_replica_preflight.yml
+  when:
+    - not ansible_check_mode
+    - not k3s_node_install_marker.stat.exists
+    - k3s_node_install_mode == 'agent_join'
+    - k3s_node_install_storage_replica_exclusion_label | length > 0
+
+- name: Load the new service definition without starting it
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when:
+    - not ansible_check_mode
+    - not k3s_node_install_marker.stat.exists
+
+- name: Check the effective new service fragment
+  ansible.builtin.command:
+    argv: [systemctl, show, "{{ 'k3s-node' if k3s_node_install_mode == 'agent_join' else 'k3s' }}", --property=FragmentPath, --value]
+  register: k3s_node_install_effective_fragment
+  changed_when: false
+  when:
+    - not ansible_check_mode
+    - not k3s_node_install_marker.stat.exists
+
+- name: Check the effective new service drop-ins
+  ansible.builtin.command:
+    argv: [systemctl, show, "{{ 'k3s-node' if k3s_node_install_mode == 'agent_join' else 'k3s' }}", --property=DropInPaths, --value]
+  register: k3s_node_install_effective_dropins
+  changed_when: false
+  when:
+    - not ansible_check_mode
+    - not k3s_node_install_marker.stat.exists
+
+- name: Reject unexpected service sources before starting
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_effective_fragment.stdout | trim == '/etc/systemd/system/' ~ ('k3s-node' if k3s_node_install_mode == 'agent_join' else 'k3s') ~ '.service'
+      - k3s_node_install_effective_dropins.stdout | trim | length == 0
+    fail_msg: The effective systemd unit or drop-ins are unexpected; do not start K3s.
+  when:
+    - not ansible_check_mode
+    - not k3s_node_install_marker.stat.exists
+
+- name: Start K3s service
+  ansible.builtin.systemd_service:
+    name: "{{ 'k3s-node' if k3s_node_install_mode == 'agent_join' else 'k3s' }}"
+    enabled: true
+    state: started
+  when:
+    - not ansible_check_mode
+    - not k3s_node_install_marker.stat.exists
+
+- name: Verify readiness and node policy
+  block:
+    - name: Wait for the expected node to become ready
+      ansible.builtin.command:
+        argv: [/usr/local/bin/k3s, kubectl, get, node, "{{ k3s_node_install_name }}", -o, json]
+      delegate_to: "{{ inventory_hostname if k3s_node_install_mode == 'server_init' else k3s_node_install_verify_host }}"
+      become: true
+      register: k3s_node_install_ready
+      changed_when: false
+      until: >-
+        k3s_node_install_ready.rc == 0 and
+        (k3s_node_install_ready.stdout | from_json).status.nodeInfo.kubeletVersion == k3s_node_install_version and
+        k3s_node_install_ip in ((k3s_node_install_ready.stdout | from_json).status.addresses | selectattr('type', 'equalto', 'InternalIP') | map(attribute='address') | list) and
+        ((k3s_node_install_ready.stdout | from_json).status.conditions | selectattr('type', 'equalto', 'Ready') | selectattr('status', 'equalto', 'True') | list | length) == 1
+      retries: "{{ k3s_node_install_ready_retries }}"
+      delay: "{{ k3s_node_install_ready_delay }}"
+      when: not ansible_check_mode
+
+    - name: Verify node policy after registration
+      block:
+        - name: Verify storage exclusion after registration
+          ansible.builtin.include_tasks: storage_preflight.yml
+          when: k3s_node_install_storage_exclusion_label | length > 0
+
+        - name: Recheck local replica exclusion after registration
+          ansible.builtin.include_tasks: storage_replica_preflight.yml
+          when: k3s_node_install_storage_replica_exclusion_label | length > 0
+
+        - name: Read Piraeus pods placed on this node
+          ansible.builtin.command:
+            argv: [/usr/local/bin/k3s, kubectl, get, pods, -n, "{{ k3s_node_install_storage_namespace }}", --field-selector, "spec.nodeName={{ k3s_node_install_name }}", -o, json]
+          delegate_to: "{{ k3s_node_install_verify_host }}"
+          become: true
+          register: k3s_node_install_storage_pods
+          changed_when: false
+          when: k3s_node_install_storage_exclusion_label | length > 0
+
+        - name: Require the policy label and no Piraeus pods
+          ansible.builtin.assert:
+            that:
+              - (k3s_node_install_ready.stdout | from_json).metadata.labels[k3s_node_install_storage_exclusion_label] | default('') == 'true'
+              - (k3s_node_install_storage_pods.stdout | from_json)['items'] | length == 0
+            fail_msg: Node policy or storage exclusion failed; leave this node out of maintenance and workloads and investigate.
+          when: k3s_node_install_storage_exclusion_label | length > 0
+
+        - name: Wait for the diskless LINSTOR satellite to become available
+          ansible.builtin.command:
+            argv: [/usr/local/bin/k3s, kubectl, get, linstorsatellite.piraeus.io, "{{ k3s_node_install_name }}", -n, "{{ k3s_node_install_storage_namespace }}", -o, json]
+          delegate_to: "{{ k3s_node_install_verify_host }}"
+          become: true
+          register: k3s_node_install_satellite
+          changed_when: false
+          until: >-
+            k3s_node_install_satellite.rc == 0 and
+            ((k3s_node_install_satellite.stdout | from_json).status.conditions | selectattr('type', 'equalto', 'Available') | selectattr('status', 'equalto', 'True') | list | length) == 1 and
+            ((k3s_node_install_satellite.stdout | from_json).status.conditions | selectattr('type', 'equalto', 'Configured') | selectattr('status', 'equalto', 'True') | list | length) == 1
+          retries: 60
+          delay: 5
+          when: k3s_node_install_storage_replica_exclusion_label | length > 0
+
+        - name: Require the replica-exclusion label after registration
+          ansible.builtin.assert:
+            that:
+              - (k3s_node_install_ready.stdout | from_json).metadata.labels[k3s_node_install_storage_replica_exclusion_label] | default('') == 'true'
+            fail_msg: The diskless worker is missing its local-replica exclusion label.
+          when: k3s_node_install_storage_replica_exclusion_label | length > 0
+      when:
+        - not ansible_check_mode
+        - k3s_node_install_mode == 'agent_join'
+        - k3s_node_install_storage_exclusion_label | length > 0 or k3s_node_install_storage_replica_exclusion_label | length > 0
+  rescue:
+    - name: Cordon a newly joined storage-excluded node on failure
+      ansible.builtin.command:
+        argv: [/usr/local/bin/k3s, kubectl, cordon, "{{ k3s_node_install_name }}"]
+      delegate_to: "{{ k3s_node_install_verify_host }}"
+      become: true
+      register: k3s_node_install_cordon
+      changed_when: k3s_node_install_cordon.rc == 0 and 'already cordoned' not in k3s_node_install_cordon.stdout
+      failed_when: false
+      when:
+        - not k3s_node_install_marker.stat.exists
+        - k3s_node_install_mode == 'agent_join'
+        - k3s_node_install_storage_exclusion_label | length > 0 or k3s_node_install_storage_replica_exclusion_label | length > 0
+    - name: Stop after unsuccessful node verification
+      ansible.builtin.fail:
+        msg: "Node verification failed. Cordon return code: {{ k3s_node_install_cordon.rc | default('not attempted') }}. Confirm cluster state and investigate before proceeding."
+  when: not ansible_check_mode
+
+- name: Verify etcd health after a server joins
+  ansible.builtin.include_tasks: server_postflight.yml
+  vars:
+    k3s_node_install_existing_masters: "{{ groups['k3s_masters'] | difference([inventory_hostname]) }}"
+  when:
+    - not ansible_check_mode
+    - k3s_node_install_mode == 'server_join'
+    - not k3s_node_install_marker.stat.exists
+
+- name: Mark the installation complete after successful verification
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/.ansible-node-install
+    content: "{{ {'mode': k3s_node_install_mode, 'version': k3s_node_install_version, 'name': k3s_node_install_name, 'ip': k3s_node_install_ip, 'phase': 'complete'} | to_json }}"
+    owner: root
+    group: root
+    mode: '0600'
+  when:
+    - not ansible_check_mode
+    - not k3s_node_install_marker.stat.exists

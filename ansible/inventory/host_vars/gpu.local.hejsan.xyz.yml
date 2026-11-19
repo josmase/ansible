@@ -1,0 +1,7 @@
+---
+k3s_node_install_labels:
+  - gpu=true
+  - node.kubernetes.io/storage-tier=low
+  - storage.josmase.io/replicas-disabled=true
+k3s_node_install_taints:
+  - gpu.josmase.io/workload=gpu:PreferNoSchedule

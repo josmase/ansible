@@ -1,0 +1,34 @@
+---
+- name: Read Piraeus cluster scheduling policies
+  ansible.builtin.command:
+    argv: [/usr/local/bin/k3s, kubectl, get, linstorclusters.piraeus.io, -n, "{{ k3s_node_install_storage_namespace }}", -o, json]
+  delegate_to: "{{ k3s_node_install_verify_host }}"
+  become: true
+  register: k3s_node_install_storage_clusters
+  changed_when: false
+  check_mode: false
+
+- name: Read Piraeus daemonset scheduling policies
+  ansible.builtin.command:
+    argv: [/usr/local/bin/k3s, kubectl, get, daemonsets, -n, "{{ k3s_node_install_storage_namespace }}", -o, json]
+  delegate_to: "{{ k3s_node_install_verify_host }}"
+  become: true
+  register: k3s_node_install_storage_daemonsets
+  changed_when: false
+  check_mode: false
+
+- name: Check for an existing satellite identity
+  ansible.builtin.command:
+    argv: [/usr/local/bin/k3s, kubectl, get, linstorsatellites.piraeus.io, "{{ k3s_node_install_name }}", --ignore-not-found, -o, name]
+  delegate_to: "{{ k3s_node_install_verify_host }}"
+  become: true
+  register: k3s_node_install_existing_satellite
+  changed_when: false
+  check_mode: false
+
+- name: Prove every Piraeus selector excludes this node
+  ansible.builtin.assert:
+    that:
+      - (k3s_node_install_storage_clusters.stdout | from_json) | k3s_piraeus_exclusion_proven((k3s_node_install_storage_daemonsets.stdout | from_json), k3s_node_install_storage_exclusion_label, k3s_node_install_name)
+      - k3s_node_install_existing_satellite.stdout | trim | length == 0
+    fail_msg: Piraeus policy does not prove this node is excluded. Review all selector terms and operator status before joining.

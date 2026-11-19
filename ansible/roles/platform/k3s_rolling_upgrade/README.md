@@ -47,3 +47,9 @@ Offline regression checks require Python, PyYAML, `ansible-playbook`, Git, and
 # From the repository root:
 python3 -m unittest discover -s ansible/tests -p 'test_k3s_upgrade_safety.py' -v
 ```
+
+## Relationship to node installation
+
+[`k3s_node_install`](../k3s_node_install/README.md) handles initial installation, and this role performs the version change. After the rolling program has completed and all control-plane nodes report the new release, update `k3s_node_install_version` in `inventory/group_vars/k3s_cluster/vars.yml` to the verified live release before using the installer for another node. The install marker retains the original installation release; the installer validates the current binary and control-plane version independently. Never edit the marker to force an installation check to pass.
+
+See [K3s roles and workflows](../../../../docs/K3S_ROLES.md) for the role map.
