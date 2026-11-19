@@ -32,7 +32,7 @@
     - memory_compression_zram_module.rc != 0
 
 - name: Load the zram kernel module
-  ansible.builtin.modprobe:
+  community.general.modprobe:
     name: zram
     state: present
 

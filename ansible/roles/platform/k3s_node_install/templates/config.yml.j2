@@ -1,0 +1,31 @@
+node-name: {{ k3s_node_install_name | to_json }}
+node-ip: {{ k3s_node_install_ip | to_json }}
+flannel-iface: {{ k3s_node_install_interface | to_json }}
+token: {{ k3s_node_install_token | to_json }}
+{% if k3s_node_install_mode == 'server_init' %}
+cluster-init: true
+{% else %}
+server: {{ k3s_node_install_server_url | to_json }}
+{% endif %}
+{% if k3s_node_install_mode != 'agent_join' %}
+{% for key, value in [('cluster-cidr', k3s_node_install_cluster_cidr), ('service-cidr', k3s_node_install_service_cidr), ('cluster-dns', k3s_node_install_cluster_dns), ('cluster-domain', k3s_node_install_cluster_domain)] %}
+{% if value | length %}
+{{ key }}: {{ value | to_json }}
+{% endif %}
+{% endfor %}
+{% for key, value in k3s_node_install_server_settings | dictsort %}
+{{ key | to_json }}: {{ value | to_json }}
+{% endfor %}
+{% if k3s_node_install_tls_sans | length %}
+tls-san: {{ k3s_node_install_tls_sans | to_json }}
+{% endif %}
+{% if k3s_node_install_disabled_components | length %}
+disable: {{ k3s_node_install_disabled_components | to_json }}
+{% endif %}
+{% endif %}
+{% if k3s_node_install_labels | length %}
+node-label: {{ k3s_node_install_labels | to_json }}
+{% endif %}
+{% if k3s_node_install_taints | length %}
+node-taint: {{ k3s_node_install_taints | to_json }}
+{% endif %}

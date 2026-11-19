@@ -1,0 +1,23 @@
+---
+- name: Read etcd metrics after the server joins
+  ansible.builtin.uri:
+    url: http://127.0.0.1:2381/metrics
+    return_content: true
+    timeout: 5
+  delegate_to: "{{ item }}"
+  become: true
+  loop: "{{ k3s_node_install_existing_masters + [inventory_hostname] }}"
+  register: k3s_node_install_post_etcd_metrics
+  changed_when: false
+  retries: 12
+  delay: 5
+  until:
+    - k3s_node_install_post_etcd_metrics.status | default(0) == 200
+    - k3s_node_install_post_etcd_metrics.content | default('') is search('(?m)^etcd_server_has_leader 1(?:[.]0+)?$')
+    - k3s_node_install_post_etcd_metrics.content | default('') is search('(?m)^etcd_server_proposals_pending 0(?:[.]0+)?$')
+
+- name: Verify one etcd leader after joining
+  ansible.builtin.assert:
+    that:
+      - (k3s_node_install_post_etcd_metrics.results | selectattr('content', 'search', '(?m)^etcd_server_is_leader 1(?:[.]0+)?$') | list | length) == 1
+    fail_msg: Etcd metrics after joining do not show exactly one leader; investigate immediately.

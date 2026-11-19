@@ -1,0 +1,15 @@
+---
+- name: Read Piraeus local storage-pool scheduling policies
+  ansible.builtin.command:
+    argv: [/usr/local/bin/k3s, kubectl, get, linstorsatelliteconfigurations.piraeus.io, -o, json]
+  delegate_to: "{{ k3s_node_install_verify_host }}"
+  become: true
+  register: k3s_node_install_storage_pool_configs
+  changed_when: false
+  check_mode: false
+
+- name: Prove every local storage pool excludes replica-disabled nodes
+  ansible.builtin.assert:
+    that:
+      - (k3s_node_install_storage_pool_configs.stdout | from_json) | k3s_piraeus_replica_exclusion_proven(k3s_node_install_storage_replica_exclusion_label)
+    fail_msg: A Piraeus storage-pool selector does not exclude replica-disabled nodes; do not join or enable this worker.

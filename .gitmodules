@@ -1,3 +1,0 @@
-[submodule "vendor/k3s-ansible"]
-	path = vendor/k3s-ansible
-	url = https://github.com/techno-tim/k3s-ansible.git

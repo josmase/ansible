@@ -1,6 +1,5 @@
 ---
-# Target K3s release. Set this explicitly for every maintenance run; it is
-# deliberately not coupled to the vendored k3s-ansible installation role.
+# Target K3s release. Set this explicitly for every maintenance run.
 k3s_upgrade_target_version: ""
 
 # Kube-vip is upgraded only after every K3s node is healthy. Set this for every

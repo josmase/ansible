@@ -1,0 +1,5 @@
+---
+k3s_node_install_mode: agent_join
+k3s_node_install_storage_replica_exclusion_label: storage.josmase.io/replicas-disabled
+k3s_node_install_labels:
+  - storage.josmase.io/replicas-disabled=true

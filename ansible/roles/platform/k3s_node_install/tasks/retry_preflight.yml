@@ -1,0 +1,145 @@
+---
+- name: Require a protected completed installation and expected files
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_marker.stat.isreg | default(false)
+      - k3s_node_install_marker.stat.uid == 0
+      - k3s_node_install_marker.stat.mode == '0600'
+      - k3s_node_install_existing.results[0].stat.isreg | default(false)
+      - k3s_node_install_existing.results[5].stat.isdir | default(false)
+      - k3s_node_install_config.stat.isreg | default(false)
+      - k3s_node_install_config.stat.uid == 0
+      - k3s_node_install_config.stat.mode == '0600'
+      - k3s_node_install_service.stat.isreg | default(false)
+      - k3s_node_install_service.stat.uid == 0
+      - k3s_node_install_service.stat.mode == '0644'
+      - (k3s_node_install_existing.results[7:] | selectattr('stat.exists') | list | length) == 0
+      - not k3s_node_install_existing.results[6].stat.exists or (k3s_node_install_mode != 'agent_join' and k3s_node_install_existing.results[6].stat.isdir | default(false) and k3s_node_install_existing.results[6].stat.uid == 0 and k3s_node_install_existing.results[6].stat.mode == '0755')
+      - (k3s_node_install_mode == 'agent_join' and not k3s_node_install_existing.results[1].stat.exists and not k3s_node_install_existing.results[2].stat.exists) or (k3s_node_install_mode != 'agent_join' and not k3s_node_install_existing.results[2].stat.exists and not k3s_node_install_existing.results[3].stat.exists)
+    fail_msg: This installation is incomplete or has unexpected ownership/state; inspect it manually.
+
+- name: Inspect the protected configuration directory
+  ansible.builtin.stat:
+    path: /etc/rancher/k3s/config.yaml.d
+  register: k3s_node_install_fragment_dir
+
+- name: Require a root-only configuration directory
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_fragment_dir.stat.isdir | default(false)
+      - k3s_node_install_fragment_dir.stat.uid == 0
+      - k3s_node_install_fragment_dir.stat.mode == '0700'
+    fail_msg: K3s configuration directory permissions are unsafe; inspect them manually.
+
+- name: Find K3s configuration fragments
+  ansible.builtin.find:
+    paths: /etc/rancher/k3s/config.yaml.d
+    patterns: '*.yaml'
+    file_type: any
+    recurse: false
+    hidden: true
+  register: k3s_node_install_fragments
+
+- name: Reject other K3s configuration fragments
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_fragments.matched == 1
+      - k3s_node_install_fragments.files[0].path == '/etc/rancher/k3s/config.yaml.d/20-ansible-node.yaml'
+      - k3s_node_install_fragments.files[0].isreg | default(false)
+    fail_msg: Unexpected K3s config fragments could override the managed configuration.
+
+- name: Inspect the runtime tuning configuration
+  ansible.builtin.stat:
+    path: /etc/rancher/k3s/config.yaml
+  register: k3s_node_install_runtime_config
+
+- name: Read the runtime tuning configuration
+  ansible.builtin.slurp:
+    src: /etc/rancher/k3s/config.yaml
+  register: k3s_node_install_runtime_content
+  no_log: true
+  when: k3s_node_install_runtime_config.stat.exists
+
+- name: Refuse unrecognized runtime settings
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_runtime_config.stat.isreg | default(false)
+      - (k3s_node_install_runtime_content.content | b64decode | from_yaml) | k3s_runtime_config_safe
+    fail_msg: The base K3s configuration contains unrecognized settings; review the effective configuration.
+  no_log: true
+  when: k3s_node_install_runtime_config.stat.exists
+
+- name: Inspect the managed K3s memory limit drop-in
+  ansible.builtin.stat:
+    path: /etc/systemd/system/k3s.service.d/20-gomemlimit.conf
+  register: k3s_node_install_gomemlimit
+  when: k3s_node_install_mode != 'agent_join' and k3s_node_install_existing.results[6].stat.exists
+
+- name: Find K3s service drop-in files
+  ansible.builtin.find:
+    paths: /etc/systemd/system/k3s.service.d
+    patterns: '*.conf'
+    file_type: any
+    recurse: false
+    hidden: true
+  register: k3s_node_install_gomemlimit_files
+  when: k3s_node_install_mode != 'agent_join' and k3s_node_install_existing.results[6].stat.exists
+
+- name: Require the expected protected memory limit drop-in
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_gomemlimit_files.matched == 0 or (k3s_node_install_gomemlimit_files.matched == 1 and k3s_node_install_gomemlimit.stat.isreg | default(false) and k3s_node_install_gomemlimit.stat.uid == 0 and k3s_node_install_gomemlimit.stat.mode == '0644' and k3s_node_install_gomemlimit_files.files[0].path == '/etc/systemd/system/k3s.service.d/20-gomemlimit.conf')
+    fail_msg: Unexpected K3s systemd drop-in files require manual review.
+  when: k3s_node_install_mode != 'agent_join' and k3s_node_install_existing.results[6].stat.exists
+
+- name: Read the managed K3s memory limit drop-in
+  ansible.builtin.slurp:
+    src: /etc/systemd/system/k3s.service.d/20-gomemlimit.conf
+  register: k3s_node_install_gomemlimit_content
+  when: k3s_node_install_mode != 'agent_join' and k3s_node_install_existing.results[6].stat.exists and k3s_node_install_gomemlimit.stat.exists
+
+- name: Validate the memory limit drop-in contents
+  ansible.builtin.assert:
+    that:
+      - (k3s_node_install_gomemlimit_content.content | b64decode) | k3s_managed_gomemlimit_safe
+    fail_msg: K3s memory limit drop-in contains unexpected directives.
+  when: k3s_node_install_mode != 'agent_join' and k3s_node_install_existing.results[6].stat.exists and k3s_node_install_gomemlimit.stat.exists
+
+- name: Inspect effective systemd drop-ins
+  ansible.builtin.command:
+    argv: [systemctl, show, "{{ 'k3s-node' if k3s_node_install_mode == 'agent_join' else 'k3s' }}", --property=DropInPaths, --value]
+  register: k3s_node_install_dropins
+  changed_when: false
+  check_mode: false
+
+- name: Reject systemd overrides
+  ansible.builtin.assert:
+    that:
+      - (k3s_node_install_dropins.stdout | trim | length == 0) or (k3s_node_install_mode != 'agent_join' and k3s_node_install_existing.results[6].stat.exists and k3s_node_install_dropins.stdout | trim == '/etc/systemd/system/k3s.service.d/20-gomemlimit.conf')
+    fail_msg: Unexpected systemd drop-ins may change the K3s service configuration.
+
+- name: Inspect the installed binary checksum
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+    checksum_algorithm: sha256
+  register: k3s_node_install_binary_checksum
+
+- name: Download the published checksum manifest
+  ansible.builtin.uri:
+    url: "https://github.com/k3s-io/k3s/releases/download/{{ k3s_node_install_version | urlencode }}/{{ k3s_node_install_architectures[ansible_architecture].checksums }}"
+    return_content: true
+    timeout: 30
+  register: k3s_node_install_checksums
+  check_mode: false
+
+- name: Verify the existing binary matches the release
+  ansible.builtin.assert:
+    that:
+      - (k3s_node_install_checksums.content | regex_findall('(?m)^([0-9a-f]{64})\\s+[*]?' ~ k3s_node_install_architectures[ansible_architecture].binary ~ '$')) == [k3s_node_install_binary_checksum.stat.checksum]
+    fail_msg: Existing K3s binary does not match the selected upstream release.
+
+- name: Require the existing service to be running
+  ansible.builtin.command:
+    argv: [systemctl, is-active, --quiet, "{{ 'k3s-node' if k3s_node_install_mode == 'agent_join' else 'k3s' }}"]
+  changed_when: false
+  check_mode: false

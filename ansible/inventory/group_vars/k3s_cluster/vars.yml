@@ -1,51 +1,15 @@
 ---
-# Cluster installation parameters consumed by the vendored k3s-ansible
-# submodule. This is the authoritative non-secret cluster configuration.
-# Secrets live in vault.yml (ansible-vault, password in .vault_pass on the
-# jumphost).
+# Version last observed on the live control plane; recheck before onboarding.
+k3s_node_install_version: v1.37.2+k3s1
+k3s_node_install_token: "{{ k3s_token }}"
+k3s_node_install_name: "{{ k8s_node_name }}"
+k3s_node_install_ip: "{{ ansible_host }}"
+k3s_node_install_interface: "{{ flannel_iface | default('eth0') }}"
+k3s_node_install_server_url: https://192.168.1.200:6443
+k3s_node_install_verify_host: kubernetes-201.local.hejsan.xyz
 
-k3s_version: v1.32.13+k3s1
+# Shared endpoint used by the K3s rolling upgrade role.
 apiserver_endpoint: 192.168.1.200
-flannel_iface: eth0
-system_timezone: "Europe/Stockholm"
-systemd_dir: /etc/systemd/system
-
-# Alternative CNI settings are kept explicit because the upstream role
-# evaluates some of these flags even while Flannel is selected.
-calico_ebpf: false
-calico_tag: v3.28.0
-cilium_mode: native
-cilium_tag: v1.16.0
-cilium_hubble: true
-cluster_cidr: 10.52.0.0/16
-cilium_bgp: false
-cilium_bgp_my_asn: "64513"
-cilium_bgp_peer_asn: "64512"
-cilium_bgp_peer_address: 192.168.1.1
-cilium_bgp_lb_cidr: 192.168.31.0/24
-
-k3s_node_ip: "{{ ansible_host }}"
-k3s_master_taint: "{{ true if groups['node'] | default([]) | length >= 1 else false }}"
-
-extra_args: >-
-  {{ '--flannel-iface=' + flannel_iface if calico_iface is not defined and cilium_iface is not defined else '' }}
-  --node-ip={{ k3s_node_ip }}
-
-extra_server_args: >-
-  {{ extra_args }}
-  {{ '--node-taint node-role.kubernetes.io/master=true:NoSchedule' if k3s_master_taint else '' }}
-  {% if calico_iface is defined or cilium_iface is defined %}
-  --flannel-backend=none
-  --disable-network-policy
-  --cluster-cidr={{ cluster_cidr | default('10.52.0.0/16') }}
-  {% endif %}
-  --tls-san {{ apiserver_endpoint }}
-  --disable servicelb
-  --disable traefik
-  --disable local-storage
-
-extra_agent_args: >-
-  {{ extra_args }}
 
 kube_vip_arp: true
 kube_vip_bgp: false
@@ -64,5 +28,5 @@ metal_lb_ip_range: "192.168.1.180-192.168.1.190"
 proxmox_lxc_configure: false
 custom_registries: false
 
-# The master taint is applied by k3s-ansible when workers exist:
+# Existing control-plane taint:
 # node-role.kubernetes.io/master=true:NoSchedule

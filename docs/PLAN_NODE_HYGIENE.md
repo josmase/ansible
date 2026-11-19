@@ -258,39 +258,11 @@ reason.
 
 Force one real change (step 9 drift probe) to prove the chain works.
 
-## 6. Relationship to `k3s-ansible` (cluster installation)
+## 6. Relationship to K3s node installation
 
-The Kubernetes cluster itself is installed/managed by **[techno-tim/k3s-ansible](https://github.com/techno-tim/k3s-ansible)**,
-included here as a git submodule at `vendor/k3s-ansible`, pinned to
-`2fad0a8db698b320a5440d4506f1ffb543402182` — the exact commit used to build the current
-cluster (k3s v1.30.2+k3s2).
+Fresh K3s nodes use `ansible/roles/platform/k3s_node_install` through the server or worker onboarding playbook. Lifecycle settings use a K3s config fragment; this runtime hygiene role manages `config.yaml`. Existing installations are not automatically adopted. Review the role README and recovery procedure before making changes to a cluster.
 
-**Authoritative configuration:** the parent repository now owns the site-specific
-inventory and variables. The upstream installer remains pinned as a submodule; it does
-not contain local configuration:
-
-| File | Contents of note |
-|---|---|
-| `ansible/inventory/production.ini` | masters 192.168.1.201–203, nodes .204–206, GPU node, and upstream-compatible `master`/`node` aliases |
-| `ansible/inventory/group_vars/k3s_cluster/vars.yml` | k3s version, kube-vip endpoint `192.168.1.200`, Flannel, MetalLB, taint, and disabled built-in Traefik/ServiceLB settings |
-| `ansible/inventory/group_vars/k3s_cluster/vault.yml` | vault-encrypted `k3s_token` and cluster secrets |
-| `ansible/playbooks/k3s-cluster.yml` | wrapper importing the pinned submodule's `site.yml` |
-| `ansible/kubeconfig` | generated cluster-admin kubeconfig (gitignored) |
-
-Run the installer from the parent repository with
-`cd ansible && ansible-playbook playbooks/k3s-cluster.yml`. The legacy
-`~/repo/k3s-ansible/inventory/my-cluster/` checkout on the jump host is no longer the
-authoritative source and can be retired after a successful check-mode comparison.
-
-**Consequences / rules:**
-1. Flux manages workloads; the parent Ansible repository manages both cluster installation
-   and ongoing node configuration.
-2. Node rebuild/reinstall uses `ansible/playbooks/k3s-cluster.yml`; do not create another
-   gitignored site inventory inside the submodule.
-3. Upgrading the toolkit = `cd vendor/k3s-ansible && git fetch && git checkout <new-tag>`
-   in a commit of its own; never let it float to master automatically.
-4. The parent inventory uses stable DNS names with explicit `ansible_host` addresses. Name
-   mapping (after the 2026-08-24 normalization):
+Inventory names and services:
 
     | This repo's inventory | ansible_host | Kubernetes node name | k3s service |
     |---|---|---|---|
@@ -314,7 +286,7 @@ authoritative source and can be retired after a successful check-mode comparison
 4. **DNS records** added to `opentofu/dns/main.tf`: `kubernetes-201..206.local` →
    .201–.206 (optional `kubernetes-119.local` left commented). ⚠️ Records are *code only*
    until `tofu apply` runs with the Cloudflare token/state.
-5. **Secrets:** `k3s_token` is vaulted at
+**Secrets:** `k3s_token` is vaulted at
    `ansible/inventory/group_vars/k3s_cluster/vault.yml` (encrypted with the repo's
    `.vault_pass` on the jumphost); non-secret install parameters are in `vars.yml`.
    Decryption requires the jumphost's `.vault_pass`.

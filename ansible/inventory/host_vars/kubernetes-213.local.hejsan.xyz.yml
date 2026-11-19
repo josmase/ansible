@@ -1,0 +1,5 @@
+---
+# Host-specific interface; cluster release is checked against live servers.
+k3s_node_install_interface: enp2s0
+# Ubuntu 26.04 prefixes sudo's prompt; the local become plugin recognizes it.
+ansible_become_method: sudo_wrapped

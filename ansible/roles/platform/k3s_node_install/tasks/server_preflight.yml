@@ -1,0 +1,61 @@
+---
+- name: Read etcd member nodes from the Kubernetes API
+  ansible.builtin.command:
+    argv: [/usr/local/bin/k3s, kubectl, get, nodes, -l, node-role.kubernetes.io/etcd, -o, json]
+  delegate_to: "{{ k3s_node_install_verify_host }}"
+  become: true
+  register: k3s_node_install_etcd_nodes
+  changed_when: false
+  check_mode: false
+
+- name: Require an explicitly reviewed etcd membership and recovery plan
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_existing_masters | length >= 1
+      - k3s_node_install_existing_masters | length == (k3s_node_install_control_plane.stdout | from_json)['items'] | length
+      - (k3s_node_install_existing_masters | length + 1) is odd or k3s_node_install_confirm_even_etcd_members | bool
+      - (k3s_node_install_control_plane.stdout | from_json) | k3s_control_plane_ready(k3s_node_install_existing_masters | map('extract', hostvars, 'k8s_node_name') | list)
+      - (k3s_node_install_etcd_nodes.stdout | from_json) | k3s_control_plane_ready(k3s_node_install_existing_masters | map('extract', hostvars, 'k8s_node_name') | list)
+      - ((k3s_node_install_control_plane.stdout | from_json)['items'] | selectattr('spec.unschedulable', 'defined') | selectattr('spec.unschedulable') | list | length) == 0
+    fail_msg: Review the complete control-plane inventory, quorum impact and recovery evidence before joining a server.
+
+- name: Inspect the explicitly identified recovery snapshot
+  ansible.builtin.stat:
+    path: "{{ k3s_node_install_recovery_snapshot_path }}"
+    checksum_algorithm: sha256
+    get_checksum: true
+    follow: false
+  delegate_to: "{{ k3s_node_install_verify_host }}"
+  become: true
+  register: k3s_node_install_snapshot
+
+- name: Require a recent snapshot with the restore-tested digest
+  ansible.builtin.assert:
+    that:
+      - k3s_node_install_snapshot.stat.exists | default(false)
+      - k3s_node_install_snapshot.stat.isreg | default(false)
+      - k3s_node_install_snapshot.stat.size | default(0) | int > 0
+      - k3s_node_install_snapshot.stat.checksum | default('') == k3s_node_install_recovery_snapshot_sha256
+      - (ansible_date_time.epoch | int - k3s_node_install_snapshot.stat.mtime | default(0) | int) >= 0
+      - (ansible_date_time.epoch | int - k3s_node_install_snapshot.stat.mtime | default(0) | int) <= k3s_node_install_recovery_max_age_seconds | int
+    fail_msg: The supplied restore-tested snapshot digest does not match a recent regular file on the verification host.
+
+- name: Read etcd leader metrics from every control-plane host
+  ansible.builtin.uri:
+    url: http://127.0.0.1:2381/metrics
+    return_content: true
+    timeout: 5
+  delegate_to: "{{ item }}"
+  become: true
+  loop: "{{ k3s_node_install_existing_masters }}"
+  register: k3s_node_install_etcd_metrics
+  changed_when: false
+  check_mode: false
+
+- name: Require a healthy etcd leader and empty proposal queues
+  ansible.builtin.assert:
+    that:
+      - (k3s_node_install_etcd_metrics.results | selectattr('content', 'search', '(?m)^etcd_server_has_leader 1(?:[.]0+)?$') | list | length) == k3s_node_install_existing_masters | length
+      - (k3s_node_install_etcd_metrics.results | selectattr('content', 'search', '(?m)^etcd_server_is_leader 1(?:[.]0+)?$') | list | length) == 1
+      - (k3s_node_install_etcd_metrics.results | selectattr('content', 'search', '(?m)^etcd_server_proposals_pending 0(?:[.]0+)?$') | list | length) == k3s_node_install_existing_masters | length
+    fail_msg: Etcd metrics do not show one leader and healthy members; do not alter membership.

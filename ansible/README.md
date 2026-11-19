@@ -35,6 +35,10 @@ ansible-playbook playbooks/local_setup.yml
 ansible-playbook playbooks/local_setup.yml --ask-vault-pass
 ```
 
+## K3s cluster management
+
+See [K3s roles and workflows](../docs/K3S_ROLES.md) for the node installation, runtime configuration, rolling upgrades and maintenance entry points.
+
 ## Common Use Cases
 
 ### 1. Setting Up a Development Machine

@@ -6,7 +6,7 @@ roles:
 
 collections:
   - name: community.general
-    version: ">=10.4.0"  # Required for lvg.remove_extra_pvs
+    version: ">=10.4.0"  # Required for lvg.remove_extra_pvs and zram modprobe
   - name: ansible.posix
   - name: kewlfft.aur
   - name: community.docker

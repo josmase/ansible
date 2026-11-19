@@ -1,0 +1,34 @@
+---
+# Select an operation explicitly on the target host.
+k3s_node_install_mode: ""
+k3s_node_install_allow_cluster_init: false
+k3s_node_install_allow_server_join: false
+k3s_node_install_confirm_even_etcd_members: false
+k3s_node_install_recovery_snapshot_path: ""
+k3s_node_install_recovery_snapshot_sha256: ""
+k3s_node_install_recovery_restore_verified_sha256: ""
+k3s_node_install_recovery_max_age_seconds: 86400
+k3s_node_install_storage_exclusion_label: ""
+k3s_node_install_storage_replica_exclusion_label: ""
+k3s_node_install_storage_namespace: piraeus-datastore
+k3s_node_install_version: ""
+k3s_node_install_server_url: ""
+k3s_node_install_token: ""
+k3s_node_install_name: ""
+k3s_node_install_ip: ""
+k3s_node_install_interface: ""
+k3s_node_install_labels: []
+k3s_node_install_taints: []
+k3s_node_install_tls_sans: []
+k3s_node_install_disabled_components: []
+k3s_node_install_server_settings: {}
+k3s_node_install_cluster_cidr: ""
+k3s_node_install_service_cidr: ""
+k3s_node_install_cluster_dns: ""
+k3s_node_install_cluster_domain: ""
+k3s_node_install_verify_host: ""
+k3s_node_install_ready_retries: 60
+k3s_node_install_ready_delay: 5
+k3s_node_install_architectures:
+  x86_64: {binary: k3s, checksums: sha256sum-amd64.txt}
+  aarch64: {binary: k3s-arm64, checksums: sha256sum-arm64.txt}
