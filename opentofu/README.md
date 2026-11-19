@@ -91,10 +91,7 @@ addresses and lineage without publishing their contents. After confirming the
 intended version, use the configured backend's `tofu state push` to restore it;
 an older serial requires `-force`, which bypasses safety checks and must only
 be used after preserving the current state. Pull it again, compare it with the
-selected version, and review a fresh plan before resuming writers. The original
-DNS backup predates the two imports of `homeassistant.local` and
-`kubernetes-214.local`; restoring it requires reimporting those records or
-choosing a GitLab version that contains them. After both migrations are verified, retain the secure
+selected version, and review a fresh plan before resuming writers. The original DNS backup predates the `homeassistant.local` import; restoring it requires reimporting that record or choosing a GitLab version that contains it. The retired worker record `kubernetes-214.local` must not be restored from an older state. After both migrations are verified, retain the secure
 backups and remove working-directory state copies. The existing state already
 references OpenTofu registry provider addresses; do not run `state
 replace-provider`.
