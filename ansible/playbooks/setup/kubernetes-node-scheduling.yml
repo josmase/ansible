@@ -28,19 +28,6 @@
       register: node_213_replica_label
       changed_when: "' labeled' in node_213_replica_label.stdout and 'not labeled' not in node_213_replica_label.stdout"
 
-    - name: Remove the retired low-risk scheduling label from node 213
-      ansible.builtin.command:
-        argv:
-          - /usr/local/bin/k3s
-          - kubectl
-          - label
-          - node
-          - kubernetes-node-213
-          - workload.josmase.io/low-risk-only-
-      register: node_213_retired_labels
-      failed_when: node_213_retired_labels.rc != 0 and 'not found' not in node_213_retired_labels.stderr
-      changed_when: node_213_retired_labels.rc == 0
-
     - name: Remove the full LINSTOR exclusion label from node 213
       ansible.builtin.command:
         argv:
@@ -53,19 +40,6 @@
       register: node_213_linstor_label
       failed_when: node_213_linstor_label.rc != 0 and 'not found' not in node_213_linstor_label.stderr
       changed_when: node_213_linstor_label.rc == 0
-
-    - name: Remove node 213's retired low-risk NoSchedule taint
-      ansible.builtin.command:
-        argv:
-          - /usr/local/bin/k3s
-          - kubectl
-          - taint
-          - node
-          - kubernetes-node-213
-          - workload=low-risk-only:NoSchedule-
-      register: node_213_retired_taint
-      failed_when: node_213_retired_taint.rc != 0 and 'not found' not in node_213_retired_taint.stderr
-      changed_when: "'untainted' in node_213_retired_taint.stdout"
 
     - name: Wait for node 213's diskless LINSTOR satellite to become available
       ansible.builtin.command:
