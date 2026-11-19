@@ -21,7 +21,7 @@ locals {
 
 resource "cloudflare_record" "local" {
   for_each = {
-    "*.local"                  = "192.168.1.181"
+    "*.local" = "192.168.1.181"
     # Canonical LAN target for the Felis Kind trial on the developer workstation.
     "felis-trial-origin.local" = "192.168.1.7"
     "media.local"              = "192.168.1.105"
@@ -34,13 +34,14 @@ resource "cloudflare_record" "local" {
     "homeassistant.local"      = "192.168.1.45"
 
     # Kubernetes nodes (k3s cluster members)
-    "kubernetes-201.local"     = "192.168.1.201"
-    "kubernetes-202.local"     = "192.168.1.202"
-    "kubernetes-203.local"     = "192.168.1.203"
-    "kubernetes-204.local"     = "192.168.1.204"
-    "kubernetes-205.local"     = "192.168.1.205"
-    "kubernetes-206.local"     = "192.168.1.206"
-    "kubernetes-214.local"     = "192.168.1.214"
+    "kubernetes-201.local" = "192.168.1.201"
+    "kubernetes-202.local" = "192.168.1.202"
+    "kubernetes-203.local" = "192.168.1.203"
+    "kubernetes-204.local" = "192.168.1.204"
+    "kubernetes-205.local" = "192.168.1.205"
+    "kubernetes-206.local" = "192.168.1.206"
+    "kubernetes-213.local" = "192.168.1.213"
+    "kubernetes-214.local" = "192.168.1.214"
     # Optional: uniform name for the GPU node (also reachable as gpu.local)
     # "kubernetes-119.local" = "192.168.1.119"
   }
