@@ -9,32 +9,32 @@ stages: [infrastructure]
 
 dns:
   stage: infrastructure
-  variables:
-    TF_ROOT: opentofu/dns
-    TF_STATE_NAME: dns
   trigger:
-    include: .gitlab/opentofu/child.yml
+    include:
+      - component: $CI_SERVER_FQDN/josmase/infrastructure/ci-templates/ansible-opentofu@v4.2.0
+        inputs:
+          tf_root: opentofu/dns
+          state_name: dns
     strategy: depend
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web" && ($TOFU_ROOT == "dns" || $TOFU_ROOT == "all")'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || ($CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH)'
       changes:
         - opentofu/dns/**/*
-        - .gitlab/opentofu/**/*
         - .gitlab-ci.yml
 
 virtual-machines:
   stage: infrastructure
-  variables:
-    TF_ROOT: opentofu/virtual-machines
-    TF_STATE_NAME: virtual-machines
   trigger:
-    include: .gitlab/opentofu/child.yml
+    include:
+      - component: $CI_SERVER_FQDN/josmase/infrastructure/ci-templates/ansible-opentofu@v4.2.0
+        inputs:
+          tf_root: opentofu/virtual-machines
+          state_name: virtual-machines
     strategy: depend
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web" && ($TOFU_ROOT == "virtual-machines" || $TOFU_ROOT == "all")'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || ($CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH)'
       changes:
         - opentofu/virtual-machines/**/*
-        - .gitlab/opentofu/**/*
         - .gitlab-ci.yml
