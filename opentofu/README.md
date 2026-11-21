@@ -13,13 +13,14 @@ This directory contains the repository's OpenTofu roots. Use OpenTofu 1.13.1
   `tofu.tfvars.example` to the local, ignored `tofu.tfvars` file and provide
   Proxmox credentials, the image checksum, and the SSH public key.
 
-Run commands from the individual root with the GitLab HTTP backend configured:
+Run local commands from the individual root with the GitLab HTTP backend
+configured:
 
 ```sh
-tofu init -lockfile=readonly
+tofu init -input=false -lockfile=readonly -reconfigure
 tofu fmt -check
 tofu validate
-tofu plan -var-file=tofu.tfvars
+tofu plan -input=false -lock=false -var-file=tofu.tfvars
 ```
 
 Do not apply a plan until it has been reviewed. The VM root must never replace
@@ -34,16 +35,23 @@ and acceptance procedure.
 ## GitLab state and pipelines
 
 The DNS and VM roots use the GitLab-managed states `dns` and
-`virtual-machines`. Each root has a separate child pipeline. Merge requests
-from the project can produce plans; main produces a new plan, which must be
-reviewed before its manual apply. A saved plan fails if its state is stale, and
-the apply job checks that its commit is at the tip of main immediately before
-attempting to acquire the state lock. A concurrent apply fails immediately if
-the lock is held; run and review a new pipeline. A main update can still occur
-between that check and the apply; coordinate merges during an apply if that
-distinction matters. To check
-drift without a change, run a main pipeline in GitLab with `TOFU_ROOT` set to
-`dns`, `virtual-machines`, or `all`.
+`virtual-machines`. The parent `.gitlab-ci.yml` keeps root selection, changed
+file rules, and the web pipeline's `TOFU_ROOT` selector. It starts the pinned
+`ansible-opentofu@v4.2.0` component with `tf_root` set to the repository-relative
+path (`opentofu/dns` or `opentofu/virtual-machines`) and `state_name` set to
+`dns` or `virtual-machines`.
+
+The component configures the GitLab HTTP backend with `CI_JOB_TOKEN`, pins
+OpenTofu 1.13.1, and plans with the scoped `TOFU_VARS` File variable. Merge
+request plans publish a summary containing resource addresses and actions, not
+planned values. Main branch plans produce a saved plan artifact that expires
+after one day. Apply is a blocking manual job on the default branch only; it
+checks that the pipeline commit is still at the tip of the default branch
+before applying the saved plan. If state changed after planning, or a
+concurrent apply holds the lock, run and review a fresh pipeline. A branch
+update can still happen between the tip check and apply, so coordinate merges
+during an apply if needed. To check drift without a change, run a main pipeline
+in GitLab with `TOFU_ROOT` set to `dns`, `virtual-machines`, or `all`.
 
 Create a GitLab project file variable named `TOFU_VARS` for each environment
 scope: `opentofu/dns` and `opentofu/virtual-machines`. Each file holds the
@@ -67,14 +75,30 @@ and state can contain private values; restrict access to the project and its
 artifacts. MR activity summaries contain resource addresses and action counts,
 not planned values. Saved plan artifacts expire after one day.
 
-For local use, configure the HTTP backend with environment variables, including
-`TF_HTTP_ADDRESS`, `TF_HTTP_LOCK_ADDRESS`, `TF_HTTP_UNLOCK_ADDRESS`,
-`TF_HTTP_LOCK_METHOD=POST`, `TF_HTTP_UNLOCK_METHOD=DELETE`, and GitLab
-credentials in `TF_HTTP_USERNAME` and `TF_HTTP_PASSWORD`. The state address is
-`$CI_API_V4_URL/projects/<project-id>/terraform/state/<state-name>`; lock and
-unlock use the same address with `/lock` appended. Do not put credentials in
-backend configuration files or command-line arguments. Run the existing plan
-command with a private local variables file.
+`TOFU_VARS` is a GitLab File variable scoped to `opentofu/dns` or
+`opentofu/virtual-machines`; local runs use the ignored `tofu.tfvars` file.
+Pass provider secrets as `TF_VAR_*` environment variables locally and as masked
+GitLab CI variables in the project. To use GitLab state locally, set the HTTP
+backend environment variables for the state you selected. For example, from
+the DNS root:
+
+```sh
+export TF_HTTP_ADDRESS="${GITLAB_API_V4_URL}/projects/${GITLAB_PROJECT_ID}/terraform/state/dns"
+export TF_HTTP_LOCK_ADDRESS="${TF_HTTP_ADDRESS}/lock"
+export TF_HTTP_UNLOCK_ADDRESS="${TF_HTTP_ADDRESS}/lock"
+export TF_HTTP_LOCK_METHOD=POST
+export TF_HTTP_UNLOCK_METHOD=DELETE
+export TF_HTTP_USERNAME="${GITLAB_HTTP_USERNAME}"
+export TF_HTTP_PASSWORD="${GITLAB_HTTP_PASSWORD}"
+export TF_HTTP_RETRY_WAIT_MIN=5
+```
+
+Set the API URL, project ID, and credentials in your shell environment before
+running the local commands. Use the `virtual-machines` state when working in
+that root. Do not put credentials in backend configuration files or command
+line arguments. The shared component handles backend setup and routine apply
+in CI; local commands support initialization, formatting, validation, and
+planning only.
 
 ## Migration and recovery
 
